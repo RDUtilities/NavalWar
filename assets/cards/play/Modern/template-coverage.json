@@ -1,0 +1,153 @@
+{
+  "setName": "Modern",
+  "requiredTemplates": [
+    {
+      "templateId": "salvo-11-1pt",
+      "presentInModernFolder": true,
+      "file": "Salvo-11-1pts.png"
+    },
+    {
+      "templateId": "salvo-11-2pts",
+      "presentInModernFolder": true,
+      "file": "Salvo-11-2pts.png"
+    },
+    {
+      "templateId": "salvo-12_6-1pt",
+      "presentInModernFolder": true,
+      "file": "Salvo-12_6-1pt.png"
+    },
+    {
+      "templateId": "salvo-12_6-2pts",
+      "presentInModernFolder": true,
+      "file": "Salvo-12_6-2pts.png"
+    },
+    {
+      "templateId": "salvo-14-1pt",
+      "presentInModernFolder": true,
+      "file": "Salvo-14-1pts.png"
+    },
+    {
+      "templateId": "salvo-14-2pts",
+      "presentInModernFolder": true,
+      "file": "Salvo-14-2pts.png"
+    },
+    {
+      "templateId": "salvo-14-3pts",
+      "presentInModernFolder": true,
+      "file": "Salvo-14-3pts.png"
+    },
+    {
+      "templateId": "salvo-15-1pt",
+      "presentInModernFolder": true,
+      "file": "Salvo-15-1pt.png"
+    },
+    {
+      "templateId": "salvo-15-2pts",
+      "presentInModernFolder": true,
+      "file": "Salvo-15-2pts.png"
+    },
+    {
+      "templateId": "salvo-15-3pts",
+      "presentInModernFolder": true,
+      "file": "Salvo-15-3pts.png"
+    },
+    {
+      "templateId": "salvo-16-1pts",
+      "presentInModernFolder": true,
+      "file": "Salvo-16-1pts.png"
+    },
+    {
+      "templateId": "salvo-16-2pts",
+      "presentInModernFolder": true,
+      "file": "Salvo-16-2pts.png"
+    },
+    {
+      "templateId": "salvo-16-3pts",
+      "presentInModernFolder": true,
+      "file": "Salvo-16-3pts.png"
+    },
+    {
+      "templateId": "salvo-16-4pts",
+      "presentInModernFolder": true,
+      "file": "Salvo-16-4pts.png"
+    },
+    {
+      "templateId": "salvo-18-2pts",
+      "presentInModernFolder": true,
+      "file": "Salvo-18-2pts.png"
+    },
+    {
+      "templateId": "salvo-18-3pts",
+      "presentInModernFolder": true,
+      "file": "Salvo-18-3pts.png"
+    },
+    {
+      "templateId": "salvo-18-4pts",
+      "presentInModernFolder": true,
+      "file": "Salvo-18-4pts.png"
+    },
+    {
+      "templateId": "additional-ship",
+      "presentInModernFolder": true,
+      "file": "Additional-Ship.png"
+    },
+    {
+      "templateId": "additional-damage-1pt",
+      "presentInModernFolder": true,
+      "file": "Additional-Damnage-1pt.png"
+    },
+    {
+      "templateId": "additional-damage-2pt",
+      "presentInModernFolder": true,
+      "file": "Additional-Damnage-2pt.png"
+    },
+    {
+      "templateId": "torpedo-boat",
+      "presentInModernFolder": true,
+      "file": "Torpedo-boat.png"
+    },
+    {
+      "templateId": "destroyer-squadron-4hits",
+      "presentInModernFolder": true,
+      "file": "Destroyer-4hits.png"
+    },
+    {
+      "templateId": "smoke-card",
+      "presentInModernFolder": true,
+      "file": "smoke-card.png"
+    },
+    {
+      "templateId": "repair-card",
+      "presentInModernFolder": true,
+      "file": "Repair-card.png"
+    },
+    {
+      "templateId": "minefield-1hit",
+      "presentInModernFolder": true,
+      "file": "Minefield-1hit.png"
+    },
+    {
+      "templateId": "minefield-2hits",
+      "presentInModernFolder": true,
+      "file": "Minefield-2hits.png"
+    },
+    {
+      "templateId": "minesweeper",
+      "presentInModernFolder": true,
+      "file": "MineSweeper.png"
+    },
+    {
+      "templateId": "submarine",
+      "presentInModernFolder": true,
+      "file": "Submarine.png"
+    }
+  ],
+  "summary": {
+    "templatesPresent": 28,
+    "templatesMissing": 0
+  },
+  "notes": [
+    "The Modern play-card set now covers every required template for the full 108-card deck.",
+    "Some filenames use '1pts' while template ids stay normalized."
+  ]
+}

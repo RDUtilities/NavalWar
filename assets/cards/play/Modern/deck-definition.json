@@ -1,0 +1,189 @@
+{
+  "deckName": "Modern Play Deck",
+  "targetCardCount": 108,
+  "templates": [
+    {
+      "templateId": "salvo-11-1pt",
+      "kind": "salvo",
+      "gunCaliber": "11\"",
+      "hits": 1,
+      "copiesInDeck": 8
+    },
+    {
+      "templateId": "salvo-11-2pts",
+      "kind": "salvo",
+      "gunCaliber": "11\"",
+      "hits": 2,
+      "copiesInDeck": 2
+    },
+    {
+      "templateId": "salvo-12_6-1pt",
+      "kind": "salvo",
+      "gunCaliber": "12.6\"",
+      "hits": 1,
+      "copiesInDeck": 4
+    },
+    {
+      "templateId": "salvo-12_6-2pts",
+      "kind": "salvo",
+      "gunCaliber": "12.6\"",
+      "hits": 2,
+      "copiesInDeck": 5
+    },
+    {
+      "templateId": "salvo-14-1pt",
+      "kind": "salvo",
+      "gunCaliber": "14\"",
+      "hits": 1,
+      "copiesInDeck": 10
+    },
+    {
+      "templateId": "salvo-14-2pts",
+      "kind": "salvo",
+      "gunCaliber": "14\"",
+      "hits": 2,
+      "copiesInDeck": 9
+    },
+    {
+      "templateId": "salvo-14-3pts",
+      "kind": "salvo",
+      "gunCaliber": "14\"",
+      "hits": 3,
+      "copiesInDeck": 2
+    },
+    {
+      "templateId": "salvo-15-1pt",
+      "kind": "salvo",
+      "gunCaliber": "15\"",
+      "hits": 1,
+      "copiesInDeck": 2
+    },
+    {
+      "templateId": "salvo-15-2pts",
+      "kind": "salvo",
+      "gunCaliber": "15\"",
+      "hits": 2,
+      "copiesInDeck": 5
+    },
+    {
+      "templateId": "salvo-15-3pts",
+      "kind": "salvo",
+      "gunCaliber": "15\"",
+      "hits": 3,
+      "copiesInDeck": 4
+    },
+    {
+      "templateId": "salvo-16-1pts",
+      "kind": "salvo",
+      "gunCaliber": "16\"",
+      "hits": 1,
+      "copiesInDeck": 4
+    },
+    {
+      "templateId": "salvo-16-2pts",
+      "kind": "salvo",
+      "gunCaliber": "16\"",
+      "hits": 2,
+      "copiesInDeck": 4
+    },
+    {
+      "templateId": "salvo-16-3pts",
+      "kind": "salvo",
+      "gunCaliber": "16\"",
+      "hits": 3,
+      "copiesInDeck": 4
+    },
+    {
+      "templateId": "salvo-16-4pts",
+      "kind": "salvo",
+      "gunCaliber": "16\"",
+      "hits": 4,
+      "copiesInDeck": 3
+    },
+    {
+      "templateId": "salvo-18-2pts",
+      "kind": "salvo",
+      "gunCaliber": "18\"",
+      "hits": 2,
+      "copiesInDeck": 3
+    },
+    {
+      "templateId": "salvo-18-3pts",
+      "kind": "salvo",
+      "gunCaliber": "18\"",
+      "hits": 3,
+      "copiesInDeck": 2
+    },
+    {
+      "templateId": "salvo-18-4pts",
+      "kind": "salvo",
+      "gunCaliber": "18\"",
+      "hits": 4,
+      "copiesInDeck": 2
+    },
+    {
+      "templateId": "additional-ship",
+      "kind": "additional_ship",
+      "copiesInDeck": 8
+    },
+    {
+      "templateId": "additional-damage-1pt",
+      "kind": "additional_damage",
+      "hits": 1,
+      "copiesInDeck": 4
+    },
+    {
+      "templateId": "additional-damage-2pt",
+      "kind": "additional_damage",
+      "hits": 2,
+      "copiesInDeck": 2
+    },
+    {
+      "templateId": "torpedo-boat",
+      "kind": "torpedo_boat",
+      "copiesInDeck": 1
+    },
+    {
+      "templateId": "destroyer-squadron-4hits",
+      "kind": "destroyer_squadron",
+      "hits": 4,
+      "copiesInDeck": 2
+    },
+    {
+      "templateId": "smoke-card",
+      "kind": "smoke",
+      "copiesInDeck": 6
+    },
+    {
+      "templateId": "repair-card",
+      "kind": "repair",
+      "copiesInDeck": 4
+    },
+    {
+      "templateId": "minefield-1hit",
+      "kind": "minefield",
+      "hits": 1,
+      "copiesInDeck": 2
+    },
+    {
+      "templateId": "minefield-2hits",
+      "kind": "minefield",
+      "hits": 2,
+      "copiesInDeck": 2
+    },
+    {
+      "templateId": "minesweeper",
+      "kind": "minesweeper",
+      "copiesInDeck": 2
+    },
+    {
+      "templateId": "submarine",
+      "kind": "submarine",
+      "copiesInDeck": 2
+    }
+  ],
+  "notes": [
+    "Each entry describes one play-card template and how many copies belong in the 108-card deck.",
+    "The counts in this file come from the user's full deck breakdown."
+  ]
+}

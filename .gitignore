@@ -1,0 +1,6 @@
+.DS_Store
+.swift-module-cache/
+node_modules/
+dist/
+tmp-crops/
+tmp-preview/

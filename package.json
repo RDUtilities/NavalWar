@@ -1,0 +1,14 @@
+{
+  "name": "naval-war-game",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Authoritative rules engine scaffold for an online naval tactics card game inspired by Naval War.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

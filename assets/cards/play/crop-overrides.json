@@ -1,0 +1,135 @@
+{
+  "playcards1_r3_c1.png": {
+    "sourceSheet": "Playcards1.webp",
+    "x": 0,
+    "y": 260,
+    "width": 217,
+    "height": 138
+  },
+  "playcards1_r3_c2.png": {
+    "sourceSheet": "Playcards1.webp",
+    "x": 217,
+    "y": 260,
+    "width": 216,
+    "height": 138
+  },
+  "playcards1_r3_c3.png": {
+    "sourceSheet": "Playcards1.webp",
+    "x": 433,
+    "y": 260,
+    "width": 217,
+    "height": 138
+  },
+  "playcards1_r4_c1.png": {
+    "sourceSheet": "Playcards1.webp",
+    "x": 0,
+    "y": 404,
+    "width": 217,
+    "height": 128
+  },
+  "playcards1_r4_c2.png": {
+    "sourceSheet": "Playcards1.webp",
+    "x": 217,
+    "y": 394,
+    "width": 216,
+    "height": 134
+  },
+  "playcards2_r1_c1.png": {
+    "sourceSheet": "Playcards2.webp",
+    "x": 0,
+    "y": 0,
+    "width": 242,
+    "height": 157
+  },
+  "playcards2_r1_c2.png": {
+    "sourceSheet": "Playcards2.webp",
+    "x": 242,
+    "y": 0,
+    "width": 242,
+    "height": 157
+  },
+  "playcards2_r1_c3.png": {
+    "sourceSheet": "Playcards2.webp",
+    "x": 484,
+    "y": 0,
+    "width": 242,
+    "height": 157
+  },
+  "playcards2_r2_c1.png": {
+    "sourceSheet": "Playcards2.webp",
+    "x": 0,
+    "y": 150,
+    "width": 242,
+    "height": 157
+  },
+  "playcards2_r2_c2.png": {
+    "sourceSheet": "Playcards2.webp",
+    "x": 242,
+    "y": 150,
+    "width": 242,
+    "height": 157
+  },
+  "playcards2_r2_c3.png": {
+    "sourceSheet": "Playcards2.webp",
+    "x": 484,
+    "y": 150,
+    "width": 242,
+    "height": 157
+  },
+  "playcards2_r3_c1.png": {
+    "sourceSheet": "Playcards2.webp",
+    "x": 0,
+    "y": 300,
+    "width": 242,
+    "height": 157
+  },
+  "playcards4_r6_c1.png": {
+    "sourceSheet": "Playcards4.webp",
+    "x": 0,
+    "y": 750,
+    "width": 239,
+    "height": 150
+  },
+  "playcards4_r6_c2.png": {
+    "sourceSheet": "Playcards4.webp",
+    "x": 239,
+    "y": 750,
+    "width": 240,
+    "height": 150
+  },
+  "playcards5_r4_c2.png": {
+    "sourceSheet": "Playcards5.webp",
+    "x": 243,
+    "y": 450,
+    "width": 244,
+    "height": 150
+  },
+  "playcards5_r4_c3.png": {
+    "sourceSheet": "Playcards5.webp",
+    "x": 487,
+    "y": 450,
+    "width": 243,
+    "height": 150
+  },
+  "playcards6_r6_c1.png": {
+    "sourceSheet": "PLaycards6.webp",
+    "x": 0,
+    "y": 750,
+    "width": 270,
+    "height": 150
+  },
+  "playcards6_r6_c2.png": {
+    "sourceSheet": "PLaycards6.webp",
+    "x": 265,
+    "y": 750,
+    "width": 225,
+    "height": 150
+  },
+  "playcards6_r6_c3.png": {
+    "sourceSheet": "PLaycards6.webp",
+    "x": 490,
+    "y": 750,
+    "width": 245,
+    "height": 150
+  }
+}

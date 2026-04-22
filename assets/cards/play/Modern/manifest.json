@@ -1,0 +1,195 @@
+{
+  "setName": "Modern",
+  "isActive": true,
+  "sharedArt": {
+    "playDeckCardBack": "cardback-Play.png"
+  },
+  "cards": [
+    {
+      "id": "additional-damage-1pt",
+      "kind": "additional_damage",
+      "hits": 1,
+      "file": "Additional-Damnage-1pt.png"
+    },
+    {
+      "id": "additional-damage-2pt",
+      "kind": "additional_damage",
+      "hits": 2,
+      "file": "Additional-Damnage-2pt.png"
+    },
+    {
+      "id": "additional-ship",
+      "kind": "additional_ship",
+      "file": "Additional-Ship.png"
+    },
+    {
+      "id": "destroyer-squadron-4hits",
+      "kind": "destroyer_squadron",
+      "hits": 4,
+      "file": "Destroyer-4hits.png"
+    },
+    {
+      "id": "minesweeper",
+      "kind": "minesweeper",
+      "file": "MineSweeper.png"
+    },
+    {
+      "id": "minefield-1hit",
+      "kind": "minefield",
+      "hits": 1,
+      "file": "Minefield-1hit.png"
+    },
+    {
+      "id": "minefield-2hits",
+      "kind": "minefield",
+      "hits": 2,
+      "file": "Minefield-2hits.png"
+    },
+    {
+      "id": "repair-card",
+      "kind": "repair",
+      "file": "Repair-card.png"
+    },
+    {
+      "id": "salvo-11-1pt",
+      "kind": "salvo",
+      "gunCaliber": "11\"",
+      "hits": 1,
+      "file": "Salvo-11-1pts.png"
+    },
+    {
+      "id": "salvo-11-2pts",
+      "kind": "salvo",
+      "gunCaliber": "11\"",
+      "hits": 2,
+      "file": "Salvo-11-2pts.png"
+    },
+    {
+      "id": "salvo-12_6-1pt",
+      "kind": "salvo",
+      "gunCaliber": "12.6\"",
+      "hits": 1,
+      "file": "Salvo-12_6-1pt.png"
+    },
+    {
+      "id": "salvo-12_6-2pts",
+      "kind": "salvo",
+      "gunCaliber": "12.6\"",
+      "hits": 2,
+      "file": "Salvo-12_6-2pts.png"
+    },
+    {
+      "id": "salvo-14-1pt",
+      "kind": "salvo",
+      "gunCaliber": "14\"",
+      "hits": 1,
+      "file": "Salvo-14-1pts.png"
+    },
+    {
+      "id": "salvo-14-2pts",
+      "kind": "salvo",
+      "gunCaliber": "14\"",
+      "hits": 2,
+      "file": "Salvo-14-2pts.png"
+    },
+    {
+      "id": "salvo-14-3pts",
+      "kind": "salvo",
+      "gunCaliber": "14\"",
+      "hits": 3,
+      "file": "Salvo-14-3pts.png"
+    },
+    {
+      "id": "salvo-15-1pt",
+      "kind": "salvo",
+      "gunCaliber": "15\"",
+      "hits": 1,
+      "file": "Salvo-15-1pt.png"
+    },
+    {
+      "id": "salvo-15-2pts",
+      "kind": "salvo",
+      "gunCaliber": "15\"",
+      "hits": 2,
+      "file": "Salvo-15-2pts.png"
+    },
+    {
+      "id": "salvo-15-3pts",
+      "kind": "salvo",
+      "gunCaliber": "15\"",
+      "hits": 3,
+      "file": "Salvo-15-3pts.png"
+    },
+    {
+      "id": "salvo-16-1pts",
+      "kind": "salvo",
+      "gunCaliber": "16\"",
+      "hits": 1,
+      "file": "Salvo-16-1pts.png"
+    },
+    {
+      "id": "salvo-16-2pts",
+      "kind": "salvo",
+      "gunCaliber": "16\"",
+      "hits": 2,
+      "file": "Salvo-16-2pts.png"
+    },
+    {
+      "id": "salvo-16-3pts",
+      "kind": "salvo",
+      "gunCaliber": "16\"",
+      "hits": 3,
+      "file": "Salvo-16-3pts.png"
+    },
+    {
+      "id": "salvo-16-4pts",
+      "kind": "salvo",
+      "gunCaliber": "16\"",
+      "hits": 4,
+      "file": "Salvo-16-4pts.png"
+    },
+    {
+      "id": "salvo-18-2pts",
+      "kind": "salvo",
+      "gunCaliber": "18\"",
+      "hits": 2,
+      "file": "Salvo-18-2pts.png"
+    },
+    {
+      "id": "salvo-18-3pts",
+      "kind": "salvo",
+      "gunCaliber": "18\"",
+      "hits": 3,
+      "file": "Salvo-18-3pts.png"
+    },
+    {
+      "id": "salvo-18-4pts",
+      "kind": "salvo",
+      "gunCaliber": "18\"",
+      "hits": 4,
+      "file": "Salvo-18-4pts.png"
+    },
+    {
+      "id": "submarine",
+      "kind": "submarine",
+      "file": "Submarine.png"
+    },
+    {
+      "id": "torpedo-boat",
+      "kind": "torpedo_boat",
+      "file": "Torpedo-boat.png"
+    },
+    {
+      "id": "smoke-card",
+      "kind": "smoke",
+      "file": "smoke-card.png"
+    }
+  ],
+  "notes": [
+    "This Modern folder is now the chosen source for play-card art.",
+    "The file names are preserved exactly as authored, including the 'Additional-Damnage' spelling.",
+    "Deck copy counts live separately in deck-definition.json so one image can represent many cards in the 108-card deck.",
+    "Some authored filenames use '1pts' while the template ids remain normalized to '1pt'.",
+    "Shared non-playable art such as the play-deck card back lives in sharedArt."
+  ]
+}

@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Naval War Prototype</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <section class="screen screen-splash is-active" data-screen="splash">
+        <div class="splash-backdrop"></div>
+        <div class="splash-card">
+          <img
+            class="brand-logo"
+            src="../assets/navalWarLogo-Transparent.png"
+            alt="Naval War logo"
+          />
+          <p class="splash-copy">
+            Command a mixed fleet, manage a hidden hand, and fight across a shared war table built
+            for human rivals, bots, and future expansions.
+          </p>
+          <div class="splash-actions">
+            <button class="primary-button" data-target-screen="menu">Enter War Room</button>
+            <button class="secondary-button" data-open-rules="true">Read Rules</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen screen-menu" data-screen="menu">
+        <div class="menu-backdrop"></div>
+        <div class="menu-panel">
+          <img
+            class="brand-logo brand-logo-menu"
+            src="../assets/navalWarLogo-Transparent.png"
+            alt="Naval War logo"
+          />
+          <p class="eyebrow">Admiral's Table Prototype</p>
+          <h1>Game Setup</h1>
+          <p class="menu-copy">
+            Build the match from here: choose the mode, review seat control, and stage the lobby
+            flow before launching the war table.
+          </p>
+          <div class="menu-actions">
+            <button class="primary-button" data-target-screen="table">Start Game</button>
+            <button class="secondary-button" id="load-game-button">Load Saved Game</button>
+            <button class="secondary-button" data-target-screen="splash">Back To Splash</button>
+          </div>
+          <p class="menu-copy" id="save-status-copy">No saved game detected yet.</p>
+          <div class="setup-grid">
+            <article class="setup-panel">
+              <p class="eyebrow">Game Mode</p>
+              <div class="mode-cards">
+                <button class="mode-card mode-card-active" type="button" data-mode-select="skirmish">
+                  <h2>Skirmish</h2>
+                  <p>One round. Sink everyone to win, or lead in surviving ships if the play deck runs dry.</p>
+                </button>
+                <button class="mode-card" type="button" data-mode-select="campaign">
+                  <h2>Campaign</h2>
+                  <p>Multiple rounds. Score sunk ship hit points and race to the campaign target, default 100.</p>
+                </button>
+              </div>
+            </article>
+            <article class="setup-panel">
+              <p class="eyebrow">Seat Control</p>
+              <div class="seat-list">
+                <label class="setup-field" for="player-name-input">
+                  <span>Your Name</span>
+                  <input id="player-name-input" type="text" value="Admiral Carter" maxlength="28" autocomplete="name" />
+                </label>
+                <label class="setup-field" for="player-count-select">
+                  <span>Total Players</span>
+                  <select id="player-count-select">
+                    <option value="2">2 Players</option>
+                    <option value="3">3 Players</option>
+                    <option value="4" selected>4 Players</option>
+                  </select>
+                </label>
+                <div class="seat-row"><span>Bottom Seat</span><strong id="human-seat-name">Admiral Carter</strong></div>
+                <div class="seat-row"><span>Top Seat</span><strong id="top-seat-name">Bot</strong></div>
+                <div class="seat-row"><span>Left Seat</span><strong id="left-seat-name">Bot</strong></div>
+                <div class="seat-row"><span>Right Seat</span><strong id="right-seat-name">Bot</strong></div>
+              </div>
+            </article>
+            <article class="setup-panel">
+              <p class="eyebrow">Match Options</p>
+              <div class="seat-list">
+                <div class="seat-row"><span>Players</span><strong id="players-count-copy">4 seats</strong></div>
+                <div class="seat-row"><span>Starting Fleets</span><strong>5 ships each</strong></div>
+                <div class="seat-row"><span>Starting Hands</span><strong>5 play cards each</strong></div>
+                <label class="setup-field" for="campaign-target-input">
+                  <span>Campaign Target</span>
+                  <input id="campaign-target-input" type="number" min="25" max="500" step="5" value="100" />
+                </label>
+              </div>
+            </article>
+            <article class="setup-panel">
+              <p class="eyebrow">Card Set</p>
+              <div class="seat-list">
+                <label class="setup-field" for="card-set-select">
+                  <span>Deck Format</span>
+                  <select id="card-set-select">
+                    <option value="classic" selected>Classic Set</option>
+                  </select>
+                </label>
+                <p class="menu-copy setup-copy" id="card-set-description">
+                  Classic Set includes the original full deck mix: 108 play cards and 54 ship cards.
+                </p>
+                <div class="seat-row"><span>Play Deck</span><strong id="card-set-play-count">108 cards</strong></div>
+                <div class="seat-row"><span>Ship Deck</span><strong id="card-set-ship-count">54 ships</strong></div>
+                <button class="secondary-button" id="view-card-set-button">View Deck</button>
+              </div>
+            </article>
+            <article class="setup-panel">
+              <p class="eyebrow">Online Lobby</p>
+              <div class="lobby-card">
+                <div class="seat-row"><span>Join Code</span><strong>NAV-4821</strong></div>
+                <div class="seat-row"><span>Privacy</span><strong>Private match</strong></div>
+                <div class="seat-row"><span>Ready State</span><strong id="ready-state-copy">1 human / 3 bots</strong></div>
+                <button class="secondary-button">Copy Join Code</button>
+              </div>
+            </article>
+          </div>
+          <div class="menu-cards">
+            <article class="menu-card">
+              <h2>Online Play</h2>
+              <p>Human opponents, bots, or mixed seats all fit the same table layout.</p>
+            </article>
+            <article class="menu-card">
+              <h2>Face-Up Fleets</h2>
+              <p>Ship cards stay visible so threat assessment feels tactical and readable.</p>
+            </article>
+            <article class="menu-card">
+              <h2>Hidden Hands</h2>
+              <p>Play cards stay private until committed, with counts visible to everyone.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen screen-table" data-screen="table">
+        <div class="table-frame">
+          <header class="top-bar">
+            <img
+              class="brand-logo brand-logo-header"
+              src="../assets/navalWarLogo-Transparent.png"
+              alt="Naval War logo"
+            />
+            <div class="status-cluster">
+              <div class="turn-pill" id="turn-pill">Turn 4 • Draw Phase</div>
+              <div class="format-pill" id="format-pill">Skirmish • Classic Set 1</div>
+            </div>
+            <div class="top-bar-actions">
+              <label class="target-board-toggle top-bar-toggle">
+                <input type="checkbox" id="target-board-toggle" checked />
+                <span>Target Board</span>
+              </label>
+              <button class="secondary-button top-bar-button" data-open-score="true">Score Card</button>
+              <button class="secondary-button top-bar-button" data-open-log="true">Combat Log</button>
+              <button class="secondary-button top-bar-button" data-open-rules="true">Rules</button>
+              <button class="secondary-button top-bar-button" id="save-game-button">Save Game</button>
+              <button class="secondary-button top-bar-button" id="quit-game-button">Quit Game</button>
+              <button class="secondary-button top-bar-button" data-target-screen="menu">Menu</button>
+            </div>
+          </header>
+
+          <main class="war-table" style="background-image: url('../assets/War-Table.png');">
+            <section class="player-zone player-zone-top" data-player-zone="top">
+              <div class="player-header">
+                <div>
+                  <p class="player-name" id="top-player-name">Admiral Tanaka</p>
+                  <p class="player-meta" id="top-player-meta">Mixed Fleet • 5 ships afloat • 5 cards hidden</p>
+                </div>
+                <button class="winner-pile" data-victory-pile="top">Victory Pile: 2</button>
+              </div>
+              <div class="fleet fleet-horizontal" id="fleet-top"></div>
+              <div class="hand-band hand-hidden">
+                <span>Hidden Hand</span>
+                <span class="hand-count">5</span>
+              </div>
+            </section>
+
+            <section class="player-zone player-zone-left" data-player-zone="left">
+              <div class="player-header player-header-side">
+                <div>
+                  <p class="player-name" id="left-player-name">Admiral Hale</p>
+                  <p class="player-meta" id="left-player-meta">Mixed Fleet • 5 ships afloat • 5 cards hidden</p>
+                </div>
+                <button class="winner-pile" data-victory-pile="left">Victory Pile: 1</button>
+              </div>
+              <div class="fleet fleet-vertical" id="fleet-left"></div>
+              <div class="hand-band hand-hidden hand-side">
+                <span>Hidden Hand</span>
+                <span class="hand-count">4</span>
+              </div>
+            </section>
+
+            <section class="battle-zone">
+              <div class="battle-zone-header">
+                <div>
+                  <p class="battle-label">Central Command</p>
+                  <h2>Battle Zone</h2>
+                </div>
+                <div class="draw-piles" id="draw-piles"></div>
+              </div>
+
+              <div class="battle-effects-map">
+                <div class="battle-effects-anchor battle-effects-top" id="effects-top"></div>
+                <div class="battle-effects-anchor battle-effects-left" id="effects-left"></div>
+                <div class="battle-effects-center"></div>
+                <div class="battle-effects-anchor battle-effects-right" id="effects-right"></div>
+                <div class="battle-effects-anchor battle-effects-bottom" id="effects-bottom"></div>
+              </div>
+            </section>
+
+            <section class="player-zone player-zone-right" data-player-zone="right">
+              <div class="player-header player-header-side">
+                <div>
+                  <p class="player-name" id="right-player-name">Admiral Rossi</p>
+                  <p class="player-meta" id="right-player-meta">Mixed Fleet • 5 ships afloat • 5 cards hidden</p>
+                </div>
+                <button class="winner-pile" data-victory-pile="right">Victory Pile: 0</button>
+              </div>
+              <div class="fleet fleet-vertical" id="fleet-right"></div>
+              <div class="hand-band hand-hidden hand-side">
+                <span>Hidden Hand</span>
+                <span class="hand-count">3</span>
+              </div>
+            </section>
+
+            <section class="player-zone player-zone-bottom current-player" data-player-zone="bottom">
+              <div class="player-header">
+                <div>
+                  <p class="player-name" id="bottom-player-name">Admiral Carter</p>
+                  <p class="player-meta" id="bottom-player-meta">United States • Draw Phase • 5 cards in hand</p>
+                </div>
+                <button class="winner-pile" data-victory-pile="bottom">Victory Pile: 3</button>
+              </div>
+              <div class="turn-summary-panel" id="turn-summary-panel">
+                <p class="battle-label">Turn Summary</p>
+                <div class="turn-summary-copy">
+                  <p id="turn-summary-title">Awaiting action</p>
+                  <span id="turn-summary-subtitle">No action yet.</span>
+                  <strong id="turn-summary-outcome">One draw, one action, then the turn ends.</strong>
+                </div>
+              </div>
+              <div class="fleet fleet-horizontal" id="fleet-bottom"></div>
+              <div class="target-board" id="target-board-section">
+                <div class="target-board-header">
+                  <p class="battle-label">Target Board</p>
+                  <span class="target-board-copy">Drag attacks and battle-zone cards here instead of scrolling up.</span>
+                </div>
+                <div class="target-board-tools">
+                  <div id="bottom-draw-deck"></div>
+                  <div class="mini-battle-zone" id="bottom-battle-zone"></div>
+                </div>
+                <div class="target-board-grid" id="target-board"></div>
+              </div>
+              <div class="hand-tray">
+                <div class="hand-tray-header">
+                  <p class="battle-label">Command Hand</p>
+                  <div class="hand-tray-actions">
+                    <div class="hand-count" id="bottom-hand-count">6 cards ready</div>
+                    <button class="secondary-button tray-turn-button" id="use-airstrike-button" hidden>Use Air Strike</button>
+                  </div>
+                </div>
+                <div class="hand-band hand-visible" id="player-hand"></div>
+              </div>
+            </section>
+          </main>
+        </div>
+      </section>
+    </div>
+
+    <div class="card-zoom-overlay" id="card-zoom-overlay" hidden>
+      <button class="card-zoom-close" id="card-zoom-close" aria-label="Close zoom view">Close</button>
+      <div class="card-zoom-dialog" role="dialog" aria-modal="true" aria-labelledby="card-zoom-title">
+        <p class="battle-label" id="card-zoom-title">Card Detail</p>
+        <img class="card-zoom-image" id="card-zoom-image" alt="" />
+        <p class="card-zoom-caption" id="card-zoom-caption"></p>
+      </div>
+    </div>
+
+    <div class="rules-overlay" id="rules-overlay" hidden>
+      <button class="card-zoom-close" id="rules-close" aria-label="Close rules view">Close</button>
+      <div class="rules-dialog" role="dialog" aria-modal="true" aria-labelledby="rules-title">
+        <div class="rules-header">
+          <div>
+            <p class="battle-label">Reference</p>
+            <h2 id="rules-title">Rules For Naval War</h2>
+          </div>
+          <a
+            class="secondary-button rules-open-new"
+            href="../Naval War!-Rules-OnlineVersion.pdf"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open PDF
+          </a>
+        </div>
+        <iframe
+          class="rules-frame"
+          src="../Naval War!-Rules-OnlineVersion.pdf"
+          title="Naval War Online Rules"
+        ></iframe>
+      </div>
+    </div>
+
+    <div class="rules-overlay" id="victory-overlay" hidden>
+      <button class="card-zoom-close" id="victory-close" aria-label="Close victory pile">Close</button>
+      <div class="rules-dialog" role="dialog" aria-modal="true" aria-labelledby="victory-title">
+        <div class="rules-header">
+          <div>
+            <p class="battle-label">Captured Ships</p>
+            <h2 id="victory-title">Victory Pile</h2>
+          </div>
+        </div>
+        <div class="victory-grid" id="victory-grid"></div>
+      </div>
+    </div>
+
+    <div class="rules-overlay" id="salvo-overlay" hidden>
+      <button class="card-zoom-close" id="salvo-close" aria-label="Close attached salvos">Close</button>
+      <div class="rules-dialog" role="dialog" aria-modal="true" aria-labelledby="salvo-title">
+        <div class="rules-header">
+          <div>
+            <p class="battle-label">Attached Damage</p>
+            <h2 id="salvo-title">Ship Salvos</h2>
+          </div>
+        </div>
+        <div class="victory-grid" id="salvo-grid"></div>
+      </div>
+    </div>
+
+    <div class="rules-overlay" id="log-overlay" hidden>
+      <button class="card-zoom-close" id="log-close" aria-label="Close combat log">Close</button>
+      <div class="rules-dialog" role="dialog" aria-modal="true" aria-labelledby="log-title">
+        <div class="rules-header">
+          <div>
+            <p class="battle-label">Turn History</p>
+            <h2 id="log-title">Combat Log</h2>
+          </div>
+        </div>
+        <div class="combat-log combat-log-overlay">
+          <ul id="combat-log-list"></ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="rules-overlay" id="score-overlay" hidden>
+      <button class="card-zoom-close" id="score-close" aria-label="Close score card">Close</button>
+      <div class="rules-dialog score-dialog" role="dialog" aria-modal="true" aria-labelledby="score-title">
+        <div class="rules-header">
+          <div>
+            <p class="battle-label">Match Standing</p>
+            <h2 id="score-title">Skirmish Standing</h2>
+          </div>
+          <div class="score-meta" id="score-meta">Victory pile points are shown for table awareness.</div>
+        </div>
+        <div class="score-table-shell">
+          <table class="score-table" id="score-table"></table>
+        </div>
+      </div>
+    </div>
+
+    <div class="rules-overlay" id="deck-overlay" hidden>
+      <button class="card-zoom-close" id="deck-close" aria-label="Close deck browser">Close</button>
+      <div class="rules-dialog deck-dialog" role="dialog" aria-modal="true" aria-labelledby="deck-title">
+        <div class="rules-header">
+          <div>
+            <p class="battle-label">Card Set Reference</p>
+            <h2 id="deck-title">Classic Set Deck Browser</h2>
+          </div>
+          <div class="score-meta" id="deck-meta">108 play cards • 54 ships</div>
+        </div>
+        <div class="deck-browser">
+          <section class="deck-browser-section">
+            <div class="deck-browser-section-header">
+              <div>
+                <p class="battle-label">Play Deck</p>
+                <h3 id="deck-play-title">Play Cards</h3>
+              </div>
+              <span class="deck-browser-count" id="deck-play-total">108 cards</span>
+            </div>
+            <div class="deck-preview-grid" id="deck-play-grid"></div>
+          </section>
+          <section class="deck-browser-section">
+            <div class="deck-browser-section-header">
+              <div>
+                <p class="battle-label">Ship Deck</p>
+                <h3 id="deck-ship-title">Ship Cards</h3>
+              </div>
+              <span class="deck-browser-count" id="deck-ship-total">54 ships</span>
+            </div>
+            <div class="deck-preview-grid" id="deck-ship-grid"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <div class="dice-banner" id="dice-banner" hidden>
+      <div class="dice-banner-shell">
+        <p class="battle-label">Dice Resolution</p>
+        <div class="dice-banner-stage">
+          <div class="dice-banner-face" id="die-face">—</div>
+          <div class="dice-banner-copy">
+            <p id="dice-title">Awaiting roll</p>
+            <span id="dice-subtitle">No dice action yet.</span>
+            <strong class="dice-banner-outcome" id="dice-outcome">Dice results appear here.</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
