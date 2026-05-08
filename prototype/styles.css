@@ -492,6 +492,7 @@ button {
 }
 
 .turn-pill,
+.round-pill,
 .format-pill,
 .winner-pile,
 .hand-count {
@@ -506,8 +507,52 @@ button {
   cursor: pointer;
 }
 
+.round-pill {
+  color: var(--accent-strong);
+}
+
 .top-bar-button {
   min-width: 110px;
+}
+
+.scoring-hint {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.2;
+  max-width: 280px;
+}
+
+.utility-menu {
+  display: none;
+  position: relative;
+}
+
+.utility-menu > summary {
+  list-style: none;
+}
+
+.utility-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.utility-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  display: grid;
+  gap: 8px;
+  min-width: 160px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(7, 15, 21, 0.96);
+  box-shadow: 0 16px 28px rgba(0, 0, 0, 0.34);
+  z-index: 40;
+}
+
+.utility-menu-panel .top-bar-button {
+  width: 100%;
+  justify-content: center;
 }
 
 .war-table {
@@ -2129,6 +2174,10 @@ body.is-dragging-hand-card .play-card[draggable="true"]:active {
     width: 100%;
   }
 
+  .scoring-hint {
+    max-width: 100%;
+  }
+
   .brand-logo-header {
     width: 180px;
     align-self: center;
@@ -2153,6 +2202,20 @@ body.is-dragging-hand-card .play-card[draggable="true"]:active {
 
   .primary-button,
   .secondary-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .utility-direct {
+    display: none;
+  }
+
+  .utility-menu {
+    display: block;
+    width: 100%;
+  }
+
+  .utility-menu > summary {
     width: 100%;
     justify-content: center;
   }

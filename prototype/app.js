@@ -50,12 +50,15 @@ const leftPlayerMeta = document.getElementById("left-player-meta");
 const rightPlayerMeta = document.getElementById("right-player-meta");
 const bottomHandCount = document.getElementById("bottom-hand-count");
 const turnPill = document.getElementById("turn-pill");
+const roundPill = document.getElementById("round-pill");
 const formatPill = document.getElementById("format-pill");
+const scoringHint = document.getElementById("scoring-hint");
 const useAirStrikeButton = document.getElementById("use-airstrike-button");
 const targetBoardToggle = document.getElementById("target-board-toggle");
 const targetBoardSection = document.getElementById("target-board-section");
 const bottomBattleZone = document.getElementById("bottom-battle-zone");
 const quitGameButton = document.getElementById("quit-game-button");
+const quitGameButtonMobile = document.getElementById("quit-game-button-mobile");
 const scoreTitle = document.getElementById("score-title");
 const scoreMeta = document.getElementById("score-meta");
 const scoreTable = document.getElementById("score-table");
@@ -75,6 +78,7 @@ const viewCardSetButton = document.getElementById("view-card-set-button");
 const campaignTargetInput = document.getElementById("campaign-target-input");
 const modeButtons = [...document.querySelectorAll("[data-mode-select]")];
 const saveGameButton = document.getElementById("save-game-button");
+const saveGameButtonMobile = document.getElementById("save-game-button-mobile");
 const loadGameButton = document.getElementById("load-game-button");
 const saveStatusCopy = document.getElementById("save-status-copy");
 const warTable = document.querySelector(".war-table");
@@ -1559,10 +1563,19 @@ function updateBottomStatus() {
   turnPill.textContent = appState.match.isRoundOver
     ? `${getPlayerName(appState.match.winnerZone)} Wins`
     : `Turn ${appState.turnState.turnNumber} • ${currentPlayerName} • ${phaseLabel}`;
+  if (roundPill) {
+    roundPill.textContent = appState.match.mode === "campaign" ? `Round ${appState.match.currentRound}` : "Single Round";
+  }
   formatPill.textContent =
     appState.match.mode === "campaign"
       ? `Campaign • ${getCurrentCardSetName()} • Round ${appState.match.currentRound} • Target ${appState.match.campaignTarget}`
       : `Skirmish • ${getCurrentCardSetName()}`;
+  if (scoringHint) {
+    scoringHint.textContent =
+      appState.match.mode === "campaign"
+        ? `Campaign: score captured ship hit points each round, first to ${appState.match.campaignTarget}.`
+        : "Skirmish: last fleet afloat wins, or most captured ships if the play deck is exhausted.";
+  }
   useAirStrikeButton.hidden =
     appState.match.isRoundOver || !isHumanTurn() || appState.turnState.phase !== "draw" || forcedCard !== null || availableCarriers.length === 0;
   useAirStrikeButton.disabled = useAirStrikeButton.hidden;
@@ -2475,13 +2488,15 @@ function maybeEndRound(reason = "fleet_elimination") {
     if (campaignLeader && campaignLeader.total >= appState.match.campaignTarget) {
       appState.match.isCampaignOver = true;
       bannerTitle = `${campaignLeader.player} Wins Campaign`;
-      bannerSubtitle = `${campaignLeader.player} reaches ${campaignLeader.total} points and wins the campaign.`;
+      bannerSubtitle = `${campaignLeader.player} reaches ${campaignLeader.total} points and wins the campaign. Round points come from captured ship hit points.`;
     } else {
       appState.match.pendingNextRound = true;
       bannerTitle = `${getPlayerName(winner.zone)} Wins Round ${appState.match.currentRound}`;
-      bannerSubtitle = `${subtitle} Campaign scores are updated. Start the next round when ready.`;
+      bannerSubtitle = `${subtitle} Campaign scores are updated from captured ship hit points. Start the next round when ready.`;
       bannerActions = [{ label: "Start Next Round", dataset: { nextCampaignRound: "true" } }];
     }
+  } else {
+    bannerSubtitle = `${bannerSubtitle} Skirmish win condition: eliminate all rival fleets, or lead in captured ships when the play deck is empty.`;
   }
 
   appendLog(`${bannerTitle}. ${bannerSubtitle}`);
@@ -3019,8 +3034,7 @@ function resolveDestroyerTargetDamage(card, targetZone, effectId) {
       showSpecialBanner("Destroyers Sunk", `${getPlayerName(targetZone)}'s Destroyer Squadron is destroyed.`);
     }
   }
-  completeActionForTurn(`${getPlayerName("bottom")}'s turn ends after attacking Destroyer Squadron.`);
-  renderPrototype();
+  finalizeHumanTurn(`${getPlayerName("bottom")}'s turn ends after attacking Destroyer Squadron.`);
 }
 
 function resolveBotDamageCard(ownerZone, card, target) {
@@ -4721,8 +4735,20 @@ if (quitGameButton) {
   });
 }
 
+if (quitGameButtonMobile) {
+  quitGameButtonMobile.addEventListener("click", () => {
+    quitCurrentGame();
+  });
+}
+
 if (saveGameButton) {
   saveGameButton.addEventListener("click", () => {
+    saveCurrentGame();
+  });
+}
+
+if (saveGameButtonMobile) {
+  saveGameButtonMobile.addEventListener("click", () => {
     saveCurrentGame();
   });
 }

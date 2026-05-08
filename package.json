@@ -6,7 +6,9 @@
   "description": "Authoritative rules engine scaffold for an online naval tactics card game inspired by Naval War.",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "check": "tsc -p tsconfig.json --noEmit"
+    "check": "tsc -p tsconfig.json --noEmit",
+    "simulate": "npm run build && node dist/simulation.js",
+    "simulate:quick": "npm run build && node dist/simulation.js --games=20 --players=4 --mode=skirmish --seed=20260508 --max-steps=5000"
   },
   "devDependencies": {
     "typescript": "^5.8.3"

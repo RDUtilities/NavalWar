@@ -36,6 +36,22 @@ function drawManyShips(deck: ShipCard[], count: number, rng: RandomSource) {
   return { ships, deck: nextDeck };
 }
 
+function pickStartingPlayerId(players: PlayerState[], rng: RandomSource): string {
+  if (players.length === 0) {
+    return "p1";
+  }
+  // Use rejection sampling on d6 to avoid modulo bias for 2/3/4-player starts.
+  while (true) {
+    const rollIndex = rng.rollDie() - 1; // 0..5
+    if (rollIndex < players.length) {
+      const chosen = players[rollIndex];
+      if (chosen) {
+        return chosen.id;
+      }
+    }
+  }
+}
+
 export class DeterministicRandom implements RandomSource {
   private dieResults: number[];
 
@@ -136,7 +152,7 @@ export function createInitialGameState(
     phase: "normal",
     roundNumber: 1,
     turnNumber: 1,
-    currentPlayerId: roundSetup.players[0]?.id ?? "p1",
+    currentPlayerId: pickStartingPlayerId(roundSetup.players, rng),
     hasDrawnThisTurn: false,
     hasUsedCarrierStrikeThisTurn: false,
     hasPerformedActionThisTurn: false,
@@ -169,7 +185,7 @@ export function createNextRoundState(state: GameState, rng: RandomSource): GameS
     phase: "normal",
     roundNumber: state.roundNumber + 1,
     turnNumber: 1,
-    currentPlayerId: roundSetup.players[0]?.id ?? "p1",
+    currentPlayerId: pickStartingPlayerId(roundSetup.players, rng),
     hasDrawnThisTurn: false,
     hasUsedCarrierStrikeThisTurn: false,
     hasPerformedActionThisTurn: false,

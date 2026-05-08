@@ -148,6 +148,7 @@
             />
             <div class="status-cluster">
               <div class="turn-pill" id="turn-pill">Turn 4 • Draw Phase</div>
+              <div class="round-pill" id="round-pill">Round 1</div>
               <div class="format-pill" id="format-pill">Skirmish • Classic Set 1</div>
             </div>
             <div class="top-bar-actions">
@@ -156,11 +157,20 @@
                 <span>Target Board</span>
               </label>
               <button class="secondary-button top-bar-button" data-open-score="true">Score Card</button>
+              <span class="scoring-hint" id="scoring-hint">Skirmish: last fleet afloat wins.</span>
               <button class="secondary-button top-bar-button" data-open-log="true">Combat Log</button>
               <button class="secondary-button top-bar-button" data-open-rules="true">Rules</button>
-              <button class="secondary-button top-bar-button" id="save-game-button">Save Game</button>
-              <button class="secondary-button top-bar-button" id="quit-game-button">Quit Game</button>
-              <button class="secondary-button top-bar-button" data-target-screen="menu">Menu</button>
+              <button class="secondary-button top-bar-button utility-direct" id="save-game-button">Save Game</button>
+              <button class="secondary-button top-bar-button utility-direct" id="quit-game-button">Quit Game</button>
+              <button class="secondary-button top-bar-button utility-direct" data-target-screen="menu">Menu</button>
+              <details class="utility-menu" id="utility-menu">
+                <summary class="secondary-button top-bar-button">More</summary>
+                <div class="utility-menu-panel">
+                  <button class="secondary-button top-bar-button" id="save-game-button-mobile">Save Game</button>
+                  <button class="secondary-button top-bar-button" id="quit-game-button-mobile">Quit Game</button>
+                  <button class="secondary-button top-bar-button" data-target-screen="menu">Menu</button>
+                </div>
+              </details>
             </div>
           </header>
 
@@ -291,16 +301,16 @@
           </div>
           <a
             class="secondary-button rules-open-new"
-            href="../Naval War!-Rules-OnlineVersion.pdf"
+            href="./rules.html"
             target="_blank"
             rel="noreferrer"
           >
-            Open PDF
+            Open In New Tab
           </a>
         </div>
         <iframe
           class="rules-frame"
-          src="../Naval War!-Rules-OnlineVersion.pdf"
+          src="./rules.html"
           title="Naval War Online Rules"
         ></iframe>
       </div>

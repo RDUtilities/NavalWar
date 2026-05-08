@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Naval War Online Rules</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #08131a;
+        --panel: rgba(8, 20, 28, 0.92);
+        --panel-soft: rgba(12, 28, 39, 0.82);
+        --line: rgba(212, 176, 110, 0.24);
+        --line-strong: rgba(243, 207, 135, 0.58);
+        --text: #f2ecdd;
+        --muted: #b7b09d;
+        --accent: #d4b06e;
+        --accent-strong: #f3cf87;
+        --success: #9dbb7b;
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        background:
+          linear-gradient(180deg, rgba(5, 11, 15, 0.72), rgba(5, 11, 15, 0.9)),
+          url("../assets/War-Table.png") center / cover fixed no-repeat;
+        color: var(--text);
+      }
+
+      body {
+        padding: 28px 20px 64px;
+      }
+
+      .shell {
+        width: min(1160px, 100%);
+        margin: 0 auto;
+        display: grid;
+        gap: 18px;
+      }
+
+      .hero,
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--panel);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 22px 60px rgba(0, 0, 0, 0.34);
+      }
+
+      .hero {
+        padding: 26px 28px;
+        display: grid;
+        gap: 18px;
+        overflow: hidden;
+      }
+
+      .hero-cover {
+        position: relative;
+        min-height: 420px;
+        border-radius: 20px;
+        overflow: hidden;
+        border: 1px solid rgba(243, 207, 135, 0.24);
+        background:
+          radial-gradient(circle at top right, rgba(32, 74, 122, 0.28), transparent 34%),
+          linear-gradient(180deg, rgba(5, 11, 15, 0.18), rgba(5, 11, 15, 0.64)),
+          url("../assets/War-Table.png") center / cover no-repeat;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+      }
+
+      .hero-cover::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(180deg, rgba(5, 11, 15, 0.16) 0%, rgba(5, 11, 15, 0.74) 72%, rgba(5, 11, 15, 0.92) 100%);
+        pointer-events: none;
+      }
+
+      .hero-copy {
+        position: absolute;
+        inset: auto 28px 28px 28px;
+        z-index: 1;
+        display: grid;
+        gap: 14px;
+        max-width: 760px;
+      }
+
+      .hero-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+
+      .logo {
+        width: min(340px, 70vw);
+      }
+
+      .eyebrow {
+        margin: 0;
+        color: var(--accent-strong);
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        font-size: 0.72rem;
+      }
+
+      h1, h2, h3 {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 5vw, 3.4rem);
+        line-height: 0.96;
+      }
+
+      h2 {
+        font-size: clamp(1.35rem, 2.6vw, 2rem);
+      }
+
+      h3 {
+        font-size: 1rem;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.66;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .pill {
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        padding: 10px 14px;
+        font-size: 0.82rem;
+      }
+
+      .layout {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: 280px minmax(0, 1fr);
+      }
+
+      .toc {
+        position: sticky;
+        top: 18px;
+        align-self: start;
+        padding: 18px;
+      }
+
+      .toc h2 {
+        margin-bottom: 14px;
+      }
+
+      .toc nav {
+        display: grid;
+        gap: 10px;
+      }
+
+      .toc a,
+      .pdf-link {
+        color: var(--accent-strong);
+        text-decoration: none;
+      }
+
+      .toc a:hover,
+      .pdf-link:hover {
+        text-decoration: underline;
+      }
+
+      .content {
+        display: grid;
+        gap: 18px;
+      }
+
+      .art-panel {
+        grid-template-columns: 1.1fr 0.9fr;
+        align-items: start;
+      }
+
+      .panel {
+        padding: 22px 24px;
+        display: grid;
+        gap: 14px;
+      }
+
+      .rule-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .rule-list li {
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .grid-2 {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .subpanel {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 18px;
+        padding: 16px;
+        background: var(--panel-soft);
+        display: grid;
+        gap: 10px;
+      }
+
+      .note {
+        border-left: 3px solid var(--accent);
+        padding-left: 12px;
+      }
+
+      .good {
+        color: var(--success);
+      }
+
+      .page-preview {
+        border-radius: 18px;
+        overflow: hidden;
+        border: 1px solid rgba(243, 207, 135, 0.24);
+        background: rgba(255, 255, 255, 0.04);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+      }
+
+      .page-preview img {
+        width: 100%;
+        display: block;
+      }
+
+      .page-preview figcaption {
+        padding: 12px 14px;
+        color: var(--muted);
+        font-size: 0.84rem;
+        line-height: 1.5;
+      }
+
+      .reference-stack {
+        display: grid;
+        gap: 14px;
+      }
+
+      .reference-card {
+        margin: 0;
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(243, 207, 135, 0.16);
+        background: var(--panel-soft);
+      }
+
+      .reference-card img {
+        width: 100%;
+        display: block;
+        border-radius: 14px;
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.26);
+      }
+
+      .reference-card figcaption {
+        color: var(--muted);
+        font-size: 0.84rem;
+        line-height: 1.55;
+      }
+
+      .art-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+      }
+
+      .deck-visuals {
+        display: grid;
+        grid-template-columns: 0.9fr 1.1fr;
+        gap: 16px;
+        align-items: start;
+      }
+
+      .deck-card-figure {
+        margin: 0;
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(243, 207, 135, 0.16);
+        background: var(--panel-soft);
+      }
+
+      .deck-card-figure img {
+        width: 100%;
+        display: block;
+        border-radius: 14px;
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.26);
+      }
+
+      .deck-card-figure figcaption {
+        color: var(--muted);
+        font-size: 0.84rem;
+        line-height: 1.55;
+      }
+
+      .deck-fact-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .deck-fact {
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .deck-fact strong {
+        color: var(--text);
+      }
+
+      .art-thumb {
+        display: grid;
+        gap: 10px;
+        text-decoration: none;
+        color: inherit;
+        border-radius: 18px;
+        padding: 12px;
+        border: 1px solid rgba(243, 207, 135, 0.16);
+        background: var(--panel-soft);
+        transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+      }
+
+      .art-thumb:hover {
+        transform: translateY(-3px);
+        border-color: rgba(243, 207, 135, 0.42);
+        box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
+      }
+
+      .art-thumb img {
+        width: 100%;
+        border-radius: 12px;
+        display: block;
+      }
+
+      .art-thumb span {
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        border-radius: 16px;
+      }
+
+      th, td {
+        padding: 10px 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        text-align: left;
+        font-size: 0.9rem;
+      }
+
+      th {
+        color: var(--accent-strong);
+        font-weight: 700;
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      td {
+        color: var(--muted);
+      }
+
+      code {
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 2px 6px;
+      }
+
+      @media (max-width: 980px) {
+        .layout,
+        .grid-2,
+        .art-panel,
+        .deck-visuals {
+          grid-template-columns: 1fr;
+        }
+
+        .toc {
+          position: static;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="hero">
+        <div class="hero-top">
+          <img class="logo" src="../assets/navalWarLogo-Transparent.png" alt="Naval War logo" />
+          <a class="pdf-link" href="../Naval War!-Rules-OnlineVersion.pdf" target="_blank" rel="noreferrer">Open Original PDF</a>
+        </div>
+        <div class="hero-cover">
+          <div class="hero-copy">
+            <div>
+              <p class="eyebrow">Online Reference</p>
+              <h1>Rules For Naval War</h1>
+            </div>
+            <p>
+              This HTML rules page now pulls visual language directly from the original illustrated
+              rules PDF, while staying lighter and more web-friendly for in-game use.
+            </p>
+            <div class="pill-row">
+              <div class="pill">Classic Set: 108 Play Cards</div>
+              <div class="pill">Ship Deck: 54 Unique Ships</div>
+              <div class="pill">1 to 4 Players</div>
+              <div class="pill">Skirmish and Campaign</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="layout">
+        <aside class="panel toc">
+          <h2>Contents</h2>
+          <nav>
+            <a href="#overview">1. Overview</a>
+            <a href="#setup">2. Setup</a>
+            <a href="#turn">3. Turn Sequence</a>
+            <a href="#specials">4. Special Cards</a>
+            <a href="#combat">5. Combat Rules</a>
+            <a href="#modes">6. Game Modes</a>
+            <a href="#classic-set">7. Classic Set</a>
+            <a href="#ui-notes">8. Online Table Notes</a>
+          </nav>
+        </aside>
+
+        <main class="content">
+          <section class="panel" id="overview">
+            <p class="eyebrow">1. Overview</p>
+            <h2>Objective</h2>
+            <p>
+              Command a visible fleet of ships while managing a hidden hand of play cards. Attack
+              enemy fleets with matching salvos, use special cards at the right moment, and collect
+              sunk enemy ships into your Victory Pile.
+            </p>
+            <div class="grid-2">
+              <div class="subpanel">
+                <h3>What Players See</h3>
+                <ul class="rule-list">
+                  <li>All fleets are face up and visible to every player.</li>
+                  <li>Each player’s hand is hidden from opponents.</li>
+                  <li>Fleet effects like smoke, mines, submarines, and destroyers are public.</li>
+                  <li>Attached salvos on a ship remain visible until removed or discarded.</li>
+                </ul>
+              </div>
+              <div class="subpanel">
+                <h3>Win Condition</h3>
+                <ul class="rule-list">
+                  <li>In Skirmish, sink all opposing fleets or lead when the play deck runs out.</li>
+                  <li>In Campaign, score sunk-ship hit points each round and race to the target score.</li>
+                  <li>Victory Pile ships are worth the printed hit points on the ship card.</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel art-panel">
+            <div>
+              <p class="eyebrow">Illustrated Reference</p>
+              <h2>Read The Cards At A Glance</h2>
+              <p>
+                The rules page works better when the card art explains the system right alongside
+                the text. These reference images now anchor the online rules with the same visual
+                language players see at the table.
+              </p>
+              <ul class="rule-list">
+                <li>The Play Deck cardback represents the shared 108-card draw pile used during the round.</li>
+                <li>The ship example shows the fields that matter most during combat: name, country, hit points, and gun caliber.</li>
+                <li>Those same values drive the online engine when it validates salvos, sinkings, scoring, and carrier placement.</li>
+              </ul>
+            </div>
+            <div class="reference-stack">
+              <figure class="reference-card">
+                <img src="./rules-art/pages/PlayDeckCardback.png" alt="Play deck cardback used for the shared draw pile" />
+                <figcaption>
+                  The shared Play Deck. In the online game, this deck is shuffled once per round and
+                  contains the full Classic Set of salvos, utility cards, and special cards.
+                </figcaption>
+              </figure>
+              <figure class="reference-card">
+                <img src="./rules-art/pages/ShipExampleCard.png" alt="Annotated ship card showing the major gameplay fields" />
+                <figcaption>
+                  A ship card with the most important data called out. Matching gun caliber
+                  determines which salvo cards a player can legally fire while that ship remains afloat.
+                </figcaption>
+              </figure>
+            </div>
+          </section>
+
+          <section class="panel" id="setup">
+            <p class="eyebrow">2. Setup</p>
+            <h2>Prepare The Table</h2>
+            <ul class="rule-list">
+              <li>Shuffle the full 54-card Ship Deck.</li>
+              <li>Shuffle the full 108-card Play Deck.</li>
+              <li>Deal 5 ship cards to each player to form a fleet.</li>
+              <li>Deal 5 play cards to each player.</li>
+              <li>Aircraft carriers must be placed behind the rest of that player’s fleet.</li>
+              <li>All fleets are public. Only hands remain hidden.</li>
+            </ul>
+            <p class="note">
+              Opening-turn special handling: if a player is dealt a mandatory special card in their
+              starting hand, that card must be resolved and replaced before that player enters the
+              normal draw-and-play cycle.
+            </p>
+          </section>
+
+          <section class="panel" id="turn">
+            <p class="eyebrow">3. Turn Sequence</p>
+            <h2>Normal Turn Flow</h2>
+            <div class="grid-2">
+              <div class="subpanel">
+                <h3>Option A: Normal Draw Turn</h3>
+                <ol class="rule-list">
+                  <li>Draw 1 card from the Play Deck.</li>
+                  <li>If the drawn card is a mandatory special, it must be played immediately.</li>
+                  <li>If it is not mandatory, it goes into your hand.</li>
+                  <li>Take exactly one play-phase action: play one card or discard one card.</li>
+                  <li>After the action resolves, your turn ends.</li>
+                </ol>
+              </div>
+              <div class="subpanel">
+                <h3>Option B: Carrier Air Strike Turn</h3>
+                <ol class="rule-list">
+                  <li>Instead of drawing, you may commit to carrier air strikes.</li>
+                  <li>Each afloat carrier may make one strike that turn.</li>
+                  <li>Roll one die per strike.</li>
+                  <li>A roll of <code>1</code> immediately sinks the target ship.</li>
+                  <li>If you choose air strikes, you do not also draw and play a hand card that turn.</li>
+                </ol>
+              </div>
+            </div>
+            <p>
+              After drawing normally, you must take an action before the turn can end. If you do not
+              want to play a legal hand card, you must discard one play card as your action.
+            </p>
+          </section>
+
+          <section class="panel" id="specials">
+            <p class="eyebrow">4. Special Cards</p>
+            <h2>Card Behavior Reference</h2>
+            <div class="grid-2">
+              <div class="subpanel">
+                <h3>Mandatory Immediate Specials</h3>
+                <ul class="rule-list">
+                  <li><strong>Minefield:</strong> must be played when drawn; cannot be played on your own fleet.</li>
+                  <li><strong>Submarine:</strong> must be played when drawn.</li>
+                  <li><strong>Torpedo Boat:</strong> must be played when drawn.</li>
+                  <li><strong>Additional Damage:</strong> must be played when drawn if a legal enemy salvo stack exists.</li>
+                  <li><strong>Additional Ship:</strong> must be resolved when drawn; it adds a new ship from the Ship Deck.</li>
+                </ul>
+              </div>
+              <div class="subpanel">
+                <h3>Hold-For-Later Cards</h3>
+                <ul class="rule-list">
+                  <li><strong>Salvo:</strong> may be held until you have a matching afloat gun caliber.</li>
+                  <li><strong>Smoke:</strong> placed in front of your own fleet.</li>
+                  <li><strong>Repair:</strong> removes one attached salvo from one of your damaged ships.</li>
+                  <li><strong>Minesweeper:</strong> removes minefields from a chosen fleet.</li>
+                  <li><strong>Destroyer Squadron:</strong> deploys to the battle zone for delayed attack.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="subpanel">
+              <h3>Special Resolution Notes</h3>
+              <ul class="rule-list">
+                <li><strong>Smoke:</strong> blocks every attack except submarine and Additional Damage until the owner’s next draw phase.</li>
+                <li><strong>Minefield:</strong> stays on the chosen fleet until cleared by Minesweeper. It damages every ship in that fleet, including ships added later.</li>
+                <li><strong>Minesweeper:</strong> clears minefields from the chosen fleet and both cards go to the discard pile.</li>
+                <li><strong>Repair:</strong> removes only one attached salvo, not the entire stack.</li>
+                <li><strong>Additional Ship:</strong> discards the card, draws the next ship from the Ship Deck, and adds it to your fleet immediately.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="panel" id="combat">
+            <p class="eyebrow">5. Combat Rules</p>
+            <h2>Targeting, Damage, and Sinking</h2>
+            <div class="grid-2">
+              <div class="subpanel">
+                <h3>Salvos</h3>
+                <ul class="rule-list">
+                  <li>You may only play a salvo if you have an afloat non-carrier ship with the matching gun caliber.</li>
+                  <li>The salvo attaches to the target ship and reduces its remaining hit points.</li>
+                  <li>Attached salvos remain on the target until removed or discarded.</li>
+                  <li>When a ship sinks, attached salvos are discarded and the sunk ship goes to the attacker’s Victory Pile.</li>
+                </ul>
+              </div>
+              <div class="subpanel">
+                <h3>Carrier Screening</h3>
+                <ul class="rule-list">
+                  <li>Aircraft carriers cannot be targeted by salvos while other ships in that fleet remain afloat.</li>
+                  <li>Carriers may still perform air strikes while afloat.</li>
+                  <li>Carriers are always placed behind the rest of the fleet.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="subpanel">
+                <h3>Die Roll Attacks</h3>
+                <ul class="rule-list">
+                  <li><strong>Submarine:</strong> roll a d6, sink the target on <code>5</code> or <code>6</code>.</li>
+                  <li><strong>Torpedo Boat:</strong> roll a d6, sink the target on <code>6</code>.</li>
+                  <li><strong>Carrier Air Strike:</strong> roll a d6, sink the target on <code>1</code>.</li>
+                </ul>
+              </div>
+              <div class="subpanel">
+                <h3>Destroyer Squadron</h3>
+                <ul class="rule-list">
+                  <li>Deploys to the battle zone with 4 hit points.</li>
+                  <li>It may be attacked before it activates.</li>
+                  <li>If it survives until the owner’s next turn, the owner chooses a target fleet and rolls one die.</li>
+                  <li>The die result is the number of ships sunk in the target fleet.</li>
+                  <li>If sunk before activation, it is discarded and scores no points.</li>
+                </ul>
+              </div>
+            </div>
+
+            <p class="note">
+              A sunk ship is immediately considered out of play. It cannot fire salvos, use carrier
+              strikes, or remain a legal target for repair.
+            </p>
+          </section>
+
+          <section class="panel" id="modes">
+            <p class="eyebrow">6. Game Modes</p>
+            <h2>Skirmish and Campaign</h2>
+            <div class="grid-2">
+              <div class="subpanel">
+                <h3>Skirmish</h3>
+                <ul class="rule-list">
+                  <li>One round only.</li>
+                  <li>The last admiral with ships afloat wins immediately.</li>
+                  <li>If the Play Deck runs out first, the admiral with the strongest Victory Pile wins.</li>
+                  <li>Captured ships first, then captured hit points, are the primary tiebreakers.</li>
+                </ul>
+              </div>
+              <div class="subpanel">
+                <h3>Campaign</h3>
+                <ul class="rule-list">
+                  <li>Play multiple rounds.</li>
+                  <li>At the end of each round, score the hit-point values of ships in your Victory Pile.</li>
+                  <li>Add those points to your campaign total.</li>
+                  <li>The first admiral to reach the campaign target wins the campaign.</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" id="classic-set">
+            <p class="eyebrow">7. Classic Set</p>
+            <h2>Deck Composition</h2>
+            <p>
+              The online prototype currently uses the Classic Set. The in-game Deck Browser shows a
+              visual preview of every ship and play card template in this set.
+            </p>
+            <div class="deck-visuals">
+              <figure class="deck-card-figure">
+                <img src="./rules-art/pages/PlayDeckCardback.png" alt="Play deck cardback from the original rules art" />
+                <figcaption>
+                  The shared Play Deck contains salvos plus utility and special cards. Players draw
+                  from this deck each turn unless they choose to use carrier air strikes instead.
+                </figcaption>
+              </figure>
+              <figure class="deck-card-figure">
+                <img src="./rules-art/pages/ShipExampleCard.png" alt="Annotated ship example card showing name, country, hit points, and gun size" />
+                <figcaption>
+                  Ship cards show the ship name, country, hit points, and gun size. Gun size matters
+                  because a player may only fire a salvo if they have an afloat ship with the matching caliber.
+                </figcaption>
+              </figure>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Deck</th>
+                  <th>Total</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Play Deck</td>
+                  <td>108</td>
+                  <td>Salvos plus smoke, repair, minefield, submarine, torpedo boat, destroyers, and more.</td>
+                </tr>
+                <tr>
+                  <td>Ship Deck</td>
+                  <td>54</td>
+                  <td>Unique ships only, no duplicates in the deck.</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="deck-fact-list">
+              <div class="deck-fact">
+                <strong>Play Deck:</strong> 108 total cards, including all salvo sizes, smoke, repair,
+                mines, minesweeper, destroyer squadron, submarine, torpedo boat, Additional Damage, and Additional Ship.
+              </div>
+              <div class="deck-fact">
+                <strong>Ship Deck:</strong> 54 unique ships with no duplicates in the deck. Additional Ship
+                cards draw from this shared finite supply.
+              </div>
+              <div class="deck-fact">
+                <strong>Fleet Firepower:</strong> salvo cards are only playable if you still have an afloat
+                ship that matches the gun caliber shown on the salvo.
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" id="ui-notes">
+            <p class="eyebrow">8. Online Table Notes</p>
+            <h2>How The Online Table Presents The Rules</h2>
+            <ul class="rule-list">
+              <li>Your own fleet and hand are always presented at the bottom of the screen.</li>
+              <li>Other occupied seats rotate around you depending on the player count.</li>
+              <li>The Target Board mirrors valid enemy targets so you do not need to scroll during play.</li>
+              <li>Dice rolls appear in a dedicated resolution banner.</li>
+              <li>The Deck Browser shows the exact Classic Set cards and counts used by the prototype.</li>
+            </ul>
+            <p class="note good">
+              This page is designed to replace the heavy embedded PDF during play and should be much
+              more web-friendly for the hosted/PWA version.
+            </p>
+          </section>
+
+          <section class="panel">
+            <p class="eyebrow">Illustrated Pages</p>
+            <h2>Rendered PDF Page Gallery</h2>
+            <p>
+              These are the extracted page images from the original rules PDF. They can be opened in
+              a new tab and used as sources for future artwork crops and section illustrations.
+            </p>
+            <div class="art-grid">
+              <a class="art-thumb" href="./rules-art/pages/PlayDeckCardback.png" target="_blank" rel="noreferrer">
+                <img src="./rules-art/pages/PlayDeckCardback.png" alt="Play deck cardback art" />
+                <span>Reference • Play Deck cardback art</span>
+              </a>
+              <a class="art-thumb" href="./rules-art/pages/ShipExampleCard.png" target="_blank" rel="noreferrer">
+                <img src="./rules-art/pages/ShipExampleCard.png" alt="Annotated ship example card" />
+                <span>Reference • Ship card anatomy example</span>
+              </a>
+              <a class="art-thumb" href="./rules-art/pages/rules-page-03.png" target="_blank" rel="noreferrer">
+                <img src="./rules-art/pages/rules-page-03.png" alt="Rules page 3" />
+                <span>Page 3 • Play card reference</span>
+              </a>
+              <a class="art-thumb" href="./rules-art/pages/rules-page-04.png" target="_blank" rel="noreferrer">
+                <img src="./rules-art/pages/rules-page-04.png" alt="Rules page 4" />
+                <span>Page 4 • Special card behavior</span>
+              </a>
+              <a class="art-thumb" href="./rules-art/pages/rules-page-05.png" target="_blank" rel="noreferrer">
+                <img src="./rules-art/pages/rules-page-05.png" alt="Rules page 5" />
+                <span>Page 5 • Ship deck and scoring content</span>
+              </a>
+              <a class="art-thumb" href="./rules-art/pages/rules-page-06.png" target="_blank" rel="noreferrer">
+                <img src="./rules-art/pages/rules-page-06.png" alt="Rules page 6" />
+                <span>Page 6 • Ships and attacks</span>
+              </a>
+              <a class="art-thumb" href="./rules-art/pages/rules-page-07.png" target="_blank" rel="noreferrer">
+                <img src="./rules-art/pages/rules-page-07.png" alt="Rules page 7" />
+                <span>Page 7 • Turn flow and combat reference</span>
+              </a>
+              <a class="art-thumb" href="./rules-art/pages/rules-page-08.png" target="_blank" rel="noreferrer">
+                <img src="./rules-art/pages/rules-page-08.png" alt="Rules page 8" />
+                <span>Page 8 • Additional rules and examples</span>
+              </a>
+              <a class="art-thumb" href="./rules-art/pages/rules-page-09.png" target="_blank" rel="noreferrer">
+                <img src="./rules-art/pages/rules-page-09.png" alt="Rules page 9" />
+                <span>Page 9 • Closing reference page</span>
+              </a>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
