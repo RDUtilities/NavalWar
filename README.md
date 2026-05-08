@@ -128,3 +128,24 @@ state = applyCommand(
 ## Tooling note
 
 `package.json` includes a TypeScript build setup, but you still need to run `npm install` before `npm run check` or `npm run build` will work in this workspace.
+
+## Server Multiplayer API (in-memory)
+
+The Node server now exposes a minimal session API backed by `InMemoryMultiplayerService`:
+
+1. `POST /api/lobbies` create lobby
+2. `POST /api/lobbies/:lobbyId/join` join lobby as human or bot
+3. `POST /api/lobbies/:lobbyId/fill-bots` auto-fill open seats with bots
+4. `POST /api/lobbies/:lobbyId/start` start match
+5. `GET /api/lobbies/:lobbyId/view?playerId=<id>` get filtered player view
+6. `POST /api/lobbies/:lobbyId/commands` submit a game command
+7. `GET /api/health` service health
+
+Quick start:
+
+```bash
+npm run build
+npm start
+```
+
+The server serves static files and redirects `/` to `/prototype/index.html`.

@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-08
 
+- `2026-05-08 10:xx America/Chicago` — Server-backed multiplayer API baseline
+- Scope: `server.mjs`, `README.md`
+- Result: Replaced static-only server with API + static host server exposing create/join/fill/start/view/command routes backed by `InMemoryMultiplayerService` from `dist/session.js`.
+- Verification: `npm run build` (pass), `node --check server.mjs` (pass), local API smoke flow create/join/fill/start/view (pass)
+
 - `2026-05-08 09:xx America/Chicago` — Render deployment bootstrap (static host path)
 - Scope: `package.json`, `server.mjs`, `render.yaml`
 - Result: Added Node static server (`npm start`) that serves the prototype and redirects `/` to `/prototype/index.html`; added Render blueprint config for build/start/health check.
