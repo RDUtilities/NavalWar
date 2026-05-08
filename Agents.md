@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-08
 
+- `2026-05-08 09:xx America/Chicago` — Render deployment bootstrap (static host path)
+- Scope: `package.json`, `server.mjs`, `render.yaml`
+- Result: Added Node static server (`npm start`) that serves the prototype and redirects `/` to `/prototype/index.html`; added Render blueprint config for build/start/health check.
+- Verification: `npm run check` (pass), local start command available (`npm start`)
+
 - `2026-05-08 08:xx America/Chicago` — UI pass for Skirmish/Campaign clarity
 - Scope: `prototype/index.html`, `prototype/styles.css`, `prototype/app.js`
 - Result: Added `Round` status pill, mode-aware scoring hint near `Score Card`, richer winner banner mode text, and mobile `More` utility menu for Save/Quit/Menu while keeping desktop direct buttons.

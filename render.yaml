@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: naval-war
+    runtime: node
+    plan: free
+    autoDeploy: true
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /prototype/index.html

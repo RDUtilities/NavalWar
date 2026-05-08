@@ -5,6 +5,8 @@
   "type": "module",
   "description": "Authoritative rules engine scaffold for an online naval tactics card game inspired by Naval War.",
   "scripts": {
+    "start": "node server.mjs",
+    "serve:local": "node server.mjs",
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "simulate": "npm run build && node dist/simulation.js",
