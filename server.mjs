@@ -48,7 +48,8 @@ function sendText(res, statusCode, text) {
 }
 
 function safeResolve(urlPath) {
-  const cleaned = normalize(urlPath).replace(/^(\.\.[/\\])+/, "");
+  const decodedPath = decodeURIComponent(urlPath);
+  const cleaned = normalize(decodedPath).replace(/^(\.\.[/\\])+/, "");
   return join(ROOT, cleaned);
 }
 
