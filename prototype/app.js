@@ -87,6 +87,8 @@ const saveGameButton = document.getElementById("save-game-button");
 const saveGameButtonMobile = document.getElementById("save-game-button-mobile");
 const loadGameButton = document.getElementById("load-game-button");
 const saveStatusCopy = document.getElementById("save-status-copy");
+const menuLobbyDebug = document.getElementById("menu-lobby-debug");
+const tableLobbyDebug = document.getElementById("table-lobby-debug");
 const warTable = document.querySelector(".war-table");
 let dragState = null;
 let fleetDropPreview = null;
@@ -1504,6 +1506,29 @@ function syncLobbySeatPreview() {
   }
   if (cardSetShipCount) {
     cardSetShipCount.textContent = `${CLASSIC_SHIP_DECK_TOTAL} ships`;
+  }
+  renderLobbyDebugPanel();
+}
+
+function renderLobbyDebugPanel() {
+  const session = appState.serverSession || {};
+  const lines = [
+    "Lobby Debug",
+    `connected: ${Boolean(session.connected)}`,
+    `status: ${session.status || "offline"}`,
+    `isHost: ${Boolean(session.isHost)}`,
+    `joinCode: ${session.joinCode || "-"}`,
+    `lobbyId: ${session.lobbyId || "-"}`,
+    `viewerPlayerId: ${session.viewerPlayerId || "-"}`,
+    `lastSyncAt: ${session.lastSyncAt || "-"}`,
+    `lastError: ${session.lastError || "-"}`,
+  ];
+  const text = lines.join("\n");
+  if (menuLobbyDebug) {
+    menuLobbyDebug.textContent = text;
+  }
+  if (tableLobbyDebug) {
+    tableLobbyDebug.textContent = text;
   }
 }
 
@@ -4366,6 +4391,7 @@ function createMiniBattleZoneDrop() {
 }
 
 function renderPrototype() {
+  renderLobbyDebugPanel();
   normalizeBottomFleetOrder();
   updateVictoryPileButtons();
   updateBottomStatus();

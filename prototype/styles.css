@@ -269,6 +269,22 @@ button {
   line-height: 1.7;
 }
 
+.lobby-debug-panel {
+  margin-top: 10px;
+  border: 1px dashed rgba(233, 213, 162, 0.45);
+  border-radius: 12px;
+  background: rgba(7, 14, 20, 0.78);
+  padding: 8px 10px;
+  font-size: 0.74rem;
+  color: var(--muted);
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+.lobby-debug-table {
+  margin: 0 14px 8px 14px;
+}
+
 .menu-cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
