@@ -861,6 +861,7 @@ const sampleState = {
   ui: {
     showTargetBoard: true,
     highlightedDrawCardId: null,
+    touchSelectedCardId: null,
   },
   tableConfig: {
     playerCount: 4,
@@ -941,7 +942,12 @@ const ACTIVE_ZONE_LAYOUTS = {
 };
 const BOT_TURN_DELAY_MS = 900;
 const LOCAL_SAVE_KEY = "naval-war-prototype-save-v1";
+const MULTIPLAYER_CLIENT_ID_KEY = "naval-war-client-id-v1";
+const MULTIPLAYER_SESSION_KEY = "naval-war-session-v1";
 const SERVER_API_BASE = `${window.location.origin}`;
+const IS_TOUCH_DEVICE =
+  (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ||
+  navigator.maxTouchPoints > 0;
 let botTurnTimer = null;
 let humanTurnAdvanceTimer = null;
 let diceBannerTimer = null;
@@ -961,11 +967,51 @@ appState.serverSession = {
   localPlayerCount: 4,
   lastSyncAt: null,
   lastError: null,
+  clientId: null,
 };
+
+function createClientId() {
+  return `client_${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function getOrCreateClientId() {
+  try {
+    const existing = window.localStorage.getItem(MULTIPLAYER_CLIENT_ID_KEY);
+    if (existing) {
+      return existing;
+    }
+    const created = createClientId();
+    window.localStorage.setItem(MULTIPLAYER_CLIENT_ID_KEY, created);
+    return created;
+  } catch (_) {
+    return createClientId();
+  }
+}
+
+function persistServerSessionSnapshot() {
+  try {
+    const session = appState.serverSession || {};
+    if (!session.connected || !session.lobbyId || !session.viewerPlayerId || !session.joinCode) {
+      window.localStorage.removeItem(MULTIPLAYER_SESSION_KEY);
+      return;
+    }
+    window.localStorage.setItem(
+      MULTIPLAYER_SESSION_KEY,
+      JSON.stringify({
+        lobbyId: session.lobbyId,
+        joinCode: session.joinCode,
+        viewerPlayerId: session.viewerPlayerId,
+        isHost: Boolean(session.isHost),
+        status: session.status || "lobby",
+      })
+    );
+  } catch (_) {
+    // Ignore session persistence errors.
+  }
+}
 
 function showScreen(target) {
   if (target !== "table") {
-    stopServerPolling();
     window.clearTimeout(botTurnTimer);
     window.clearTimeout(humanTurnAdvanceTimer);
     humanTurnAdvanceTimer = null;
@@ -982,8 +1028,10 @@ function showScreen(target) {
   screens.forEach((screen) => {
     screen.classList.toggle("is-active", screen.dataset.screen === target);
   });
-  if (target === "table" && appState.serverSession?.connected) {
+  if (appState.serverSession?.connected) {
     startServerPolling();
+  } else {
+    stopServerPolling();
   }
 }
 
@@ -1050,6 +1098,7 @@ function setServerSessionCore({ connected, lobbyId, viewerPlayerId, joinCode, st
   appState.serverSession.lastSyncAt = new Date().toISOString();
   appState.serverSession.lastError = null;
   appState.serverSession.localPlayerCount = playerCount;
+  persistServerSessionSnapshot();
 }
 
 async function hostLobbyFromSetup({ playerCount, matchMode, campaignTarget }) {
@@ -1067,6 +1116,7 @@ async function hostLobbyFromSetup({ playerCount, matchMode, campaignTarget }) {
     matchMode,
     campaignTargetScore: campaignTarget,
     preferredSeatId: 0,
+    clientId: appState.serverSession.clientId,
   });
   const lobbyId = created?.lobbyId;
   if (!lobbyId) {
@@ -1100,8 +1150,12 @@ async function joinLobbyFromCode(joinCode, { playerCount }) {
   const joined = await serverPost(`/api/lobbies/by-code/${encodeURIComponent(joinCode)}/join`, {
     playerName: getPlayerName("bottom"),
     role: "human",
+    clientId: appState.serverSession.clientId,
   });
-  const viewerRecord = (joined?.players || []).find((player) => player.playerName === getPlayerName("bottom")) || joined?.players?.at(-1);
+  const viewerRecord =
+    (joined?.players || []).find((player) => player.clientId && player.clientId === appState.serverSession.clientId) ||
+    (joined?.players || []).find((player) => player.playerName === getPlayerName("bottom")) ||
+    joined?.players?.at(-1);
   const viewerPlayerId = viewerRecord?.playerId;
   if (!viewerPlayerId) {
     throw new Error("Server did not return a joined player id.");
@@ -1126,7 +1180,53 @@ async function startHostedMatchFromLobby() {
   await serverPost(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/fill-bots`, {});
   const started = await serverPost(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/start`, {});
   appState.serverSession.status = started?.status ?? "in_progress";
+  persistServerSessionSnapshot();
   return true;
+}
+
+async function reconnectLobbySession(joinCode) {
+  if (!(await canUseServerApi())) {
+    return false;
+  }
+  const response = await serverPost(`/api/lobbies/by-code/${encodeURIComponent(joinCode)}/reconnect`, {
+    clientId: appState.serverSession.clientId,
+  });
+  if (!response?.lobbyId || !response?.viewerPlayerId) {
+    return false;
+  }
+  setServerSessionCore({
+    connected: true,
+    lobbyId: response.lobbyId,
+    viewerPlayerId: response.viewerPlayerId,
+    joinCode: response.joinCode ?? joinCode,
+    status: response.status ?? "lobby",
+    isHost: Boolean(response.isHost),
+    playerCount: response.playerCount ?? getConfiguredPlayerCount(),
+  });
+  return true;
+}
+
+async function restoreServerSessionFromStorage() {
+  let snapshot = null;
+  try {
+    snapshot = JSON.parse(window.localStorage.getItem(MULTIPLAYER_SESSION_KEY) || "null");
+  } catch (_) {
+    snapshot = null;
+  }
+  if (!snapshot?.joinCode) {
+    return false;
+  }
+  try {
+    const reconnected = await reconnectLobbySession(snapshot.joinCode);
+    if (!reconnected) {
+      return false;
+    }
+    appState.serverSession.status = snapshot.status || appState.serverSession.status;
+    syncLobbySeatPreview();
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 function mapServerViewToLocalState(view) {
@@ -1287,6 +1387,7 @@ async function refreshServerViewAndRender() {
     appState.serverSession.status = view.status || appState.serverSession.status;
     appState.serverSession.lastSyncAt = new Date().toISOString();
     appState.serverSession.lastError = null;
+    persistServerSessionSnapshot();
     renderPrototype();
   } catch (error) {
     appState.serverSession.lastError = error instanceof Error ? error.message : "Server refresh failed.";
@@ -1626,6 +1727,7 @@ function resetTransientUiState() {
   appState.ui = appState.ui || {};
   appState.ui.rejectedCardId = null;
   appState.ui.highlightedDrawCardId = null;
+  appState.ui.touchSelectedCardId = null;
   appState.pendingImpacts = [];
   clearFleetDropPreview();
   clearTargetingLine();
@@ -2318,6 +2420,72 @@ function clearValidTargetHighlights() {
   });
 }
 
+function clearTouchSelection() {
+  appState.ui.touchSelectedCardId = null;
+  clearValidTargetHighlights();
+}
+
+function highlightTouchTargetsForCard(card) {
+  clearValidTargetHighlights();
+  if (!card) {
+    return;
+  }
+  const forcedCard = getForcedImmediateCard();
+  if (forcedCard && forcedCard.id !== card.id) {
+    return;
+  }
+  if (appState.turnState.airStrikeMode && card.kind !== "carrier_airstrike") {
+    return;
+  }
+  const candidates = [...document.querySelectorAll("[data-drop-type], [data-zone='bottom'][data-ship-index]")];
+  candidates.forEach((node) => {
+    if (canHandCardDropOnTarget(card, node)) {
+      node.classList.add("is-valid-target");
+    }
+  });
+}
+
+function resolveHandCardDrop(card, dropTarget) {
+  if (!card || !dropTarget || !canHandCardDropOnTarget(card, dropTarget)) {
+    return false;
+  }
+
+  if (card.kind === "carrier_airstrike" && dropTarget.dataset.dropType === "enemy_ship") {
+    resolveCarrierAirStrike(card.fromIndex, dropTarget.dataset.zone, Number(dropTarget.dataset.shipIndex));
+    return true;
+  }
+  if (card.kind === "carrier_airstrike" && isDestroyerTarget(dropTarget)) {
+    resolveCarrierAirStrikeOnDestroyer(card.fromIndex, dropTarget.dataset.zone, dropTarget.dataset.effectId);
+    return true;
+  }
+  if (card.dropMode === "enemy_ship" && dropTarget.dataset.dropType === "enemy_ship") {
+    attachCardToEnemyShip(card, dropTarget.dataset.zone, Number(dropTarget.dataset.shipIndex), dropTarget.dataset.shipId || null);
+    return true;
+  }
+  if (card.dropMode === "enemy_ship" && isDestroyerTarget(dropTarget)) {
+    resolveDestroyerTargetDamage(card, dropTarget.dataset.zone, dropTarget.dataset.effectId);
+    return true;
+  }
+  if (card.dropMode === "battle_zone" && dropTarget.dataset.dropType === "battle_zone") {
+    deployCenterCard(card);
+    return true;
+  }
+  if (card.dropMode === "fleet_target" && dropTarget.dataset.zone) {
+    playFleetTargetCard(card, dropTarget.dataset.zone);
+    return true;
+  }
+  if (card.dropMode === "own_ship" && dropTarget.dataset.dropType === "own_ship") {
+    playOwnShipCard(card, Number(dropTarget.dataset.shipIndex), dropTarget.dataset.shipId || null);
+    return true;
+  }
+  if (dropTarget.dataset.dropType === "discard_action") {
+    discardHandCardAsAction(card);
+    return true;
+  }
+
+  return false;
+}
+
 function highlightValidTargets() {
   clearValidTargetHighlights();
   if (!dragState) {
@@ -2928,6 +3096,9 @@ async function startHostedMatchFromUi() {
     if (appState.serverSession.isHost) {
       await startHostedMatchFromLobby();
     } else {
+      if (!appState.serverSession.viewerPlayerId && appState.serverSession.joinCode) {
+        await reconnectLobbySession(appState.serverSession.joinCode);
+      }
       const lobby = await serverGet(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}`);
       appState.serverSession.status = lobby.status || appState.serverSession.status;
       if (appState.serverSession.status !== "in_progress") {
@@ -2935,16 +3106,26 @@ async function startHostedMatchFromUi() {
         renderPrototype();
         return;
       }
-      const localName = getPlayerName("bottom");
-      const seatedRecord =
-        (lobby.players || []).find((player) => player.playerName === localName) ||
-        null;
-      if (!seatedRecord?.playerId) {
-        appendLog(`Enter match failed: ${localName} is not seated in this lobby.`);
+      const hasViewerSeat = (lobby.players || []).some((player) => player.playerId === appState.serverSession.viewerPlayerId);
+      if (!hasViewerSeat) {
+        if (appState.serverSession.joinCode) {
+          const reconnected = await reconnectLobbySession(appState.serverSession.joinCode);
+          if (!reconnected) {
+            appendLog("Enter match failed: your player session is no longer seated in this lobby.");
+            renderPrototype();
+            return;
+          }
+        } else {
+          appendLog("Enter match failed: no active viewer session is associated with this lobby.");
+          renderPrototype();
+          return;
+        }
+      }
+      if (!(lobby.players || []).some((player) => player.playerId === appState.serverSession.viewerPlayerId)) {
+        appendLog("Enter match failed: this session is not seated in the running match.");
         renderPrototype();
         return;
       }
-      appState.serverSession.viewerPlayerId = seatedRecord.playerId;
     }
     await refreshServerViewAndRender();
     startServerPolling();
@@ -4004,7 +4185,7 @@ function createShipCard(ship, zone, index) {
   if (ship.sunk) wrapper.classList.add("is-sunk");
   if (ship.isSinking) wrapper.classList.add("is-sinking-transition");
   if (zone === "bottom" && !ship.sunk) {
-    wrapper.draggable = true;
+    wrapper.draggable = !IS_TOUCH_DEVICE;
     wrapper.dataset.dragType = "fleet_ship";
     wrapper.dataset.isCarrier = String(ship.isCarrier);
   }
@@ -4067,7 +4248,7 @@ function createPlayCard(card, index) {
   wrapper.dataset.cardId = card.id;
   wrapper.dataset.dragType = "hand_card";
   wrapper.dataset.dropMode = card.dropMode;
-  wrapper.draggable = true;
+  wrapper.draggable = !IS_TOUCH_DEVICE;
   if (IMMEDIATE_PLAY_KINDS.has(card.kind)) {
     wrapper.classList.add("is-forced-special");
   }
@@ -4079,6 +4260,9 @@ function createPlayCard(card, index) {
   }
   if (appState.ui.highlightedDrawCardId === card.id) {
     wrapper.classList.add("is-new-draw");
+  }
+  if (appState.ui.touchSelectedCardId === card.id) {
+    wrapper.classList.add("is-touch-selected");
   }
   const image = document.createElement("img");
   image.src = card.image;
@@ -4152,7 +4336,7 @@ function createEffectCard(effect, zone) {
     card.dataset.effectKind = effect.kind;
   }
   if (zone === "bottom" && effect.kind === "destroyer_squadron") {
-    card.draggable = true;
+    card.draggable = !IS_TOUCH_DEVICE;
     card.dataset.dragType = "battle_effect";
   }
 
@@ -5772,24 +5956,7 @@ document.addEventListener("drop", (event) => {
       dragState = null;
       return;
     }
-
-    if (card.kind === "carrier_airstrike" && dropTarget.dataset.dropType === "enemy_ship") {
-      resolveCarrierAirStrike(card.fromIndex, dropTarget.dataset.zone, Number(dropTarget.dataset.shipIndex));
-    } else if (card.kind === "carrier_airstrike" && isDestroyerTarget(dropTarget)) {
-      resolveCarrierAirStrikeOnDestroyer(card.fromIndex, dropTarget.dataset.zone, dropTarget.dataset.effectId);
-    } else if (card.dropMode === "enemy_ship" && dropTarget.dataset.dropType === "enemy_ship") {
-      attachCardToEnemyShip(card, dropTarget.dataset.zone, Number(dropTarget.dataset.shipIndex), dropTarget.dataset.shipId || null);
-    } else if (card.dropMode === "enemy_ship" && isDestroyerTarget(dropTarget)) {
-      resolveDestroyerTargetDamage(card, dropTarget.dataset.zone, dropTarget.dataset.effectId);
-    } else if (card.dropMode === "battle_zone" && dropTarget.dataset.dropType === "battle_zone") {
-      deployCenterCard(card);
-    } else if (card.dropMode === "fleet_target" && dropTarget.dataset.zone) {
-      playFleetTargetCard(card, dropTarget.dataset.zone);
-    } else if (card.dropMode === "own_ship" && dropTarget.dataset.dropType === "own_ship") {
-      playOwnShipCard(card, Number(dropTarget.dataset.shipIndex), dropTarget.dataset.shipId || null);
-    } else if (dropTarget.dataset.dropType === "discard_action") {
-      discardHandCardAsAction(card);
-    }
+    resolveHandCardDrop(card, dropTarget);
   }
 
   if (
@@ -5818,5 +5985,53 @@ document.addEventListener("dragend", () => {
   dragState = null;
 });
 
+document.addEventListener("click", (event) => {
+  if (!IS_TOUCH_DEVICE || appState.match.isRoundOver || !isHumanTurn() || appState.turnState.phase !== "play") {
+    return;
+  }
+
+  const cardNode = event.target.closest("[data-drag-type='hand_card']");
+  if (cardNode) {
+    const card = getDisplayedHandCardById(cardNode.dataset.cardId);
+    if (!card) {
+      return;
+    }
+    if (appState.ui.touchSelectedCardId === card.id) {
+      clearTouchSelection();
+      renderPrototype();
+      return;
+    }
+    if (!isCardPlayableNow(card) && !IMMEDIATE_PLAY_KINDS.has(card.kind)) {
+      markRejectedHandCard(card.id);
+      renderPrototype();
+      return;
+    }
+    appState.ui.touchSelectedCardId = card.id;
+    highlightTouchTargetsForCard(card);
+    renderPrototype();
+    return;
+  }
+
+  const targetNode = event.target.closest("[data-drop-type], [data-zone='bottom'][data-ship-index]");
+  if (targetNode && appState.ui.touchSelectedCardId) {
+    const selectedCard = getDisplayedHandCardById(appState.ui.touchSelectedCardId);
+    const played = resolveHandCardDrop(selectedCard, targetNode);
+    clearTouchSelection();
+    if (!played && selectedCard?.id) {
+      markRejectedHandCard(selectedCard.id);
+    }
+    renderPrototype();
+    return;
+  }
+
+  if (appState.ui.touchSelectedCardId) {
+    clearTouchSelection();
+    renderPrototype();
+  }
+});
+appState.serverSession.clientId = getOrCreateClientId();
 renderPrototype();
-showScreen("splash");
+restoreServerSessionFromStorage().finally(() => {
+  renderPrototype();
+  showScreen("splash");
+});

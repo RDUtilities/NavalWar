@@ -30,10 +30,12 @@ export interface LobbyJoinOptions {
   role?: "human" | "bot";
   preferredSeatId?: SeatId | null;
   isLocalPlayer?: boolean;
+  clientId?: string | null;
 }
 
 export interface MultiplayerPlayerRecord {
   playerId: PlayerId;
+  clientId: string | null;
   playerName: string;
   role: "human" | "bot";
   preferredSeatId: SeatId | null;
@@ -229,6 +231,7 @@ export class InMemoryMultiplayerService {
     const hostPlayerId = createId("player");
     const hostRecord: MultiplayerPlayerRecord = {
       playerId: hostPlayerId,
+      clientId: null,
       playerName: sanitizeName(options.hostName, "Host Admiral"),
       role: "human",
       preferredSeatId: options.preferredSeatId ?? 0,
@@ -270,9 +273,21 @@ export class InMemoryMultiplayerService {
     const lobby = this.requireMutableLobby(lobbyId);
     assert(lobby.status === "lobby", "Cannot join a lobby that has already started.");
     assert(lobby.players.length < lobby.playerCount, "Lobby is already full.");
+    const normalizedClientId = options.clientId ? String(options.clientId).trim() : "";
+    if (normalizedClientId) {
+      const existing = lobby.players.find((player) => player.clientId === normalizedClientId);
+      if (existing) {
+        if (options.playerName) {
+          existing.playerName = sanitizeName(options.playerName, existing.playerName);
+        }
+        lobby.seats = assignServerSeats(toSeatReservations(lobby.players), lobby.playerCount);
+        return cloneLobby(lobby);
+      }
+    }
 
     const player: MultiplayerPlayerRecord = {
       playerId: createId("player"),
+      clientId: normalizedClientId || null,
       playerName: sanitizeName(options.playerName, "Admiral"),
       role: options.role ?? "human",
       preferredSeatId: options.preferredSeatId ?? null,
@@ -290,6 +305,22 @@ export class InMemoryMultiplayerService {
     return this.joinLobby(lobby.lobbyId, options);
   }
 
+  reconnectLobbyByJoinCode(joinCode: string, clientId: string) {
+    const normalizedClientId = String(clientId || "").trim();
+    assert(normalizedClientId.length > 0, "A clientId is required to reconnect.");
+    const lobby = this.getLobbyByJoinCode(joinCode);
+    const player = lobby.players.find((entry) => entry.clientId === normalizedClientId);
+    assert(player, `Client ${normalizedClientId} is not seated in lobby ${lobby.lobbyId}.`);
+    return {
+      lobbyId: lobby.lobbyId,
+      joinCode: lobby.joinCode,
+      status: lobby.status,
+      playerCount: lobby.playerCount,
+      viewerPlayerId: player.playerId,
+      isHost: player.isHost
+    };
+  }
+
   fillOpenSeatsWithBots(lobbyId: string, botNamePrefix = "Bot Admiral"): MultiplayerLobby {
     const lobby = this.requireMutableLobby(lobbyId);
     assert(lobby.status === "lobby", "Bots can only be added before the match starts.");
@@ -298,6 +329,7 @@ export class InMemoryMultiplayerService {
       const botIndex = lobby.players.filter((player) => player.role === "bot").length + 1;
       lobby.players.push({
         playerId: createId("player"),
+        clientId: null,
         playerName: `${botNamePrefix} ${botIndex}`,
         role: "bot",
         preferredSeatId: null,

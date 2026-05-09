@@ -221,6 +221,13 @@ Entry format:
 - Result: user-visible behavior change
 - Verification: commands run and result
 
+### 2026-05-09
+
+- `2026-05-09 11:xx America/Chicago` — Multiplayer reconnect identity + touch-play improvements
+- Scope: `src/session.ts`, `server.mjs`, `prototype/app.js`, `prototype/styles.css`
+- Result: Added persistent per-client identity (`clientId`) and by-code reconnect flow so joined humans can reattach to active lobbies/matches; client now stores/restores server session and uses reconnect during `Enter Match` fallback. Added touch-device tap-to-select/tap-to-target card play fallback and selected-card visual state to improve mobile playability where drag is difficult.
+- Verification: `node --check prototype/app.js` (pass), `node --check server.mjs` (pass), `npm run check` (pass), `npm run build` (pass), session sanity check confirmed viewer-rotated layout keeps local player at bottom.
+
 ### 2026-05-08
 
 - `2026-05-08 12:xx America/Chicago` — Host/Join lobby UI flow (no console)

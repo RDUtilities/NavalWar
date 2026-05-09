@@ -133,7 +133,7 @@ async function handleApi(req, res, pathname, searchParams) {
     return;
   }
 
-  const byCodeMatch = pathname.match(/^\/api\/lobbies\/by-code\/([^/]+)(?:\/(join))?$/);
+  const byCodeMatch = pathname.match(/^\/api\/lobbies\/by-code\/([^/]+)(?:\/(join|reconnect))?$/);
   if (byCodeMatch) {
     const joinCode = decodeURIComponent(byCodeMatch[1] || "").trim().toUpperCase();
     const action = byCodeMatch[2] || "";
@@ -147,9 +147,19 @@ async function handleApi(req, res, pathname, searchParams) {
         playerName: String(body.playerName ?? "Admiral"),
         role: body.role === "bot" ? "bot" : "human",
         preferredSeatId: body.preferredSeatId == null ? null : toInt(body.preferredSeatId, 0),
-        isLocalPlayer: Boolean(body.isLocalPlayer)
+        isLocalPlayer: Boolean(body.isLocalPlayer),
+        clientId: body.clientId == null ? null : String(body.clientId)
       });
       sendJson(res, 200, lobby);
+      return;
+    }
+    if (action === "reconnect" && req.method === "POST") {
+      const body = await parseJsonBody(req);
+      const session = multiplayerService.reconnectLobbyByJoinCode(
+        joinCode,
+        String(body.clientId ?? "")
+      );
+      sendJson(res, 200, session);
       return;
     }
   }
@@ -171,7 +181,8 @@ async function handleApi(req, res, pathname, searchParams) {
       playerName: String(body.playerName ?? "Admiral"),
       role: body.role === "bot" ? "bot" : "human",
       preferredSeatId: body.preferredSeatId == null ? null : toInt(body.preferredSeatId, 0),
-      isLocalPlayer: Boolean(body.isLocalPlayer)
+      isLocalPlayer: Boolean(body.isLocalPlayer),
+      clientId: body.clientId == null ? null : String(body.clientId)
     });
     sendJson(res, 200, lobby);
     return;
