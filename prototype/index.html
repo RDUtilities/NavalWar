@@ -42,7 +42,8 @@
             flow before launching the war table.
           </p>
           <div class="menu-actions">
-            <button class="primary-button" data-target-screen="table">Start Game</button>
+            <button class="primary-button" id="host-lobby-button">Host Lobby</button>
+            <button class="secondary-button" id="start-match-button" disabled>Start Match</button>
             <button class="secondary-button" id="load-game-button">Load Saved Game</button>
             <button class="secondary-button" data-target-screen="splash">Back To Splash</button>
           </div>
@@ -114,10 +115,15 @@
             <article class="setup-panel">
               <p class="eyebrow">Online Lobby</p>
               <div class="lobby-card">
-                <div class="seat-row"><span>Join Code</span><strong>NAV-4821</strong></div>
+                <div class="seat-row"><span>Join Code</span><strong id="lobby-join-code">Not hosted yet</strong></div>
                 <div class="seat-row"><span>Privacy</span><strong>Private match</strong></div>
-                <div class="seat-row"><span>Ready State</span><strong id="ready-state-copy">1 human / 3 bots</strong></div>
-                <button class="secondary-button">Copy Join Code</button>
+                <div class="seat-row"><span>Ready State</span><strong id="ready-state-copy">No active lobby</strong></div>
+                <label class="setup-field" for="join-code-input">
+                  <span>Join Existing Lobby</span>
+                  <input id="join-code-input" type="text" maxlength="12" placeholder="Enter join code" />
+                </label>
+                <button class="secondary-button" id="join-lobby-button">Join Lobby</button>
+                <button class="secondary-button" id="copy-join-code-button">Copy Join Code</button>
               </div>
             </article>
           </div>

@@ -71,6 +71,12 @@ const leftSeatName = document.getElementById("left-seat-name");
 const rightSeatName = document.getElementById("right-seat-name");
 const playersCountCopy = document.getElementById("players-count-copy");
 const readyStateCopy = document.getElementById("ready-state-copy");
+const lobbyJoinCode = document.getElementById("lobby-join-code");
+const joinCodeInput = document.getElementById("join-code-input");
+const hostLobbyButton = document.getElementById("host-lobby-button");
+const joinLobbyButton = document.getElementById("join-lobby-button");
+const startMatchButton = document.getElementById("start-match-button");
+const copyJoinCodeButton = document.getElementById("copy-join-code-button");
 const cardSetDescription = document.getElementById("card-set-description");
 const cardSetPlayCount = document.getElementById("card-set-play-count");
 const cardSetShipCount = document.getElementById("card-set-ship-count");
@@ -947,6 +953,7 @@ appState.serverSession = {
   lobbyId: null,
   viewerPlayerId: null,
   joinCode: null,
+  isHost: false,
   status: "offline",
   localRoleByZone: { bottom: "human", left: "bot", top: "bot", right: "bot" },
   localPlayerCount: 4,
@@ -1031,7 +1038,19 @@ async function canUseServerApi() {
   }
 }
 
-async function bootstrapServerSessionFromSetup({ playerCount, matchMode, campaignTarget }) {
+function setServerSessionCore({ connected, lobbyId, viewerPlayerId, joinCode, status, isHost, playerCount }) {
+  appState.serverSession.connected = connected;
+  appState.serverSession.lobbyId = lobbyId;
+  appState.serverSession.viewerPlayerId = viewerPlayerId;
+  appState.serverSession.joinCode = joinCode;
+  appState.serverSession.status = status;
+  appState.serverSession.isHost = isHost;
+  appState.serverSession.lastSyncAt = new Date().toISOString();
+  appState.serverSession.lastError = null;
+  appState.serverSession.localPlayerCount = playerCount;
+}
+
+async function hostLobbyFromSetup({ playerCount, matchMode, campaignTarget }) {
   if (!(await canUseServerApi())) {
     appState.serverSession.connected = false;
     appState.serverSession.status = "local_only";
@@ -1051,24 +1070,60 @@ async function bootstrapServerSessionFromSetup({ playerCount, matchMode, campaig
   if (!lobbyId) {
     throw new Error("Server did not return a lobbyId.");
   }
-
-  await serverPost(`/api/lobbies/${encodeURIComponent(lobbyId)}/fill-bots`, {});
-  const started = await serverPost(`/api/lobbies/${encodeURIComponent(lobbyId)}/start`, {});
-  const hostRecord = (started?.players || []).find((player) => player.isHost) || started?.players?.[0];
+  const hostRecord = (created?.players || []).find((player) => player.isHost) || created?.players?.[0];
   const viewerPlayerId = hostRecord?.playerId;
   if (!viewerPlayerId) {
     throw new Error("Server did not return a host player id.");
   }
+  setServerSessionCore({
+    connected: true,
+    lobbyId,
+    viewerPlayerId,
+    joinCode: created?.joinCode ?? null,
+    status: created?.status ?? "lobby",
+    isHost: true,
+    playerCount,
+  });
+  syncLobbySeatPreview();
+  return true;
+}
 
-  await serverGet(`/api/lobbies/${encodeURIComponent(lobbyId)}/view?playerId=${encodeURIComponent(viewerPlayerId)}`);
-  appState.serverSession.connected = true;
-  appState.serverSession.lobbyId = lobbyId;
-  appState.serverSession.viewerPlayerId = viewerPlayerId;
-  appState.serverSession.joinCode = started?.joinCode ?? created?.joinCode ?? null;
+async function joinLobbyFromCode(joinCode, { playerCount }) {
+  if (!(await canUseServerApi())) {
+    appState.serverSession.connected = false;
+    appState.serverSession.status = "local_only";
+    appState.serverSession.lastError = "Server API unavailable in this runtime.";
+    return false;
+  }
+  const joined = await serverPost(`/api/lobbies/by-code/${encodeURIComponent(joinCode)}/join`, {
+    playerName: getPlayerName("bottom"),
+    role: "human",
+  });
+  const viewerRecord = (joined?.players || []).find((player) => player.playerName === getPlayerName("bottom")) || joined?.players?.at(-1);
+  const viewerPlayerId = viewerRecord?.playerId;
+  if (!viewerPlayerId) {
+    throw new Error("Server did not return a joined player id.");
+  }
+  setServerSessionCore({
+    connected: true,
+    lobbyId: joined.lobbyId,
+    viewerPlayerId,
+    joinCode: joined.joinCode ?? joinCode,
+    status: joined.status ?? "lobby",
+    isHost: false,
+    playerCount,
+  });
+  syncLobbySeatPreview();
+  return true;
+}
+
+async function startHostedMatchFromLobby() {
+  if (!appState.serverSession?.lobbyId || !appState.serverSession?.isHost) {
+    throw new Error("Only the host can start the match.");
+  }
+  await serverPost(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/fill-bots`, {});
+  const started = await serverPost(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/start`, {});
   appState.serverSession.status = started?.status ?? "in_progress";
-  appState.serverSession.lastSyncAt = new Date().toISOString();
-  appState.serverSession.lastError = null;
-  appState.serverSession.localPlayerCount = playerCount;
   return true;
 }
 
@@ -1423,7 +1478,20 @@ function syncLobbySeatPreview() {
     playersCountCopy.textContent = `${playerCount} seats`;
   }
   if (readyStateCopy) {
-    readyStateCopy.textContent = `1 human / ${Math.max(0, playerCount - 1)} bots`;
+    readyStateCopy.textContent = appState.serverSession?.lobbyId
+      ? appState.serverSession.isHost
+        ? "Lobby hosted. Waiting for players or start match."
+        : "Joined lobby. Waiting for host to start."
+      : `No active lobby`;
+  }
+  if (lobbyJoinCode) {
+    lobbyJoinCode.textContent = appState.serverSession?.joinCode || "Not hosted yet";
+  }
+  if (startMatchButton) {
+    const canHostStart = appState.serverSession?.isHost && appState.serverSession?.lobbyId;
+    const canJoinRunning = appState.serverSession?.connected && appState.serverSession?.status === "in_progress";
+    startMatchButton.disabled = !(canHostStart || canJoinRunning);
+    startMatchButton.textContent = appState.serverSession?.isHost ? "Start Match" : "Enter Match";
   }
   if (cardSetSelect) {
     cardSetSelect.value = getCurrentCardSetId();
@@ -2756,7 +2824,7 @@ function startNextCampaignRound() {
   renderPrototype();
 }
 
-async function startConfiguredMatch() {
+function prepareLocalPrototypeMatchFromSetup() {
   const selectedMode = appState.match.mode || "skirmish";
   const configuredTarget = Math.max(25, Number(campaignTargetInput?.value || appState.match.campaignTarget || 100));
   const playerCount = Math.min(4, Math.max(2, Number(playerCountSelect?.value || 4)));
@@ -2768,31 +2836,88 @@ async function startConfiguredMatch() {
   appState.match.currentRound = 1;
   appState.match.scoreRows = createFreshScoreRows();
   initializePrototypeMatch({ preserveScores: true });
+  return { selectedMode, configuredTarget, playerCount };
+}
+
+async function hostLobbyFromUi() {
+  const { selectedMode, configuredTarget, playerCount } = prepareLocalPrototypeMatchFromSetup();
   try {
-    const linked = await bootstrapServerSessionFromSetup({
+    const linked = await hostLobbyFromSetup({
       playerCount,
       matchMode: selectedMode,
       campaignTarget: configuredTarget,
     });
     if (linked) {
-      appendLog(
-        `Server session linked (${appState.serverSession.joinCode ?? appState.serverSession.lobbyId}). Multiplayer state authority is now available.`
-      );
+      appendLog(`Lobby hosted. Share join code ${appState.serverSession.joinCode}.`);
       setTurnSummary(
-        "Server Session Ready",
-        "Lobby and match were created on the server.",
-        "Next step: wire card actions to /api/lobbies/:id/commands for full authoritative gameplay."
+        "Lobby Hosted",
+        "Waiting for players to join.",
+        "Click Start Match when ready. Remaining seats will be filled with bots."
       );
-      await refreshServerViewAndRender();
-      startServerPolling();
     } else {
       appendLog("Running in local-only mode (server API unavailable).");
     }
   } catch (error) {
     appState.serverSession.connected = false;
     appState.serverSession.status = "local_only";
-    appState.serverSession.lastError = error instanceof Error ? error.message : "Unknown server bootstrap error.";
-    appendLog(`Server link failed, local mode continues. ${appState.serverSession.lastError}`);
+    appState.serverSession.lastError = error instanceof Error ? error.message : "Unknown host lobby error.";
+    appendLog(`Host lobby failed. ${appState.serverSession.lastError}`);
+  }
+  renderPrototype();
+}
+
+async function joinLobbyFromUi() {
+  const { playerCount } = prepareLocalPrototypeMatchFromSetup();
+  const code = String(joinCodeInput?.value || "").trim();
+  if (!code) {
+    appendLog("Enter a join code first.");
+    renderPrototype();
+    return;
+  }
+  try {
+    const linked = await joinLobbyFromCode(code, { playerCount });
+    if (linked) {
+      appendLog(`Joined lobby ${appState.serverSession.joinCode}. Waiting for host to start.`);
+      setTurnSummary(
+        "Lobby Joined",
+        "You are connected to the host lobby.",
+        "Wait for the host to click Start Match."
+      );
+    } else {
+      appendLog("Join failed. Server API unavailable.");
+    }
+  } catch (error) {
+    appState.serverSession.lastError = error instanceof Error ? error.message : "Unknown join lobby error.";
+    appendLog(`Join failed. ${appState.serverSession.lastError}`);
+  }
+  renderPrototype();
+}
+
+async function startHostedMatchFromUi() {
+  if (!appState.serverSession?.lobbyId) {
+    appendLog("Host or join a lobby first.");
+    renderPrototype();
+    return;
+  }
+  try {
+    if (appState.serverSession.isHost) {
+      await startHostedMatchFromLobby();
+    } else {
+      const lobby = await serverGet(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}`);
+      appState.serverSession.status = lobby.status || appState.serverSession.status;
+      if (appState.serverSession.status !== "in_progress") {
+        appendLog("Host has not started the match yet.");
+        renderPrototype();
+        return;
+      }
+    }
+    await refreshServerViewAndRender();
+    startServerPolling();
+    showScreen("table");
+    appendLog(`Match started from lobby ${appState.serverSession.joinCode}.`);
+  } catch (error) {
+    appState.serverSession.lastError = error instanceof Error ? error.message : "Unknown start match error.";
+    appendLog(`Start match failed. ${appState.serverSession.lastError}`);
   }
   renderPrototype();
 }
@@ -5204,16 +5329,52 @@ async function discardHandCardAsAction(card) {
 }
 
 screenButtons.forEach((button) => {
-  button.addEventListener("click", async () => {
-    if (button.dataset.targetScreen === "table" && playerNameInput) {
-      setHumanPlayerName(playerNameInput.value);
-      showScreen(button.dataset.targetScreen);
-      await startConfiguredMatch();
-      return;
-    }
+  button.addEventListener("click", () => {
     showScreen(button.dataset.targetScreen);
   });
 });
+
+if (hostLobbyButton) {
+  hostLobbyButton.addEventListener("click", async () => {
+    if (playerNameInput) {
+      setHumanPlayerName(playerNameInput.value);
+    }
+    await hostLobbyFromUi();
+  });
+}
+
+if (joinLobbyButton) {
+  joinLobbyButton.addEventListener("click", async () => {
+    if (playerNameInput) {
+      setHumanPlayerName(playerNameInput.value);
+    }
+    await joinLobbyFromUi();
+  });
+}
+
+if (startMatchButton) {
+  startMatchButton.addEventListener("click", async () => {
+    await startHostedMatchFromUi();
+  });
+}
+
+if (copyJoinCodeButton) {
+  copyJoinCodeButton.addEventListener("click", async () => {
+    const code = appState.serverSession?.joinCode;
+    if (!code) {
+      appendLog("No join code to copy yet. Host a lobby first.");
+      renderPrototype();
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(code);
+      appendLog(`Join code ${code} copied to clipboard.`);
+    } catch {
+      appendLog(`Unable to copy automatically. Join code: ${code}`);
+    }
+    renderPrototype();
+  });
+}
 
 if (playerNameInput) {
   playerNameInput.addEventListener("input", () => {

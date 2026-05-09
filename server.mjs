@@ -133,6 +133,27 @@ async function handleApi(req, res, pathname, searchParams) {
     return;
   }
 
+  const byCodeMatch = pathname.match(/^\/api\/lobbies\/by-code\/([^/]+)(?:\/(join))?$/);
+  if (byCodeMatch) {
+    const joinCode = decodeURIComponent(byCodeMatch[1] || "").trim().toUpperCase();
+    const action = byCodeMatch[2] || "";
+    if (!action && req.method === "GET") {
+      sendJson(res, 200, multiplayerService.getLobbyByJoinCode(joinCode));
+      return;
+    }
+    if (action === "join" && req.method === "POST") {
+      const body = await parseJsonBody(req);
+      const lobby = multiplayerService.joinLobbyByJoinCode(joinCode, {
+        playerName: String(body.playerName ?? "Admiral"),
+        role: body.role === "bot" ? "bot" : "human",
+        preferredSeatId: body.preferredSeatId == null ? null : toInt(body.preferredSeatId, 0),
+        isLocalPlayer: Boolean(body.isLocalPlayer)
+      });
+      sendJson(res, 200, lobby);
+      return;
+    }
+  }
+
   const lobbyId = parseLobbyId(pathname);
   if (!lobbyId) {
     sendJson(res, 404, { error: "API route not found." });

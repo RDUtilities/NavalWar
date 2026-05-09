@@ -259,6 +259,13 @@ export class InMemoryMultiplayerService {
     return cloneLobby(lobby);
   }
 
+  getLobbyByJoinCode(joinCode: string): MultiplayerLobby {
+    const normalized = String(joinCode || "").trim().toUpperCase();
+    const lobby = [...this.lobbies.values()].find((entry) => entry.joinCode.toUpperCase() === normalized);
+    assert(lobby, `Lobby with join code ${normalized} was not found.`);
+    return cloneLobby(lobby);
+  }
+
   joinLobby(lobbyId: string, options: LobbyJoinOptions): MultiplayerLobby {
     const lobby = this.requireMutableLobby(lobbyId);
     assert(lobby.status === "lobby", "Cannot join a lobby that has already started.");
@@ -276,6 +283,11 @@ export class InMemoryMultiplayerService {
     lobby.players.push(player);
     lobby.seats = assignServerSeats(toSeatReservations(lobby.players), lobby.playerCount);
     return cloneLobby(lobby);
+  }
+
+  joinLobbyByJoinCode(joinCode: string, options: LobbyJoinOptions): MultiplayerLobby {
+    const lobby = this.getLobbyByJoinCode(joinCode);
+    return this.joinLobby(lobby.lobbyId, options);
   }
 
   fillOpenSeatsWithBots(lobbyId: string, botNamePrefix = "Bot Admiral"): MultiplayerLobby {

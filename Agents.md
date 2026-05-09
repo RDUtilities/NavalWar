@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-08
 
+- `2026-05-08 12:xx America/Chicago` — Host/Join lobby UI flow (no console)
+- Scope: `prototype/index.html`, `prototype/app.js`, `server.mjs`, `src/session.ts`
+- Result: Added menu-level `Host Lobby`, `Join Lobby`, `Start Match`, join-code input/copy, plus server join-by-code endpoints and client wiring so two humans can join same lobby before host fills remaining seats with bots and starts.
+- Verification: `node --check prototype/app.js` (pass), `node --check server.mjs` (pass), `npm run check` (pass), `npm run build` (pass)
+
 - `2026-05-08 11:xx America/Chicago` — Prototype start flow linked to server lobby API
 - Scope: `prototype/app.js`
 - Result: `Start Game` now attempts server session bootstrap (`/api/health`, create lobby, fill bots, start match, fetch host view) and records link status; local gameplay remains active fallback if API is unavailable.
