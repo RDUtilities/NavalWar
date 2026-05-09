@@ -78,6 +78,9 @@ export interface MultiplayerPlayerView {
   legalCommands: string[];
   gameState: {
     phase: GameState["phase"];
+    hasDrawnThisTurn: boolean;
+    hasUsedCarrierStrikeThisTurn: boolean;
+    hasPerformedActionThisTurn: boolean;
     roundNumber: number;
     turnNumber: number;
     currentPlayerId: PlayerId;
@@ -126,6 +129,13 @@ class DefaultRandomSource implements RandomSource {
   rollDie() {
     return Math.floor(Math.random() * 6) + 1;
   }
+}
+
+function randomIndex(maxExclusive: number) {
+  if (maxExclusive <= 1) {
+    return 0;
+  }
+  return Math.floor(Math.random() * maxExclusive);
 }
 
 function shuffle<T>(items: T[]): T[] {
@@ -308,6 +318,7 @@ export class InMemoryMultiplayerService {
     lobby.players = synchronizeLobbyPlayersToState(lobby.players, lobby.seats);
     lobby.hostPlayerId = lobby.players.find((player) => player.isHost)?.playerId ?? lobby.hostPlayerId;
     lobby.state = state;
+    this.runBotTurnsUntilHumanOrEnd(lobby);
     lobby.status = state.matchWinnerIds.length > 0 ? "finished" : "in_progress";
     return cloneLobby(lobby);
   }
@@ -322,6 +333,8 @@ export class InMemoryMultiplayerService {
     );
 
     lobby.state = applyCommand(lobby.state, command, this.rng);
+    this.autoResolvePendingDestroyerSelection(lobby, command.actorId);
+    this.runBotTurnsUntilHumanOrEnd(lobby);
     if (lobby.state.phase === "round_complete" || lobby.state.matchWinnerIds.length > 0) {
       lobby.status = "finished";
     }
@@ -349,6 +362,9 @@ export class InMemoryMultiplayerService {
       gameState: lobby.state
         ? {
             phase: lobby.state.phase,
+            hasDrawnThisTurn: lobby.state.hasDrawnThisTurn,
+            hasUsedCarrierStrikeThisTurn: lobby.state.hasUsedCarrierStrikeThisTurn,
+            hasPerformedActionThisTurn: lobby.state.hasPerformedActionThisTurn,
             roundNumber: lobby.state.roundNumber,
             turnNumber: lobby.state.turnNumber,
             currentPlayerId: lobby.state.currentPlayerId,
@@ -381,11 +397,197 @@ export class InMemoryMultiplayerService {
     };
   }
 
+  private runBotTurnsUntilHumanOrEnd(lobby: MultiplayerLobby) {
+    if (!lobby.state) {
+      return;
+    }
+    let safety = 0;
+    while (safety < 250) {
+      safety += 1;
+      const state = lobby.state;
+      if (!state || state.phase === "round_complete" || state.matchWinnerIds.length > 0) {
+        return;
+      }
+      const actor = state.players.find((entry) => entry.id === state.currentPlayerId);
+      if (!actor) {
+        return;
+      }
+      const actorRecord = lobby.players.find((entry) => entry.playerId === actor.id);
+      const isBot = actorRecord?.role === "bot";
+      if (!isBot) {
+        return;
+      }
+      const command = chooseBotCommand(state, actor.id, this.rng);
+      if (!command) {
+        return;
+      }
+      lobby.state = applyCommand(state, command, this.rng);
+      this.autoResolvePendingDestroyerSelection(lobby, actor.id);
+    }
+  }
+
+  private autoResolvePendingDestroyerSelection(lobby: MultiplayerLobby, actorId: PlayerId) {
+    const state = lobby.state;
+    const pending = state?.pendingDestroyerAttack;
+    if (!state || !pending || pending.ownerId !== actorId) {
+      return;
+    }
+    const targetPlayer = state.players.find((entry) => entry.id === pending.targetPlayerId);
+    if (!targetPlayer) {
+      return;
+    }
+    const targetShipIds = targetPlayer.ships.filter((ship) => !ship.sunk).slice(0, pending.shipsToSink).map((ship) => ship.card.id);
+    lobby.state = applyCommand(
+      state,
+      {
+        type: "select_destroyer_squadron_targets",
+        actorId,
+        destroyerId: pending.destroyerId,
+        targetShipIds
+      },
+      this.rng
+    );
+  }
+
   private requireMutableLobby(lobbyId: string): MultiplayerLobby {
     const lobby = this.lobbies.get(lobbyId);
     assert(lobby, `Lobby ${lobbyId} was not found.`);
     return lobby;
   }
+}
+
+function chooseBotCommand(state: GameState, actorId: PlayerId, rng: RandomSource): GameCommand | null {
+  const legal = listLegalCommands(state, actorId);
+  if (legal.length === 0) {
+    return null;
+  }
+  const actor = state.players.find((entry) => entry.id === actorId);
+  if (!actor) {
+    return null;
+  }
+  const livingShips = actor.ships.filter((ship) => !ship.sunk);
+  const enemyPlayers = state.players.filter((entry) => entry.id !== actorId && !entry.eliminated);
+
+  const inPriority = (name: string) => legal.includes(name);
+
+  if (inPriority("select_destroyer_squadron_targets")) {
+    const pending = state.pendingDestroyerAttack;
+    if (!pending || pending.ownerId !== actorId) {
+      return null;
+    }
+    const targetPlayer = state.players.find((entry) => entry.id === pending.targetPlayerId);
+    if (!targetPlayer) {
+      return null;
+    }
+    const targetShipIds = targetPlayer.ships.filter((ship) => !ship.sunk).slice(0, pending.shipsToSink).map((ship) => ship.card.id);
+    return { type: "select_destroyer_squadron_targets", actorId, destroyerId: pending.destroyerId, targetShipIds };
+  }
+
+  if (inPriority("resolve_destroyer_squadron_roll")) {
+    const squadron = state.destroyerSquadrons.find((entry) => entry.ownerId === actorId && entry.deployedTurn < state.turnNumber);
+    const target = enemyPlayers[0];
+    if (squadron && target) {
+      return { type: "resolve_destroyer_squadron_roll", actorId, destroyerId: squadron.id, targetPlayerId: target.id };
+    }
+  }
+
+  if (inPriority("draw_card")) {
+    return { type: "draw_card", actorId };
+  }
+
+  const shipTargets = enemyPlayers.flatMap((enemy) =>
+    enemy.ships
+      .filter((ship) => !ship.sunk)
+      .map((ship) => ({ targetPlayerId: enemy.id, targetShipId: ship.card.id, ship }))
+  );
+
+  if (inPriority("use_carrier_strike")) {
+    const carriers = livingShips.filter((ship) => ship.card.isCarrier);
+    const strikes = carriers
+      .map((carrier) => {
+        const target = shipTargets[randomIndex(shipTargets.length)];
+        if (!target) return null;
+        return { carrierShipId: carrier.card.id, targetPlayerId: target.targetPlayerId, targetShipId: target.targetShipId };
+      })
+      .filter((entry): entry is { carrierShipId: string; targetPlayerId: string; targetShipId: string } => Boolean(entry));
+    if (strikes.length > 0) {
+      return { type: "use_carrier_strike", actorId, strikes };
+    }
+  }
+
+  const handByKind = (kind: PlayCard["kind"]) => actor.hand.filter((card) => card.kind === kind);
+
+  if (inPriority("play_additional_ship")) {
+    const card = handByKind("additional_ship")[0];
+    if (card) return { type: "play_additional_ship", actorId, cardId: card.id };
+  }
+  if (inPriority("play_minefield")) {
+    const card = handByKind("minefield")[0];
+    const target = enemyPlayers[0];
+    if (card && target) return { type: "play_minefield", actorId, cardId: card.id, targetPlayerId: target.id };
+  }
+  if (inPriority("play_submarine")) {
+    const card = handByKind("submarine")[0];
+    const target = shipTargets[0];
+    if (card && target) return { type: "play_submarine", actorId, cardId: card.id, targetPlayerId: target.targetPlayerId, targetShipId: target.targetShipId };
+  }
+  if (inPriority("play_torpedo_boat")) {
+    const card = handByKind("torpedo_boat")[0];
+    const target = shipTargets[0];
+    if (card && target) return { type: "play_torpedo_boat", actorId, cardId: card.id, targetPlayerId: target.targetPlayerId, targetShipId: target.targetShipId };
+  }
+  if (inPriority("play_additional_damage")) {
+    const card = handByKind("additional_damage")[0];
+    const target = shipTargets.find(({ ship }) =>
+      ship.attachments.some((attachment) => attachment.source.type === "salvo" || attachment.source.type === "additional_damage")
+    );
+    if (card && target) return { type: "play_additional_damage", actorId, cardId: card.id, targetPlayerId: target.targetPlayerId, targetShipId: target.targetShipId };
+  }
+  if (inPriority("play_minesweeper")) {
+    const card = handByKind("minesweeper")[0];
+    const target = state.players.find((player) => player.fleetEffects.some((effect) => effect.kind === "minefield"));
+    if (card && target) return { type: "play_minesweeper", actorId, cardId: card.id, targetPlayerId: target.id };
+  }
+  if (inPriority("play_repair")) {
+    const card = handByKind("repair")[0];
+    const ownTarget = livingShips.find((ship) =>
+      ship.damage.some((damage) => damage.type === "salvo" || damage.type === "additional_damage")
+    );
+    if (card && ownTarget) return { type: "play_repair", actorId, cardId: card.id, targetShipId: ownTarget.card.id };
+  }
+  if (inPriority("play_smoke")) {
+    const card = handByKind("smoke")[0];
+    if (card) return { type: "play_smoke", actorId, cardId: card.id };
+  }
+  if (inPriority("play_destroyer_squadron")) {
+    const card = handByKind("destroyer_squadron")[0];
+    if (card) return { type: "play_destroyer_squadron", actorId, cardId: card.id };
+  }
+  if (inPriority("play_salvo")) {
+    const salvos = actor.hand.filter((card): card is Extract<PlayCard, { kind: "salvo" }> => card.kind === "salvo");
+    const salvo = salvos.find((card) =>
+      livingShips.some((ship) => ship.card.gunCaliber === card.gunCaliber)
+    );
+    const target = shipTargets[0];
+    if (salvo && target) return { type: "play_salvo", actorId, cardId: salvo.id, targetPlayerId: target.targetPlayerId, targetShipId: target.targetShipId };
+  }
+  if (inPriority("attack_destroyer_squadron")) {
+    const salvos = actor.hand.filter((card): card is Extract<PlayCard, { kind: "salvo" }> => card.kind === "salvo");
+    const salvo = salvos.find((card) =>
+      livingShips.some((ship) => ship.card.gunCaliber === card.gunCaliber)
+    );
+    const squadron = state.destroyerSquadrons.find((entry) => entry.ownerId !== actorId);
+    if (salvo && squadron) return { type: "attack_destroyer_squadron", actorId, cardId: salvo.id, targetDestroyerId: squadron.id };
+  }
+  if (inPriority("discard_play_card")) {
+    const card = actor.hand[0];
+    if (card) return { type: "discard_play_card", actorId, cardId: card.id };
+  }
+  if (inPriority("end_turn")) {
+    return { type: "end_turn", actorId };
+  }
+
+  return null;
 }
 
 function occupiedSeatsToStatePlayers(seats: ServerSeatRecord[], state: GameState): ServerSeatRecord[] {

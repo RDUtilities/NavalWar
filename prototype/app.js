@@ -420,6 +420,44 @@ const PLAY_CARD_DRAW_LIBRARY = [
     dropMode: "battle_zone",
   },
 ];
+const SHIP_CARD_BY_NAME = new Map(
+  SHIP_DEAL_LIBRARY.map((ship) => [ship.ship, ship])
+);
+const PLAY_CARD_BY_SIGNATURE = new Map(
+  PLAY_CARD_DRAW_LIBRARY.map((card) => [cardSignature(card), card])
+);
+
+function cardSignature(card) {
+  if (card.kind === "salvo") {
+    return `salvo:${card.gunSize}:${card.hits}`;
+  }
+  if (card.kind === "additional_damage" || card.kind === "minefield") {
+    return `${card.kind}:${card.hits}`;
+  }
+  return `${card.kind}`;
+}
+
+function serverCardToClientCard(serverCard) {
+  const signature = cardSignature({
+    kind: serverCard.kind,
+    gunSize: serverCard.gunCaliber,
+    hits: serverCard.hits,
+  });
+  const template = PLAY_CARD_BY_SIGNATURE.get(signature);
+  if (template) {
+    return {
+      ...template,
+      id: serverCard.id,
+    };
+  }
+  return {
+    id: serverCard.id,
+    kind: serverCard.kind,
+    label: serverCard.kind.replaceAll("_", " "),
+    image: "../assets/cards/play/Modern/cardback-Play.png",
+    dropMode: "enemy_ship",
+  };
+}
 const smallSalvoAudio = new Audio("../assets/sound/Salvo-small.wav");
 const bigSalvoAudio = new Audio("../assets/sound/Salvo-big.wav");
 const shipSinkAudio = new Audio("../assets/sound/shipsink.wav");
@@ -895,6 +933,7 @@ const ACTIVE_ZONE_LAYOUTS = {
 };
 const BOT_TURN_DELAY_MS = 900;
 const LOCAL_SAVE_KEY = "naval-war-prototype-save-v1";
+const SERVER_API_BASE = `${window.location.origin}`;
 let botTurnTimer = null;
 let humanTurnAdvanceTimer = null;
 let diceBannerTimer = null;
@@ -902,9 +941,22 @@ let diceRollAnimationTimer = null;
 let pendingDiceAdvanceDelay = 0;
 let autosaveTimer = null;
 let hasLaunchedMatch = false;
+let serverPollTimer = null;
+appState.serverSession = {
+  connected: false,
+  lobbyId: null,
+  viewerPlayerId: null,
+  joinCode: null,
+  status: "offline",
+  localRoleByZone: { bottom: "human", left: "bot", top: "bot", right: "bot" },
+  localPlayerCount: 4,
+  lastSyncAt: null,
+  lastError: null,
+};
 
 function showScreen(target) {
   if (target !== "table") {
+    stopServerPolling();
     window.clearTimeout(botTurnTimer);
     window.clearTimeout(humanTurnAdvanceTimer);
     humanTurnAdvanceTimer = null;
@@ -921,6 +973,9 @@ function showScreen(target) {
   screens.forEach((screen) => {
     screen.classList.toggle("is-active", screen.dataset.screen === target);
   });
+  if (target === "table" && appState.serverSession?.connected) {
+    startServerPolling();
+  }
 }
 
 function setTurnSummary(title, subtitle, outcome) {
@@ -933,6 +988,281 @@ function setTurnSummary(title, subtitle, outcome) {
   }
   if (turnSummaryOutcome) {
     turnSummaryOutcome.textContent = outcome;
+  }
+}
+
+async function serverGet(path) {
+  const response = await fetch(`${SERVER_API_BASE}${path}`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`GET ${path} failed (${response.status}): ${text}`);
+  }
+  return response.json();
+}
+
+async function serverPost(path, body) {
+  const response = await fetch(`${SERVER_API_BASE}${path}`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body ?? {}),
+  });
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`POST ${path} failed (${response.status}): ${text}`);
+  }
+  return response.json();
+}
+
+async function canUseServerApi() {
+  if (window.location.protocol === "file:") {
+    return false;
+  }
+  try {
+    const health = await serverGet("/api/health");
+    return Boolean(health?.ok);
+  } catch {
+    return false;
+  }
+}
+
+async function bootstrapServerSessionFromSetup({ playerCount, matchMode, campaignTarget }) {
+  if (!(await canUseServerApi())) {
+    appState.serverSession.connected = false;
+    appState.serverSession.status = "local_only";
+    appState.serverSession.lastError = "Server API unavailable in this runtime.";
+    return false;
+  }
+
+  const hostName = getPlayerName("bottom");
+  const created = await serverPost("/api/lobbies", {
+    hostName,
+    playerCount,
+    matchMode,
+    campaignTargetScore: campaignTarget,
+    preferredSeatId: 0,
+  });
+  const lobbyId = created?.lobbyId;
+  if (!lobbyId) {
+    throw new Error("Server did not return a lobbyId.");
+  }
+
+  await serverPost(`/api/lobbies/${encodeURIComponent(lobbyId)}/fill-bots`, {});
+  const started = await serverPost(`/api/lobbies/${encodeURIComponent(lobbyId)}/start`, {});
+  const hostRecord = (started?.players || []).find((player) => player.isHost) || started?.players?.[0];
+  const viewerPlayerId = hostRecord?.playerId;
+  if (!viewerPlayerId) {
+    throw new Error("Server did not return a host player id.");
+  }
+
+  await serverGet(`/api/lobbies/${encodeURIComponent(lobbyId)}/view?playerId=${encodeURIComponent(viewerPlayerId)}`);
+  appState.serverSession.connected = true;
+  appState.serverSession.lobbyId = lobbyId;
+  appState.serverSession.viewerPlayerId = viewerPlayerId;
+  appState.serverSession.joinCode = started?.joinCode ?? created?.joinCode ?? null;
+  appState.serverSession.status = started?.status ?? "in_progress";
+  appState.serverSession.lastSyncAt = new Date().toISOString();
+  appState.serverSession.lastError = null;
+  appState.serverSession.localPlayerCount = playerCount;
+  return true;
+}
+
+function mapServerViewToLocalState(view) {
+  const gameState = view?.gameState;
+  if (!gameState) {
+    return;
+  }
+  appState.botHands = appState.botHands || { left: [], top: [], right: [] };
+  const playersBySide = {};
+  appState.fleetsByZone = {};
+  appState.effectsByFleet = { bottom: [], left: [], top: [], right: [] };
+  appState.serverSession.localRoleByZone = { bottom: "empty", left: "empty", top: "empty", right: "empty" };
+  gameState.players.forEach((player) => {
+    const seatRecord = Object.values(view.seatLayout?.seatsBySide || {}).find((seat) => seat?.assignment?.playerId === player.id);
+    if (seatRecord?.side) {
+      playersBySide[seatRecord.side] = player;
+      appState.fleetsByZone[seatRecord.side] = { playerId: player.id, name: player.name };
+      appState.serverSession.localRoleByZone[seatRecord.side] = seatRecord.role || "human";
+    }
+  });
+  appState.tableConfig.playerCount = Math.min(4, Math.max(2, gameState.players.length || appState.tableConfig.playerCount || 4));
+
+  const sides = ["bottom", "left", "top", "right"];
+  sides.forEach((side) => {
+    const player = playersBySide[side];
+    if (!player) {
+      appState.fleets[side] = [];
+      if (side !== "bottom") {
+        appState.botHands[side] = [];
+      }
+      return;
+    }
+    PLAYER_NAMES[side] = player.name;
+    const sideEffects = (player.fleetEffects || []).map((effect) => {
+      const rendered = serverCardToClientCard(effect.card);
+      return {
+        id: effect.card.id,
+        kind: effect.kind,
+        label: rendered.label,
+        image: rendered.image,
+        hits: effect.hits,
+      };
+    });
+    appState.effectsByFleet[side] = sideEffects;
+    const ships = player.ships.map((ship) => {
+      const template = SHIP_CARD_BY_NAME.get(ship.card.name);
+      const damageTotal = ship.damage.reduce((sum, entry) => sum + Number(entry.hits || 0), 0);
+      const remaining = Math.max(ship.card.hitNumber - damageTotal, 0);
+      const salvos = (ship.attachments || []).map((attachment) => {
+        const rendered = serverCardToClientCard(attachment.card);
+        return {
+          image: rendered.image,
+          label: rendered.label,
+        };
+      });
+      return {
+        ship: ship.card.name,
+        shipId: ship.card.id,
+        image: template?.image || SHIP_CARD_BACK,
+        damage: `${remaining} / ${ship.card.hitNumber}`,
+        isCarrier: Boolean(ship.card.isCarrier),
+        gunSize: ship.card.gunCaliber,
+        salvos,
+      };
+    });
+    ships.sort((a, b) => Number(a.isCarrier) - Number(b.isCarrier));
+    appState.fleets[side] = ships;
+    if (side === "bottom") {
+      appState.hand = (player.hand || []).map((card) => serverCardToClientCard(card));
+    } else {
+      appState.botHands[side] = Array.from({ length: player.handCount || 0 }, (_, idx) => ({ id: `hidden-${side}-${idx}` }));
+    }
+  });
+
+  (gameState.destroyerSquadrons || []).forEach((squadron) => {
+    const ownerSide = Object.keys(playersBySide).find((side) => playersBySide[side]?.id === squadron.ownerId);
+    if (!ownerSide) {
+      return;
+    }
+    appState.effectsByFleet[ownerSide] = appState.effectsByFleet[ownerSide] || [];
+    appState.effectsByFleet[ownerSide].push({
+      id: squadron.id,
+      kind: "destroyer_squadron",
+      label: "Destroyer Squadron",
+      image: "../assets/cards/play/Modern/Destroyer-4hits.png",
+      damage: `${Math.max(4 - Number(squadron.hitsTaken || 0), 0)} / 4`,
+      salvos: [],
+    });
+  });
+
+  appState.turnState.currentZone =
+    Object.keys(playersBySide).find((side) => playersBySide[side]?.id === gameState.currentPlayerId) || "bottom";
+  appState.turnState.turnNumber = gameState.turnNumber;
+  appState.turnState.phase = gameState.phase === "round_complete"
+    ? "complete"
+    : gameState.hasPerformedActionThisTurn
+    ? "complete"
+    : gameState.hasDrawnThisTurn || gameState.hasUsedCarrierStrikeThisTurn
+    ? "play"
+    : "draw";
+  appState.turnState.playedCard = Boolean(gameState.hasPerformedActionThisTurn);
+  appState.match.isRoundOver = gameState.phase === "round_complete";
+  appState.match.roundEndReason = gameState.roundEndReason || null;
+  appState.match.winnerZone =
+    Object.keys(playersBySide).find((side) => gameState.winnerIds?.includes(playersBySide[side]?.id)) || null;
+  appState.match.currentRound = gameState.roundNumber || 1;
+  appState.match.mode = gameState.options?.matchMode || appState.match.mode;
+  appState.match.campaignTarget = gameState.options?.campaignTargetScore || appState.match.campaignTarget;
+
+  if (gameState.campaign?.totalScores) {
+    appState.match.scoreRows = Object.entries(playersBySide).map(([side, player]) => ({
+      player: player.name,
+      playerZone: side,
+      rounds: [],
+      total: gameState.campaign.totalScores[player.id] || 0,
+    }));
+  } else {
+    appState.match.scoreRows = Object.entries(playersBySide).map(([side, player]) => ({
+      player: player.name,
+      playerZone: side,
+      rounds: [],
+      total: 0,
+    }));
+  }
+
+  appState.drawPiles = [
+    {
+      label: "Play Deck",
+      count: gameState.playDeckCount,
+      image: "../assets/cards/play/Modern/cardback-Play.png",
+    },
+    {
+      label: "Discard Pile",
+      count: gameState.discardPileCount,
+      image: "../assets/cards/play/Modern/cardback-Play.png",
+      topCardLabel: gameState.discardPileCount > 0 ? "Top discard from server state" : "Discard pile is empty",
+    },
+    {
+      label: "Ship Deck",
+      count: gameState.shipDeckCount,
+      image: "../assets/cards/ships/Modern/Cardback-Ship.png",
+    },
+  ];
+
+  const serverEvents = gameState.events || [];
+  appState.combatLog = [...serverEvents].reverse().map((event) => `${event.type}: ${event.detail}`);
+}
+
+async function refreshServerViewAndRender() {
+  if (!appState.serverSession?.connected || !appState.serverSession.lobbyId || !appState.serverSession.viewerPlayerId) {
+    return;
+  }
+  try {
+    const view = await serverGet(
+      `/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/view?playerId=${encodeURIComponent(appState.serverSession.viewerPlayerId)}`
+    );
+    mapServerViewToLocalState(view);
+    appState.serverSession.status = view.status || appState.serverSession.status;
+    appState.serverSession.lastSyncAt = new Date().toISOString();
+    appState.serverSession.lastError = null;
+    renderPrototype();
+  } catch (error) {
+    appState.serverSession.lastError = error instanceof Error ? error.message : "Server refresh failed.";
+  }
+}
+
+function startServerPolling() {
+  window.clearInterval(serverPollTimer);
+  if (!appState.serverSession?.connected) {
+    return;
+  }
+  serverPollTimer = window.setInterval(() => {
+    refreshServerViewAndRender();
+  }, 1200);
+}
+
+function stopServerPolling() {
+  window.clearInterval(serverPollTimer);
+  serverPollTimer = null;
+}
+
+async function submitServerCommand(command) {
+  if (!appState.serverSession?.connected || !appState.serverSession.lobbyId) {
+    return false;
+  }
+  try {
+    await serverPost(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/commands`, command);
+    await refreshServerViewAndRender();
+    return true;
+  } catch (error) {
+    appendLog(`Server command failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    renderPrototype();
+    return false;
   }
 }
 
@@ -1023,6 +1353,12 @@ function getCurrentCardSetName() {
 }
 
 function getZoneRoleLabel(zone) {
+  if (appState.serverSession?.connected) {
+    const role = appState.serverSession.localRoleByZone?.[zone];
+    if (role === "human") return "Human";
+    if (role === "bot") return "Bot";
+    return "Empty";
+  }
   if (zone === "bottom") {
     return "Human";
   }
@@ -1570,6 +1906,9 @@ function updateBottomStatus() {
     appState.match.mode === "campaign"
       ? `Campaign • ${getCurrentCardSetName()} • Round ${appState.match.currentRound} • Target ${appState.match.campaignTarget}`
       : `Skirmish • ${getCurrentCardSetName()}`;
+  if (appState.serverSession?.connected) {
+    formatPill.textContent += " • Server Linked";
+  }
   if (scoringHint) {
     scoringHint.textContent =
       appState.match.mode === "campaign"
@@ -2417,7 +2756,7 @@ function startNextCampaignRound() {
   renderPrototype();
 }
 
-function startConfiguredMatch() {
+async function startConfiguredMatch() {
   const selectedMode = appState.match.mode || "skirmish";
   const configuredTarget = Math.max(25, Number(campaignTargetInput?.value || appState.match.campaignTarget || 100));
   const playerCount = Math.min(4, Math.max(2, Number(playerCountSelect?.value || 4)));
@@ -2429,6 +2768,32 @@ function startConfiguredMatch() {
   appState.match.currentRound = 1;
   appState.match.scoreRows = createFreshScoreRows();
   initializePrototypeMatch({ preserveScores: true });
+  try {
+    const linked = await bootstrapServerSessionFromSetup({
+      playerCount,
+      matchMode: selectedMode,
+      campaignTarget: configuredTarget,
+    });
+    if (linked) {
+      appendLog(
+        `Server session linked (${appState.serverSession.joinCode ?? appState.serverSession.lobbyId}). Multiplayer state authority is now available.`
+      );
+      setTurnSummary(
+        "Server Session Ready",
+        "Lobby and match were created on the server.",
+        "Next step: wire card actions to /api/lobbies/:id/commands for full authoritative gameplay."
+      );
+      await refreshServerViewAndRender();
+      startServerPolling();
+    } else {
+      appendLog("Running in local-only mode (server API unavailable).");
+    }
+  } catch (error) {
+    appState.serverSession.connected = false;
+    appState.serverSession.status = "local_only";
+    appState.serverSession.lastError = error instanceof Error ? error.message : "Unknown server bootstrap error.";
+    appendLog(`Server link failed, local mode continues. ${appState.serverSession.lastError}`);
+  }
   renderPrototype();
 }
 
@@ -2800,6 +3165,18 @@ async function drawPlayCardForTurn() {
     return;
   }
 
+  if (appState.serverSession?.connected) {
+    const ok = await submitServerCommand({
+      type: "draw_card",
+      actorId: appState.serverSession.viewerPlayerId,
+    });
+    if (!ok) {
+      renderPrototype();
+      return;
+    }
+    return;
+  }
+
   replenishPlayDeckQueue();
   const playDeckPile = getPlayDeckPile();
   if (!playDeckPile || playDeckPile.count <= 0 || appState.playDeckQueue.length === 0) {
@@ -2977,6 +3354,20 @@ function damageDestroyerEffect(zone, effectId, hits, sourceLabel) {
 }
 
 function resolveDestroyerTargetDamage(card, targetZone, effectId) {
+  if (appState.serverSession?.connected) {
+    if (card.kind === "salvo") {
+      submitServerCommand({
+        type: "attack_destroyer_squadron",
+        actorId: appState.serverSession.viewerPlayerId,
+        cardId: card.id,
+        targetDestroyerId: effectId,
+      });
+      return;
+    }
+    appendLog(`Server currently supports salvo attacks against Destroyer Squadron only.`);
+    renderPrototype();
+    return;
+  }
   const effect = getDestroyerEffect(targetZone, effectId);
   if (!effect) {
     markRejectedHandCard(card.id);
@@ -3390,6 +3781,9 @@ async function runBotTurn(zone) {
 }
 
 function scheduleBotTurnIfNeeded() {
+  if (appState.serverSession?.connected) {
+    return;
+  }
   window.clearTimeout(botTurnTimer);
   if (appState.match.isRoundOver) {
     return;
@@ -3441,6 +3835,9 @@ function createShipCard(ship, zone, index) {
   wrapper.dataset.zoomLabel = `${ship.ship} • Damage ${ship.damage}${ship.sunk ? " • Sunk" : ""}`;
   wrapper.dataset.zone = zone;
   wrapper.dataset.shipIndex = String(index);
+  if (ship.shipId) {
+    wrapper.dataset.shipId = ship.shipId;
+  }
   if (!ship.sunk) {
     wrapper.dataset.dropType = zone === "bottom" ? "own_ship" : "enemy_ship";
   }
@@ -3967,9 +4364,10 @@ function closeSalvoPile() {
 
 function openCombatLog() {
   combatLogList.innerHTML = "";
-  appState.combatLog.forEach((entry) => {
+  const orderedEntries = [...appState.combatLog].reverse();
+  orderedEntries.forEach((entry, index) => {
     const item = document.createElement("li");
-    item.textContent = entry;
+    item.textContent = `${index + 1}. ${entry}`;
     combatLogList.appendChild(item);
   });
   logOverlay.hidden = false;
@@ -3979,8 +4377,15 @@ function closeCombatLog() {
   logOverlay.hidden = true;
 }
 
+function formatLogTimestamp(date = new Date()) {
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `${hours}:${minutes}:${seconds}`;
+}
+
 function appendLog(entry) {
-  appState.combatLog.unshift(entry);
+  appState.combatLog.unshift(`${formatLogTimestamp()} • ${entry}`);
 }
 
 function parseDamage(damageText) {
@@ -4116,6 +4521,22 @@ function resolveTorpedoBoatStrike(card, targetZone, targetIndex) {
 }
 
 function resolveCarrierAirStrike(fromIndex, targetZone, targetIndex) {
+  if (appState.serverSession?.connected) {
+    const carrierShipId = appState.fleets.bottom?.[fromIndex]?.shipId;
+    const targetShipId = appState.fleets[targetZone]?.[targetIndex]?.shipId;
+    const targetPlayerId = appState.fleetsByZone?.[targetZone]?.playerId;
+    if (!carrierShipId || !targetShipId || !targetPlayerId) {
+      appendLog("Server air strike blocked: missing target mapping.");
+      renderPrototype();
+      return;
+    }
+    submitServerCommand({
+      type: "use_carrier_strike",
+      actorId: appState.serverSession.viewerPlayerId,
+      strikes: [{ carrierShipId, targetPlayerId, targetShipId }],
+    });
+    return;
+  }
   const forcedCard = getForcedImmediateCard();
   if (forcedCard) {
     appendLog(`${forcedCard.label} must be played before launching an air strike.`);
@@ -4228,6 +4649,21 @@ function resolveCarrierAirStrikeOnDestroyer(fromIndex, targetZone, effectId) {
 }
 
 function resolveDestroyerSquadronStrike(effectId, targetZone) {
+  if (appState.serverSession?.connected) {
+    const targetPlayerId = appState.fleetsByZone?.[targetZone]?.playerId;
+    if (!targetPlayerId) {
+      appendLog("Server destroyer strike blocked: missing target player.");
+      renderPrototype();
+      return;
+    }
+    submitServerCommand({
+      type: "resolve_destroyer_squadron_roll",
+      actorId: appState.serverSession.viewerPlayerId,
+      destroyerId: effectId,
+      targetPlayerId,
+    });
+    return;
+  }
   const forcedCard = getForcedImmediateCard();
   if (forcedCard) {
     appendLog(`${forcedCard.label} must be played before activating Destroyer Squadron.`);
@@ -4314,7 +4750,39 @@ function sinkFleetShip(zone, targetIndex, winnerZone = "bottom") {
   appendLog(`${ship.ship} is sunk and moved to ${getPlayerName(winnerZone)}'s Victory Pile.`);
 }
 
-function attachCardToEnemyShip(card, targetZone, targetIndex) {
+async function attachCardToEnemyShip(card, targetZone, targetIndex, targetShipIdOverride = null) {
+  if (appState.serverSession?.connected) {
+    const targetShip =
+      targetShipIdOverride ||
+      appState.fleets[targetZone]?.[targetIndex]?.shipId ||
+      null;
+    const targetPlayerId = appState.fleetsByZone?.[targetZone]?.playerId || null;
+    if (!targetShip || !targetPlayerId) {
+      appendLog(`Server play blocked: target mapping missing for ${card.label}.`);
+      renderPrototype();
+      return;
+    }
+    const commandByKind = {
+      salvo: "play_salvo",
+      additional_damage: "play_additional_damage",
+      submarine: "play_submarine",
+      torpedo_boat: "play_torpedo_boat",
+    };
+    const commandType = commandByKind[card.kind];
+    if (!commandType) {
+      appendLog(`Server play blocked: ${card.label} target command is not supported yet.`);
+      renderPrototype();
+      return;
+    }
+    await submitServerCommand({
+      type: commandType,
+      actorId: appState.serverSession.viewerPlayerId,
+      cardId: card.id,
+      targetPlayerId,
+      targetShipId: targetShip,
+    });
+    return;
+  }
   if (!ensureForcedCard(card)) {
     return;
   }
@@ -4446,7 +4914,26 @@ function attachCardToEnemyShip(card, targetZone, targetIndex) {
   }
 }
 
-function deployCenterCard(card) {
+async function deployCenterCard(card) {
+  if (appState.serverSession?.connected) {
+    const commandMap = {
+      smoke: "play_smoke",
+      destroyer_squadron: "play_destroyer_squadron",
+      additional_ship: "play_additional_ship",
+    };
+    const type = commandMap[card.kind];
+    if (!type) {
+      appendLog(`Server deployment unsupported for ${card.label}.`);
+      renderPrototype();
+      return;
+    }
+    await submitServerCommand({
+      type,
+      actorId: appState.serverSession.viewerPlayerId,
+      cardId: card.id,
+    });
+    return;
+  }
   if (!ensureForcedCard(card)) {
     return;
   }
@@ -4493,7 +4980,33 @@ function deployCenterCard(card) {
   finalizeHumanTurn(`${getPlayerName("bottom")}'s turn ends after deploying ${card.label}.`);
 }
 
-function playFleetTargetCard(card, targetZone) {
+async function playFleetTargetCard(card, targetZone) {
+  if (appState.serverSession?.connected) {
+    const targetPlayerId = appState.fleetsByZone?.[targetZone]?.playerId || null;
+    if (!targetPlayerId) {
+      appendLog(`Server play blocked: missing fleet target for ${card.label}.`);
+      renderPrototype();
+      return;
+    }
+    if (card.kind === "minefield") {
+      await submitServerCommand({
+        type: "play_minefield",
+        actorId: appState.serverSession.viewerPlayerId,
+        cardId: card.id,
+        targetPlayerId,
+      });
+      return;
+    }
+    if (card.kind === "minesweeper") {
+      await submitServerCommand({
+        type: "play_minesweeper",
+        actorId: appState.serverSession.viewerPlayerId,
+        cardId: card.id,
+        targetPlayerId,
+      });
+      return;
+    }
+  }
   if (!ensureForcedCard(card)) {
     return;
   }
@@ -4556,7 +5069,22 @@ function playFleetTargetCard(card, targetZone) {
   }
 }
 
-function repairOwnShip(card, targetIndex) {
+async function repairOwnShip(card, targetIndex, targetShipIdOverride = null) {
+  if (appState.serverSession?.connected) {
+    const targetShipId = targetShipIdOverride || appState.fleets.bottom?.[targetIndex]?.shipId;
+    if (!targetShipId) {
+      appendLog("Server repair blocked: missing target ship id.");
+      renderPrototype();
+      return;
+    }
+    await submitServerCommand({
+      type: "play_repair",
+      actorId: appState.serverSession.viewerPlayerId,
+      cardId: card.id,
+      targetShipId,
+    });
+    return;
+  }
   if (!ensureForcedCard(card)) {
     return;
   }
@@ -4588,7 +5116,15 @@ function repairOwnShip(card, targetIndex) {
   finalizeHumanTurn(`${getPlayerName("bottom")}'s turn ends after the repair.`);
 }
 
-function resolveAdditionalShipCard(card) {
+async function resolveAdditionalShipCard(card) {
+  if (appState.serverSession?.connected) {
+    await submitServerCommand({
+      type: "play_additional_ship",
+      actorId: appState.serverSession.viewerPlayerId,
+      cardId: card.id,
+    });
+    return;
+  }
   if (!ensureForcedCard(card)) {
     return;
   }
@@ -4624,16 +5160,24 @@ function resolveAdditionalShipCard(card) {
   finalizeHumanTurn(`${getPlayerName("bottom")}'s turn ends after resolving Additional Ship.`);
 }
 
-function playOwnShipCard(card, targetIndex) {
+function playOwnShipCard(card, targetIndex, targetShipIdOverride = null) {
   if (card.kind === "additional_ship") {
     resolveAdditionalShipCard(card);
     return;
   }
 
-  repairOwnShip(card, targetIndex);
+  repairOwnShip(card, targetIndex, targetShipIdOverride);
 }
 
-function discardHandCardAsAction(card) {
+async function discardHandCardAsAction(card) {
+  if (appState.serverSession?.connected) {
+    await submitServerCommand({
+      type: "discard_play_card",
+      actorId: appState.serverSession.viewerPlayerId,
+      cardId: card.id,
+    });
+    return;
+  }
   if (appState.turnState.phase !== "play") {
     appendLog(`${card.label} can only be discarded during the play phase.`);
     renderPrototype();
@@ -4660,10 +5204,12 @@ function discardHandCardAsAction(card) {
 }
 
 screenButtons.forEach((button) => {
-  button.addEventListener("click", () => {
+  button.addEventListener("click", async () => {
     if (button.dataset.targetScreen === "table" && playerNameInput) {
       setHumanPlayerName(playerNameInput.value);
-      startConfiguredMatch();
+      showScreen(button.dataset.targetScreen);
+      await startConfiguredMatch();
+      return;
     }
     showScreen(button.dataset.targetScreen);
   });
@@ -5035,7 +5581,7 @@ document.addEventListener("drop", (event) => {
     } else if (card.kind === "carrier_airstrike" && isDestroyerTarget(dropTarget)) {
       resolveCarrierAirStrikeOnDestroyer(card.fromIndex, dropTarget.dataset.zone, dropTarget.dataset.effectId);
     } else if (card.dropMode === "enemy_ship" && dropTarget.dataset.dropType === "enemy_ship") {
-      attachCardToEnemyShip(card, dropTarget.dataset.zone, Number(dropTarget.dataset.shipIndex));
+      attachCardToEnemyShip(card, dropTarget.dataset.zone, Number(dropTarget.dataset.shipIndex), dropTarget.dataset.shipId || null);
     } else if (card.dropMode === "enemy_ship" && isDestroyerTarget(dropTarget)) {
       resolveDestroyerTargetDamage(card, dropTarget.dataset.zone, dropTarget.dataset.effectId);
     } else if (card.dropMode === "battle_zone" && dropTarget.dataset.dropType === "battle_zone") {
@@ -5043,7 +5589,7 @@ document.addEventListener("drop", (event) => {
     } else if (card.dropMode === "fleet_target" && dropTarget.dataset.zone) {
       playFleetTargetCard(card, dropTarget.dataset.zone);
     } else if (card.dropMode === "own_ship" && dropTarget.dataset.dropType === "own_ship") {
-      playOwnShipCard(card, Number(dropTarget.dataset.shipIndex));
+      playOwnShipCard(card, Number(dropTarget.dataset.shipIndex), dropTarget.dataset.shipId || null);
     } else if (dropTarget.dataset.dropType === "discard_action") {
       discardHandCardAsAction(card);
     }

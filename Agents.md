@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-08
 
+- `2026-05-08 11:xx America/Chicago` — Prototype start flow linked to server lobby API
+- Scope: `prototype/app.js`
+- Result: `Start Game` now attempts server session bootstrap (`/api/health`, create lobby, fill bots, start match, fetch host view) and records link status; local gameplay remains active fallback if API is unavailable.
+- Verification: `node --check prototype/app.js` (pass), `npm run check` (pass)
+
 - `2026-05-08 10:xx America/Chicago` — Server-backed multiplayer API baseline
 - Scope: `server.mjs`, `README.md`
 - Result: Replaced static-only server with API + static host server exposing create/join/fill/start/view/command routes backed by `InMemoryMultiplayerService` from `dist/session.js`.
