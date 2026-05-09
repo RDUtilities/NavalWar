@@ -2910,6 +2910,16 @@ async function startHostedMatchFromUi() {
         renderPrototype();
         return;
       }
+      const localName = getPlayerName("bottom");
+      const seatedRecord =
+        (lobby.players || []).find((player) => player.playerName === localName) ||
+        null;
+      if (!seatedRecord?.playerId) {
+        appendLog(`Enter match failed: ${localName} is not seated in this lobby.`);
+        renderPrototype();
+        return;
+      }
+      appState.serverSession.viewerPlayerId = seatedRecord.playerId;
     }
     await refreshServerViewAndRender();
     startServerPolling();
