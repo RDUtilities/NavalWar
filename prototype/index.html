@@ -41,9 +41,14 @@
             Build the match from here: choose the mode, review seat control, and stage the lobby
             flow before launching the war table.
           </p>
+          <div class="mode-switch-row">
+            <button class="secondary-button setup-mode-button is-active" id="setup-mode-solo">Solo</button>
+            <button class="secondary-button setup-mode-button" id="setup-mode-multiplayer">Multiplayer</button>
+          </div>
           <div class="menu-actions">
             <button class="primary-button" id="host-lobby-button">Host Lobby</button>
             <button class="secondary-button" id="start-match-button" disabled>Start Match</button>
+            <button class="secondary-button" id="ready-toggle-button" disabled>Ready</button>
             <button class="secondary-button" id="load-game-button">Load Saved Game</button>
             <button class="secondary-button" data-target-screen="splash">Back To Splash</button>
           </div>
@@ -119,6 +124,8 @@
                 <div class="seat-row"><span>Join Code</span><strong id="lobby-join-code">Not hosted yet</strong></div>
                 <div class="seat-row"><span>Privacy</span><strong>Private match</strong></div>
                 <div class="seat-row"><span>Ready State</span><strong id="ready-state-copy">No active lobby</strong></div>
+                <div class="seat-row"><span>Lobby Ready</span><strong id="lobby-ready-summary">0 / 0 ready</strong></div>
+                <div id="lobby-ready-list" class="lobby-ready-list"></div>
                 <label class="setup-field" for="join-code-input">
                   <span>Join Existing Lobby</span>
                   <input id="join-code-input" type="text" maxlength="12" placeholder="Enter join code" />

@@ -206,6 +206,33 @@ button {
   flex-wrap: wrap;
 }
 
+.mode-switch-row {
+  display: flex;
+  gap: 10px;
+  margin: 8px 0 12px;
+}
+
+.setup-mode-button.is-active {
+  border-color: rgba(243, 207, 135, 0.95);
+  box-shadow: 0 0 0 2px rgba(243, 207, 135, 0.24);
+}
+
+.lobby-ready-list {
+  display: grid;
+  gap: 6px;
+}
+
+.lobby-ready-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.88rem;
+}
+
+.lobby-ready-check {
+  color: #79d88f;
+  font-weight: 700;
+}
+
 .primary-button,
 .secondary-button {
   padding: 14px 24px;

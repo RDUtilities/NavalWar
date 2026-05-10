@@ -134,7 +134,8 @@ async function handleApi(req, res, pathname, searchParams) {
       playerCount: Math.min(4, Math.max(1, toInt(body.playerCount, 4))),
       matchMode: body.matchMode === "campaign" ? "campaign" : "skirmish",
       campaignTargetScore: Math.max(25, toInt(body.campaignTargetScore, 100)),
-      preferredSeatId: body.preferredSeatId == null ? null : toInt(body.preferredSeatId, 0)
+      preferredSeatId: body.preferredSeatId == null ? null : toInt(body.preferredSeatId, 0),
+      clientId: body.clientId == null ? null : String(body.clientId)
     });
     const host = (lobby.players || []).find((player) => player.isHost) || lobby.players?.[0];
     sendJson(res, 201, {
@@ -221,6 +222,17 @@ async function handleApi(req, res, pathname, searchParams) {
     const lobby = multiplayerService.fillOpenSeatsWithBots(
       lobbyId,
       String(body.botNamePrefix ?? "Bot Admiral")
+    );
+    sendJson(res, 200, sanitizeLobbyResponse(lobby));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === `/api/lobbies/${encodeURIComponent(lobbyId)}/ready`) {
+    const body = await parseJsonBody(req);
+    const lobby = multiplayerService.setReady(
+      lobbyId,
+      String(body.sessionToken ?? ""),
+      Boolean(body.ready)
     );
     sendJson(res, 200, sanitizeLobbyResponse(lobby));
     return;

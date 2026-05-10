@@ -76,7 +76,12 @@ const joinCodeInput = document.getElementById("join-code-input");
 const hostLobbyButton = document.getElementById("host-lobby-button");
 const joinLobbyButton = document.getElementById("join-lobby-button");
 const startMatchButton = document.getElementById("start-match-button");
+const readyToggleButton = document.getElementById("ready-toggle-button");
+const setupModeSoloButton = document.getElementById("setup-mode-solo");
+const setupModeMultiplayerButton = document.getElementById("setup-mode-multiplayer");
 const copyJoinCodeButton = document.getElementById("copy-join-code-button");
+const lobbyReadySummary = document.getElementById("lobby-ready-summary");
+const lobbyReadyList = document.getElementById("lobby-ready-list");
 const cardSetDescription = document.getElementById("card-set-description");
 const cardSetPlayCount = document.getElementById("card-set-play-count");
 const cardSetShipCount = document.getElementById("card-set-ship-count");
@@ -969,7 +974,9 @@ appState.serverSession = {
   lastError: null,
   clientId: null,
   sessionToken: null,
+  lobbyInfo: null,
 };
+appState.setupMode = "solo";
 
 function createClientId() {
   return `client_${Math.random().toString(36).slice(2, 12)}`;
@@ -1101,7 +1108,32 @@ function setServerSessionCore({ connected, lobbyId, viewerPlayerId, joinCode, st
   appState.serverSession.lastSyncAt = new Date().toISOString();
   appState.serverSession.lastError = null;
   appState.serverSession.localPlayerCount = playerCount;
+  if (!connected) {
+    appState.serverSession.lobbyInfo = null;
+  }
   persistServerSessionSnapshot();
+}
+
+function setSetupMode(mode) {
+  appState.setupMode = mode === "multiplayer" ? "multiplayer" : "solo";
+  if (setupModeSoloButton) {
+    setupModeSoloButton.classList.toggle("is-active", appState.setupMode === "solo");
+  }
+  if (setupModeMultiplayerButton) {
+    setupModeMultiplayerButton.classList.toggle("is-active", appState.setupMode === "multiplayer");
+  }
+  syncLobbySeatPreview();
+}
+
+async function refreshLobbyInfo() {
+  if (!appState.serverSession?.connected || !appState.serverSession?.lobbyId) {
+    appState.serverSession.lobbyInfo = null;
+    return null;
+  }
+  const lobby = await serverGet(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}`);
+  appState.serverSession.lobbyInfo = lobby;
+  appState.serverSession.status = lobby?.status || appState.serverSession.status;
+  return lobby;
 }
 
 async function hostLobbyFromSetup({ playerCount, matchMode, campaignTarget }) {
@@ -1403,7 +1435,17 @@ function startServerPolling() {
   if (!appState.serverSession?.connected) {
     return;
   }
-  serverPollTimer = window.setInterval(() => {
+  serverPollTimer = window.setInterval(async () => {
+    const menuActive = document.querySelector("[data-screen='menu']")?.classList.contains("is-active");
+    if (menuActive) {
+      try {
+        await refreshLobbyInfo();
+        syncLobbySeatPreview();
+      } catch (error) {
+        appState.serverSession.lastError = error instanceof Error ? error.message : "Lobby polling failed.";
+      }
+      return;
+    }
     refreshServerViewAndRender();
   }, 1200);
 }
@@ -1587,21 +1629,73 @@ function syncLobbySeatPreview() {
   if (playersCountCopy) {
     playersCountCopy.textContent = `${playerCount} seats`;
   }
+  const lobbyInfo = appState.serverSession?.lobbyInfo;
+  const humans = (lobbyInfo?.players || []).filter((player) => player.role === "human");
+  const readyHumans = humans.filter((player) => player.isReady);
   if (readyStateCopy) {
-    readyStateCopy.textContent = appState.serverSession?.lobbyId
-      ? appState.serverSession.isHost
-        ? "Lobby hosted. Waiting for players or start match."
-        : "Joined lobby. Waiting for host to start."
-      : `No active lobby`;
+    if (appState.setupMode === "solo") {
+      readyStateCopy.textContent = "Solo quick start is enabled.";
+    } else {
+      readyStateCopy.textContent = appState.serverSession?.lobbyId
+        ? appState.serverSession.isHost
+          ? "Lobby hosted. Waiting for ready checks."
+          : "Joined lobby. Waiting for host to start."
+        : `No active lobby`;
+    }
+  }
+  if (lobbyReadySummary) {
+    lobbyReadySummary.textContent = `${readyHumans.length} / ${humans.length || 0} ready`;
+  }
+  if (lobbyReadyList) {
+    lobbyReadyList.innerHTML = "";
+    (lobbyInfo?.players || []).forEach((player) => {
+      if (player.role !== "human") return;
+      const item = document.createElement("div");
+      item.className = "lobby-ready-item";
+      const name = document.createElement("span");
+      name.textContent = player.playerName;
+      const check = document.createElement("span");
+      check.className = "lobby-ready-check";
+      check.textContent = player.isReady ? "✓ Ready" : "Not Ready";
+      item.append(name, check);
+      lobbyReadyList.appendChild(item);
+    });
   }
   if (lobbyJoinCode) {
-    lobbyJoinCode.textContent = appState.serverSession?.joinCode || "Not hosted yet";
+    lobbyJoinCode.textContent = appState.setupMode === "solo" ? "Not needed (Solo)" : appState.serverSession?.joinCode || "Not hosted yet";
+  }
+  if (hostLobbyButton) {
+    hostLobbyButton.hidden = appState.setupMode !== "multiplayer";
+  }
+  if (joinLobbyButton) {
+    joinLobbyButton.hidden = appState.setupMode !== "multiplayer";
+  }
+  if (copyJoinCodeButton) {
+    copyJoinCodeButton.hidden = appState.setupMode !== "multiplayer";
+  }
+  if (joinCodeInput) {
+    joinCodeInput.disabled = appState.setupMode !== "multiplayer";
   }
   if (startMatchButton) {
-    const canHostStart = appState.serverSession?.isHost && appState.serverSession?.lobbyId;
+    const allHumansReady = humans.length > 0 && readyHumans.length === humans.length;
+    const canHostStart = appState.serverSession?.isHost && appState.serverSession?.lobbyId && allHumansReady;
     const canJoinRunning = appState.serverSession?.connected && appState.serverSession?.status === "in_progress";
-    startMatchButton.disabled = !(canHostStart || canJoinRunning);
-    startMatchButton.textContent = appState.serverSession?.isHost ? "Start Match" : "Enter Match";
+    if (appState.setupMode === "solo") {
+      startMatchButton.disabled = false;
+      startMatchButton.textContent = "Start Game";
+    } else {
+      startMatchButton.disabled = !(canHostStart || canJoinRunning);
+      startMatchButton.textContent = appState.serverSession?.isHost ? "Start Match" : "Enter Match";
+    }
+  }
+  if (readyToggleButton) {
+    const sessionToken = appState.serverSession?.sessionToken;
+    const currentHuman = (lobbyInfo?.players || []).find(
+      (player) => player.role === "human" && player.playerId === appState.serverSession.viewerPlayerId
+    );
+    readyToggleButton.hidden = appState.setupMode !== "multiplayer";
+    readyToggleButton.disabled = !(sessionToken && appState.serverSession?.lobbyId);
+    readyToggleButton.textContent = currentHuman?.isReady ? "Unready" : "Ready";
   }
   if (cardSetSelect) {
     cardSetSelect.value = getCurrentCardSetId();
@@ -3041,6 +3135,11 @@ function prepareLocalPrototypeMatchFromSetup() {
 }
 
 async function hostLobbyFromUi() {
+  if (appState.setupMode !== "multiplayer") {
+    appendLog("Switch to Multiplayer mode to host a lobby.");
+    renderPrototype();
+    return;
+  }
   const { selectedMode, configuredTarget, playerCount } = prepareLocalPrototypeMatchFromSetup();
   try {
     const linked = await hostLobbyFromSetup({
@@ -3049,6 +3148,7 @@ async function hostLobbyFromUi() {
       campaignTarget: configuredTarget,
     });
     if (linked) {
+      await refreshLobbyInfo();
       appendLog(`Lobby hosted. Share join code ${appState.serverSession.joinCode}.`);
       setTurnSummary(
         "Lobby Hosted",
@@ -3068,6 +3168,11 @@ async function hostLobbyFromUi() {
 }
 
 async function joinLobbyFromUi() {
+  if (appState.setupMode !== "multiplayer") {
+    appendLog("Switch to Multiplayer mode to join a lobby.");
+    renderPrototype();
+    return;
+  }
   const { playerCount } = prepareLocalPrototypeMatchFromSetup();
   const code = String(joinCodeInput?.value || "").trim();
   if (!code) {
@@ -3078,6 +3183,7 @@ async function joinLobbyFromUi() {
   try {
     const linked = await joinLobbyFromCode(code, { playerCount });
     if (linked) {
+      await refreshLobbyInfo();
       appendLog(`Joined lobby ${appState.serverSession.joinCode}. Waiting for host to start.`);
       setTurnSummary(
         "Lobby Joined",
@@ -3094,7 +3200,40 @@ async function joinLobbyFromUi() {
   renderPrototype();
 }
 
+async function toggleReadyFromUi() {
+  if (appState.setupMode !== "multiplayer") {
+    return;
+  }
+  if (!appState.serverSession?.lobbyId || !appState.serverSession?.sessionToken) {
+    appendLog("Join or host a lobby first.");
+    renderPrototype();
+    return;
+  }
+  try {
+    const lobbyInfo = appState.serverSession.lobbyInfo || (await refreshLobbyInfo());
+    const me = (lobbyInfo?.players || []).find((player) => player.playerId === appState.serverSession.viewerPlayerId);
+    const nextReady = !Boolean(me?.isReady);
+    const updated = await serverPost(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/ready`, {
+      sessionToken: appState.serverSession.sessionToken,
+      ready: nextReady,
+    });
+    appState.serverSession.lobbyInfo = updated;
+    appendLog(nextReady ? "You are marked Ready." : "You are marked Not Ready.");
+  } catch (error) {
+    appState.serverSession.lastError = error instanceof Error ? error.message : "Unknown ready-state error.";
+    appendLog(`Ready toggle failed. ${appState.serverSession.lastError}`);
+  }
+  syncLobbySeatPreview();
+  renderPrototype();
+}
+
 async function startHostedMatchFromUi() {
+  if (appState.setupMode === "solo") {
+    prepareLocalPrototypeMatchFromSetup();
+    renderPrototype();
+    showScreen("table");
+    return;
+  }
   if (!appState.serverSession?.lobbyId) {
     appendLog("Host or join a lobby first.");
     renderPrototype();
@@ -3102,6 +3241,13 @@ async function startHostedMatchFromUi() {
   }
   try {
     if (appState.serverSession.isHost) {
+      const lobbyInfo = await refreshLobbyInfo();
+      const humans = (lobbyInfo?.players || []).filter((player) => player.role === "human");
+      if (!humans.length || !humans.every((player) => player.isReady)) {
+        appendLog("All human players must be ready before the host can start.");
+        renderPrototype();
+        return;
+      }
       await startHostedMatchFromLobby();
     } else {
       if (!appState.serverSession.viewerPlayerId && appState.serverSession.joinCode) {
@@ -3115,7 +3261,7 @@ async function startHostedMatchFromUi() {
           appState.serverSession.viewerPlayerId = resumed.viewerPlayerId;
         }
       }
-      const lobby = await serverGet(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}`);
+      const lobby = await refreshLobbyInfo();
       appState.serverSession.status = lobby.status || appState.serverSession.status;
       if (appState.serverSession.status !== "in_progress") {
         appendLog("Host has not started the match yet.");
@@ -5594,6 +5740,26 @@ if (startMatchButton) {
   });
 }
 
+if (readyToggleButton) {
+  readyToggleButton.addEventListener("click", async () => {
+    await toggleReadyFromUi();
+  });
+}
+
+if (setupModeSoloButton) {
+  setupModeSoloButton.addEventListener("click", () => {
+    setSetupMode("solo");
+    renderPrototype();
+  });
+}
+
+if (setupModeMultiplayerButton) {
+  setupModeMultiplayerButton.addEventListener("click", () => {
+    setSetupMode("multiplayer");
+    renderPrototype();
+  });
+}
+
 if (copyJoinCodeButton) {
   copyJoinCodeButton.addEventListener("click", async () => {
     const code = appState.serverSession?.joinCode;
@@ -6046,6 +6212,7 @@ document.addEventListener("click", (event) => {
   }
 });
 appState.serverSession.clientId = getOrCreateClientId();
+setSetupMode(appState.setupMode || "solo");
 renderPrototype();
 restoreServerSessionFromStorage().finally(() => {
   renderPrototype();

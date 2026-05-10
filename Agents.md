@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-09
 
+- `2026-05-09 13:xx America/Chicago` — Solo/Multiplayer setup split + lobby ready-check start gate
+- Scope: `prototype/index.html`, `prototype/styles.css`, `prototype/app.js`, `src/session.ts`, `server.mjs`
+- Result: Added explicit setup mode switch (`Solo` vs `Multiplayer`). Solo starts directly without lobby flow. Multiplayer now includes host/join/ready workflow with per-player ready indicators and host start gating until all human players are ready. Added server `ready` endpoint and pre-start readiness enforcement.
+- Verification: `node --check prototype/app.js` (pass), `node --check server.mjs` (pass), `npm run check` (pass), `npm run build` (pass)
+
 - `2026-05-09 11:xx America/Chicago` — Multiplayer reconnect identity + touch-play improvements
 - Scope: `src/session.ts`, `server.mjs`, `prototype/app.js`, `prototype/styles.css`
 - Result: Added persistent per-client identity (`clientId`) and by-code reconnect flow so joined humans can reattach to active lobbies/matches; client now stores/restores server session and uses reconnect during `Enter Match` fallback. Added touch-device tap-to-select/tap-to-target card play fallback and selected-card visual state to improve mobile playability where drag is difficult.

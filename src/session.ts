@@ -23,6 +23,7 @@ export interface LobbyCreateOptions {
   matchMode?: GameMode;
   campaignTargetScore?: number;
   preferredSeatId?: SeatId | null;
+  clientId?: string | null;
 }
 
 export interface LobbyJoinOptions {
@@ -38,6 +39,7 @@ export interface MultiplayerPlayerRecord {
   clientId: string | null;
   sessionToken: string;
   playerName: string;
+  isReady: boolean;
   role: "human" | "bot";
   preferredSeatId: SeatId | null;
   isHost: boolean;
@@ -232,10 +234,11 @@ export class InMemoryMultiplayerService {
     const hostPlayerId = createId("player");
     const hostRecord: MultiplayerPlayerRecord = {
       playerId: hostPlayerId,
-      clientId: null,
+      clientId: options.clientId ? String(options.clientId).trim() : null,
       sessionToken: createId("session"),
       playerName: sanitizeName(options.hostName, "Host Admiral"),
       role: "human",
+      isReady: false,
       preferredSeatId: options.preferredSeatId ?? 0,
       isHost: true,
       isLocalPlayer: true
@@ -293,6 +296,7 @@ export class InMemoryMultiplayerService {
       sessionToken: createId("session"),
       playerName: sanitizeName(options.playerName, "Admiral"),
       role: options.role ?? "human",
+      isReady: options.role === "bot",
       preferredSeatId: options.preferredSeatId ?? null,
       isHost: false,
       isLocalPlayer: options.isLocalPlayer ?? false
@@ -300,6 +304,19 @@ export class InMemoryMultiplayerService {
 
     lobby.players.push(player);
     lobby.seats = assignServerSeats(toSeatReservations(lobby.players), lobby.playerCount);
+    return cloneLobby(lobby);
+  }
+
+  setReady(lobbyId: string, sessionToken: string, ready: boolean): MultiplayerLobby {
+    const lobby = this.requireMutableLobby(lobbyId);
+    assert(lobby.status === "lobby", "Ready state can only be changed before the match starts.");
+    const normalizedToken = String(sessionToken || "").trim();
+    assert(normalizedToken.length > 0, "A sessionToken is required.");
+    const player = lobby.players.find((entry) => entry.sessionToken === normalizedToken);
+    assert(player, "Session token is not seated in this lobby.");
+    if (player.role === "human") {
+      player.isReady = Boolean(ready);
+    }
     return cloneLobby(lobby);
   }
 
@@ -354,6 +371,7 @@ export class InMemoryMultiplayerService {
         sessionToken: createId("session"),
         playerName: `${botNamePrefix} ${botIndex}`,
         role: "bot",
+        isReady: true,
         preferredSeatId: null,
         isHost: false,
         isLocalPlayer: false
@@ -368,6 +386,9 @@ export class InMemoryMultiplayerService {
     const lobby = this.requireMutableLobby(lobbyId);
     assert(lobby.status === "lobby", "Match has already started.");
     assert(lobby.players.length > 0, "Cannot start a match with no players.");
+    const humans = lobby.players.filter((player) => player.role === "human");
+    assert(humans.length > 0, "At least one human player is required.");
+    assert(humans.every((player) => player.isReady), "All human players must be ready before starting.");
 
     if (lobby.players.length < lobby.playerCount) {
       this.fillOpenSeatsWithBots(lobbyId);
