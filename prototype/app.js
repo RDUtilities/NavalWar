@@ -1299,16 +1299,33 @@ function mapServerViewToLocalState(view) {
   }
   appState.botHands = appState.botHands || { left: [], top: [], right: [] };
   const playersBySide = {};
+  const rawPlayersBySide = {};
   appState.fleetsByZone = {};
   appState.effectsByFleet = { bottom: [], left: [], top: [], right: [] };
   appState.serverSession.localRoleByZone = { bottom: "empty", left: "empty", top: "empty", right: "empty" };
   gameState.players.forEach((player) => {
     const seatRecord = Object.values(view.seatLayout?.seatsBySide || {}).find((seat) => seat?.assignment?.playerId === player.id);
     if (seatRecord?.side) {
-      playersBySide[seatRecord.side] = player;
-      appState.fleetsByZone[seatRecord.side] = { playerId: player.id, name: player.name };
-      appState.serverSession.localRoleByZone[seatRecord.side] = seatRecord.role || "human";
+      rawPlayersBySide[seatRecord.side] = { player, role: seatRecord.role || "human" };
     }
+  });
+
+  const sideOrder = ["bottom", "left", "top", "right"];
+  const viewerPlayerId = view?.viewerPlayerId || appState.serverSession?.viewerPlayerId || null;
+  const viewerRawSide = Object.entries(rawPlayersBySide).find(([, entry]) => entry?.player?.id === viewerPlayerId)?.[0] || "bottom";
+  const viewerRawIndex = Math.max(0, sideOrder.indexOf(viewerRawSide));
+  const rotateToLocalBottom = (rawSide) => {
+    const rawIndex = sideOrder.indexOf(rawSide);
+    if (rawIndex < 0) return rawSide;
+    const mappedIndex = (rawIndex - viewerRawIndex + sideOrder.length) % sideOrder.length;
+    return sideOrder[mappedIndex];
+  };
+
+  Object.entries(rawPlayersBySide).forEach(([rawSide, entry]) => {
+    const mappedSide = rotateToLocalBottom(rawSide);
+    playersBySide[mappedSide] = entry.player;
+    appState.fleetsByZone[mappedSide] = { playerId: entry.player.id, name: entry.player.name };
+    appState.serverSession.localRoleByZone[mappedSide] = entry.role || "human";
   });
   appState.tableConfig.playerCount = Math.min(4, Math.max(2, gameState.players.length || appState.tableConfig.playerCount || 4));
 
