@@ -963,6 +963,8 @@ let autosaveTimer = null;
 let hasLaunchedMatch = false;
 let serverPollTimer = null;
 let autoEnterMatchInFlight = false;
+let multiplayerSocket = null;
+let realtimeEnabled = false;
 appState.serverSession = {
   connected: false,
   lobbyId: null,
@@ -1019,6 +1021,101 @@ function persistServerSessionSnapshot() {
   } catch (_) {
     // Ignore session persistence errors.
   }
+}
+
+function hasSocketIoClient() {
+  return typeof window !== "undefined" && typeof window.io === "function";
+}
+
+function socketRequest(event, payload = {}, timeoutMs = 7000) {
+  return new Promise((resolve, reject) => {
+    if (!multiplayerSocket || !multiplayerSocket.connected) {
+      reject(new Error("Realtime socket is not connected."));
+      return;
+    }
+    let settled = false;
+    const timer = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error(`Socket request timed out: ${event}`));
+    }, timeoutMs);
+    multiplayerSocket.emit(event, payload, (response) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timer);
+      if (!response?.ok) {
+        reject(new Error(response?.error || `${event} failed.`));
+        return;
+      }
+      resolve(response);
+    });
+  });
+}
+
+function bindRealtimeHandlers() {
+  if (!multiplayerSocket) return;
+
+  multiplayerSocket.on("lobby:state", (lobby) => {
+    appState.serverSession.connected = true;
+    appState.serverSession.lobbyInfo = lobby || null;
+    if (lobby?.lobbyId) appState.serverSession.lobbyId = lobby.lobbyId;
+    if (lobby?.joinCode) appState.serverSession.joinCode = lobby.joinCode;
+    if (typeof lobby?.youAreHost === "boolean") appState.serverSession.isHost = lobby.youAreHost;
+    if (lobby?.status) appState.serverSession.status = lobby.status;
+    if (lobby?.viewerPlayerId) appState.serverSession.viewerPlayerId = lobby.viewerPlayerId;
+    appState.serverSession.lastSyncAt = new Date().toISOString();
+    appState.serverSession.lastError = null;
+    syncLobbySeatPreview();
+    renderPrototype();
+  });
+
+  multiplayerSocket.on("match:ready", (payload) => {
+    if (payload?.status) {
+      appState.serverSession.status = payload.status;
+    }
+    tryAutoEnterRunningMatchFromLobby();
+  });
+
+  multiplayerSocket.on("match:state", (payload) => {
+    const view = payload?.view || null;
+    if (!view) return;
+    if (payload?.status) appState.serverSession.status = payload.status;
+    if (payload?.joinCode) appState.serverSession.joinCode = payload.joinCode;
+    if (payload?.lobbyId) appState.serverSession.lobbyId = payload.lobbyId;
+    if (payload?.viewerPlayerId) appState.serverSession.viewerPlayerId = payload.viewerPlayerId;
+    mapServerViewToLocalState(view);
+    appState.serverSession.lastSyncAt = new Date().toISOString();
+    appState.serverSession.lastError = null;
+    persistServerSessionSnapshot();
+    renderPrototype();
+    if (document.querySelector("[data-screen='menu']")?.classList.contains("is-active")) {
+      showScreen("table");
+    }
+  });
+
+  multiplayerSocket.on("disconnect", () => {
+    appState.serverSession.connected = false;
+    appState.serverSession.lastError = "Realtime disconnected.";
+    syncLobbySeatPreview();
+    renderPrototype();
+  });
+}
+
+function ensureRealtimeConnection() {
+  if (!hasSocketIoClient() || window.location.protocol === "file:") {
+    return false;
+  }
+  if (multiplayerSocket) {
+    realtimeEnabled = true;
+    return true;
+  }
+  multiplayerSocket = window.io(SERVER_API_BASE, {
+    transports: ["websocket", "polling"],
+    withCredentials: false,
+  });
+  bindRealtimeHandlers();
+  realtimeEnabled = true;
+  return true;
 }
 
 function showScreen(target) {
@@ -1132,6 +1229,9 @@ async function refreshLobbyInfo() {
     appState.serverSession.lobbyInfo = null;
     return null;
   }
+  if (realtimeEnabled && appState.serverSession.lobbyInfo) {
+    return appState.serverSession.lobbyInfo;
+  }
   const lobby = await serverGet(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}`);
   appState.serverSession.lobbyInfo = lobby;
   appState.serverSession.status = lobby?.status || appState.serverSession.status;
@@ -1139,6 +1239,30 @@ async function refreshLobbyInfo() {
 }
 
 async function hostLobbyFromSetup({ playerCount, matchMode, campaignTarget }) {
+  if (ensureRealtimeConnection()) {
+    const created = await socketRequest("lobby:create", {
+      hostName: getPlayerName("bottom"),
+      playerCount,
+      matchMode,
+      campaignTargetScore: campaignTarget,
+      preferredSeatId: 0,
+      clientId: appState.serverSession.clientId,
+    });
+    const createdLobby = created?.lobby ?? created;
+    setServerSessionCore({
+      connected: true,
+      lobbyId: createdLobby?.lobbyId ?? null,
+      viewerPlayerId: created?.viewerPlayerId ?? createdLobby?.viewerPlayerId ?? null,
+      joinCode: createdLobby?.joinCode ?? null,
+      status: createdLobby?.status ?? "lobby",
+      isHost: Boolean(createdLobby?.youAreHost ?? true),
+      playerCount,
+      sessionToken: created?.sessionToken ?? null,
+    });
+    appState.serverSession.lobbyInfo = createdLobby ?? null;
+    syncLobbySeatPreview();
+    return true;
+  }
   if (!(await canUseServerApi())) {
     appState.serverSession.connected = false;
     appState.serverSession.status = "local_only";
@@ -1179,6 +1303,28 @@ async function hostLobbyFromSetup({ playerCount, matchMode, campaignTarget }) {
 }
 
 async function joinLobbyFromCode(joinCode, { playerCount }) {
+  if (ensureRealtimeConnection()) {
+    const joined = await socketRequest("lobby:join", {
+      joinCode,
+      playerName: getPlayerName("bottom"),
+      role: "human",
+      clientId: appState.serverSession.clientId,
+    });
+    const joinedLobby = joined?.lobby ?? joined;
+    setServerSessionCore({
+      connected: true,
+      lobbyId: joinedLobby?.lobbyId ?? null,
+      viewerPlayerId: joined?.viewerPlayerId ?? joinedLobby?.viewerPlayerId ?? null,
+      joinCode: joinedLobby?.joinCode ?? joinCode,
+      status: joinedLobby?.status ?? "lobby",
+      isHost: Boolean(joinedLobby?.youAreHost ?? false),
+      playerCount,
+      sessionToken: joined?.sessionToken ?? null,
+    });
+    appState.serverSession.lobbyInfo = joinedLobby ?? null;
+    syncLobbySeatPreview();
+    return true;
+  }
   if (!(await canUseServerApi())) {
     appState.serverSession.connected = false;
     appState.serverSession.status = "local_only";
@@ -1212,6 +1358,14 @@ async function joinLobbyFromCode(joinCode, { playerCount }) {
 async function startHostedMatchFromLobby() {
   if (!appState.serverSession?.lobbyId || !appState.serverSession?.isHost) {
     throw new Error("Only the host can start the match.");
+  }
+  if (ensureRealtimeConnection()) {
+    const started = await socketRequest("lobby:start", {});
+    const lobby = started?.lobby ?? null;
+    if (lobby?.status) appState.serverSession.status = lobby.status;
+    if (lobby) appState.serverSession.lobbyInfo = lobby;
+    persistServerSessionSnapshot();
+    return true;
   }
   const lobbyId = encodeURIComponent(appState.serverSession.lobbyId);
   const lobbyInfo = await refreshLobbyInfo();
@@ -1248,6 +1402,29 @@ async function startHostedMatchFromLobby() {
 }
 
 async function reconnectLobbySession(joinCode) {
+  if (ensureRealtimeConnection()) {
+    if (!appState.serverSession?.lobbyId && !joinCode) {
+      return false;
+    }
+    const resumed = await socketRequest("lobby:resume", {
+      lobbyId: appState.serverSession.lobbyId,
+      sessionToken: appState.serverSession.sessionToken,
+    });
+    if (!resumed?.lobbyId || !resumed?.viewerPlayerId) {
+      return false;
+    }
+    setServerSessionCore({
+      connected: true,
+      lobbyId: resumed.lobbyId,
+      viewerPlayerId: resumed.viewerPlayerId,
+      joinCode: resumed.joinCode ?? joinCode,
+      status: resumed.status ?? "lobby",
+      isHost: Boolean(resumed.isHost),
+      playerCount: resumed.playerCount ?? getConfiguredPlayerCount(),
+      sessionToken: resumed.sessionToken ?? null,
+    });
+    return true;
+  }
   if (!(await canUseServerApi())) {
     return false;
   }
@@ -1281,6 +1458,9 @@ async function restoreServerSessionFromStorage() {
     return false;
   }
   try {
+    appState.serverSession.lobbyId = snapshot.lobbyId ?? appState.serverSession.lobbyId;
+    appState.serverSession.sessionToken = snapshot.sessionToken ?? appState.serverSession.sessionToken;
+    appState.serverSession.viewerPlayerId = snapshot.viewerPlayerId ?? appState.serverSession.viewerPlayerId;
     const reconnected = await reconnectLobbySession(snapshot.joinCode);
     if (!reconnected) {
       return false;
@@ -1561,6 +1741,9 @@ function startServerPolling() {
   if (!appState.serverSession?.connected) {
     return;
   }
+  if (realtimeEnabled) {
+    return;
+  }
   serverPollTimer = window.setInterval(async () => {
     const menuActive = document.querySelector("[data-screen='menu']")?.classList.contains("is-active");
     if (menuActive) {
@@ -1587,6 +1770,16 @@ function stopServerPolling() {
 async function submitServerCommand(command) {
   if (!appState.serverSession?.connected || !appState.serverSession.lobbyId) {
     return false;
+  }
+  if (ensureRealtimeConnection()) {
+    try {
+      await socketRequest("game:action", { command });
+      return true;
+    } catch (error) {
+      appendLog(`Server command failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      renderPrototype();
+      return false;
+    }
   }
   try {
     await serverPost(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/commands`, {
@@ -3354,6 +3547,17 @@ async function toggleReadyFromUi() {
     return;
   }
   try {
+    if (ensureRealtimeConnection()) {
+      const lobbyInfo = appState.serverSession.lobbyInfo || {};
+      const me = (lobbyInfo?.players || []).find((player) => player.playerId === appState.serverSession.viewerPlayerId);
+      const nextReady = !Boolean(me?.isReady);
+      const response = await socketRequest("lobby:ready", { ready: nextReady });
+      appState.serverSession.lobbyInfo = response?.lobby || appState.serverSession.lobbyInfo;
+      appendLog(nextReady ? "You are marked Ready." : "You are marked Not Ready.");
+      syncLobbySeatPreview();
+      renderPrototype();
+      return;
+    }
     const lobbyInfo = appState.serverSession.lobbyInfo || (await refreshLobbyInfo());
     const me = (lobbyInfo?.players || []).find((player) => player.playerId === appState.serverSession.viewerPlayerId);
     const nextReady = !Boolean(me?.isReady);
