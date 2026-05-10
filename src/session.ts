@@ -707,7 +707,10 @@ function chooseBotCommand(state: GameState, actorId: PlayerId, rng: RandomSource
     if (salvo && squadron) return { type: "attack_destroyer_squadron", actorId, cardId: salvo.id, targetDestroyerId: squadron.id };
   }
   if (inPriority("discard_play_card")) {
-    const card = actor.hand[0];
+    const card =
+      actor.hand.find((entry) => entry.kind === "additional_damage") ||
+      actor.hand.find((entry) => entry.kind !== "minefield" && entry.kind !== "submarine" && entry.kind !== "torpedo_boat" && entry.kind !== "additional_ship") ||
+      actor.hand[0];
     if (card) return { type: "discard_play_card", actorId, cardId: card.id };
   }
   if (inPriority("end_turn")) {
