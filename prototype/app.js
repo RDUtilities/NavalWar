@@ -1414,12 +1414,12 @@ function mapServerViewToLocalState(view) {
 
   appState.turnState.phase = gameState.phase === "round_complete"
     ? "complete"
-    : gameState.hasPerformedActionThisTurn || hasOnlyEndTurn
-    ? "complete"
     : hasPlayAction
     ? "play"
     : hasDrawAction
     ? "draw"
+    : gameState.hasPerformedActionThisTurn || hasOnlyEndTurn
+    ? "complete"
     : gameState.hasDrawnThisTurn || gameState.hasUsedCarrierStrikeThisTurn
     ? "play"
     : "draw";
