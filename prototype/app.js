@@ -1803,25 +1803,85 @@ async function submitServerCommand(command) {
   if (!appState.serverSession?.connected || !appState.serverSession.lobbyId) {
     return false;
   }
+  const originalHandCard =
+    command?.cardId && Array.isArray(appState.hand)
+      ? appState.hand.find((card) => card.id === command.cardId) || null
+      : null;
+
+  const commandMatchesCard = (candidate, source) => {
+    if (!candidate || !source) return false;
+    if (candidate.kind !== source.kind) return false;
+    const sameHits = Number(candidate.hits ?? -1) === Number(source.hits ?? -1);
+    const sameGun = String(candidate.gunSize ?? "") === String(source.gunSize ?? "");
+    return sameHits && sameGun;
+  };
+
+  const tryCommand = async (payload) => {
+    if (ensureRealtimeConnection()) {
+      await socketRequest("game:action", { command: payload });
+      return true;
+    }
+    await serverPost(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/commands`, {
+      ...payload,
+      sessionToken: appState.serverSession.sessionToken ?? null,
+    });
+    await refreshServerViewAndRender();
+    return true;
+  };
+
   if (ensureRealtimeConnection()) {
     try {
-      await socketRequest("game:action", { command });
+      await tryCommand(command);
       return true;
     } catch (error) {
-      appendLog(`Server command failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const canRetryWithFreshCardId =
+        Boolean(command?.cardId) &&
+        Boolean(originalHandCard) &&
+        /is not in .*hand/i.test(message);
+      if (canRetryWithFreshCardId) {
+        await refreshServerViewAndRender();
+        const replacement = appState.hand.find((card) => commandMatchesCard(card, originalHandCard));
+        if (replacement?.id && replacement.id !== command.cardId) {
+          try {
+            await tryCommand({ ...command, cardId: replacement.id });
+            return true;
+          } catch (retryError) {
+            appendLog(`Server command failed: ${retryError instanceof Error ? retryError.message : "Unknown error"}`);
+            renderPrototype();
+            return false;
+          }
+        }
+      }
+      appendLog(`Server command failed: ${message}`);
       renderPrototype();
       return false;
     }
   }
   try {
-    await serverPost(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/commands`, {
-      ...command,
-      sessionToken: appState.serverSession.sessionToken ?? null,
-    });
-    await refreshServerViewAndRender();
+    await tryCommand(command);
     return true;
   } catch (error) {
-    appendLog(`Server command failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    const canRetryWithFreshCardId =
+      Boolean(command?.cardId) &&
+      Boolean(originalHandCard) &&
+      /is not in .*hand/i.test(message);
+    if (canRetryWithFreshCardId) {
+      await refreshServerViewAndRender();
+      const replacement = appState.hand.find((card) => commandMatchesCard(card, originalHandCard));
+      if (replacement?.id && replacement.id !== command.cardId) {
+        try {
+          await tryCommand({ ...command, cardId: replacement.id });
+          return true;
+        } catch (retryError) {
+          appendLog(`Server command failed: ${retryError instanceof Error ? retryError.message : "Unknown error"}`);
+          renderPrototype();
+          return false;
+        }
+      }
+    }
+    appendLog(`Server command failed: ${message}`);
     renderPrototype();
     return false;
   }
