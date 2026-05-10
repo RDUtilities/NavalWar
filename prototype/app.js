@@ -965,6 +965,8 @@ let serverPollTimer = null;
 let autoEnterMatchInFlight = false;
 let multiplayerSocket = null;
 let realtimeEnabled = false;
+let autoEndTurnInFlight = false;
+let lastAutoEndTurnKey = null;
 appState.serverSession = {
   connected: false,
   lobbyId: null,
@@ -979,6 +981,7 @@ appState.serverSession = {
   clientId: null,
   sessionToken: null,
   lobbyInfo: null,
+  legalCommands: [],
 };
 appState.setupMode = "solo";
 
@@ -1091,6 +1094,7 @@ function bindRealtimeHandlers() {
     if (document.querySelector("[data-screen='menu']")?.classList.contains("is-active")) {
       showScreen("table");
     }
+    maybeAutoEndTurnForOpeningSpecialFlow();
   });
 
   multiplayerSocket.on("disconnect", () => {
@@ -1478,6 +1482,7 @@ function mapServerViewToLocalState(view) {
   if (!gameState) {
     return;
   }
+  appState.serverSession.legalCommands = Array.isArray(view?.legalCommands) ? [...view.legalCommands] : [];
   appState.botHands = appState.botHands || { left: [], top: [], right: [] };
   const playersBySide = {};
   const rawPlayersBySide = {};
@@ -1651,6 +1656,29 @@ function mapServerViewToLocalState(view) {
   appState.combatLog = [...serverEvents].reverse().map((event) => `${event.type}: ${event.detail}`);
 }
 
+async function maybeAutoEndTurnForOpeningSpecialFlow() {
+  if (autoEndTurnInFlight) return;
+  if (!appState.serverSession?.connected) return;
+  if (!isHumanTurn()) return;
+  const legal = Array.isArray(appState.serverSession.legalCommands) ? appState.serverSession.legalCommands : [];
+  if (!(legal.length === 1 && legal[0] === "end_turn")) return;
+  if (!appState.serverSession.viewerPlayerId) return;
+
+  const key = `${appState.turnState.turnNumber}:${appState.serverSession.viewerPlayerId}:end_turn_only`;
+  if (lastAutoEndTurnKey === key) return;
+  lastAutoEndTurnKey = key;
+
+  autoEndTurnInFlight = true;
+  try {
+    await submitServerCommand({
+      type: "end_turn",
+      actorId: appState.serverSession.viewerPlayerId,
+    });
+  } finally {
+    autoEndTurnInFlight = false;
+  }
+}
+
 async function refreshServerViewAndRender() {
   if (!appState.serverSession?.connected || !appState.serverSession.lobbyId || !appState.serverSession.viewerPlayerId) {
     return;
@@ -1669,6 +1697,7 @@ async function refreshServerViewAndRender() {
     appState.serverSession.lastError = null;
     persistServerSessionSnapshot();
     renderPrototype();
+    maybeAutoEndTurnForOpeningSpecialFlow();
   } catch (error) {
     appState.serverSession.lastError = error instanceof Error ? error.message : "Server refresh failed.";
   }
