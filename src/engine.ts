@@ -569,6 +569,9 @@ export function listLegalCommands(state: GameState, actorId: PlayerId): string[]
   if (player.eliminated) {
     return ["end_turn"];
   }
+  if (openingTurnPending && !mandatorySpecialInHand) {
+    return ["end_turn"];
+  }
   const allowTurnEnd = !state.hasDrawnThisTurn || state.hasPerformedActionThisTurn;
   const canTakePlayAction = !state.hasPerformedActionThisTurn || openingTurnPending;
 
