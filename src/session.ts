@@ -275,6 +275,13 @@ export class InMemoryMultiplayerService {
   }
 
   joinLobby(lobbyId: string, options: LobbyJoinOptions): MultiplayerLobby {
+    return this.joinLobbyWithIdentity(lobbyId, options).lobby;
+  }
+
+  joinLobbyWithIdentity(
+    lobbyId: string,
+    options: LobbyJoinOptions
+  ): { lobby: MultiplayerLobby; viewerPlayerId: PlayerId; sessionToken: string } {
     const lobby = this.requireMutableLobby(lobbyId);
     assert(lobby.status === "lobby", "Cannot join a lobby that has already started.");
     assert(lobby.players.length < lobby.playerCount, "Lobby is already full.");
@@ -286,7 +293,11 @@ export class InMemoryMultiplayerService {
           existing.playerName = sanitizeName(options.playerName, existing.playerName);
         }
         lobby.seats = assignServerSeats(toSeatReservations(lobby.players), lobby.playerCount);
-        return cloneLobby(lobby);
+        return {
+          lobby: cloneLobby(lobby),
+          viewerPlayerId: existing.playerId,
+          sessionToken: existing.sessionToken
+        };
       }
     }
 
@@ -304,7 +315,11 @@ export class InMemoryMultiplayerService {
 
     lobby.players.push(player);
     lobby.seats = assignServerSeats(toSeatReservations(lobby.players), lobby.playerCount);
-    return cloneLobby(lobby);
+    return {
+      lobby: cloneLobby(lobby),
+      viewerPlayerId: player.playerId,
+      sessionToken: player.sessionToken
+    };
   }
 
   setReady(lobbyId: string, sessionToken: string, ready: boolean): MultiplayerLobby {
@@ -323,6 +338,14 @@ export class InMemoryMultiplayerService {
   joinLobbyByJoinCode(joinCode: string, options: LobbyJoinOptions): MultiplayerLobby {
     const lobby = this.getLobbyByJoinCode(joinCode);
     return this.joinLobby(lobby.lobbyId, options);
+  }
+
+  joinLobbyByJoinCodeWithIdentity(
+    joinCode: string,
+    options: LobbyJoinOptions
+  ): { lobby: MultiplayerLobby; viewerPlayerId: PlayerId; sessionToken: string } {
+    const lobby = this.getLobbyByJoinCode(joinCode);
+    return this.joinLobbyWithIdentity(lobby.lobbyId, options);
   }
 
   reconnectLobbyByJoinCode(joinCode: string, clientId: string) {

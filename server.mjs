@@ -210,23 +210,19 @@ async function handleApi(req, res, pathname, searchParams) {
       sendJson(res, 200, sanitizeLobbyResponse(multiplayerService.getLobbyByJoinCode(joinCode)));
       return;
     }
-    if (action === "join" && req.method === "POST") {
+  if (action === "join" && req.method === "POST") {
       const body = await parseJsonBody(req);
-      const lobby = multiplayerService.joinLobbyByJoinCode(joinCode, {
+      const joined = multiplayerService.joinLobbyByJoinCodeWithIdentity(joinCode, {
         playerName: String(body.playerName ?? "Admiral"),
         role: body.role === "bot" ? "bot" : "human",
         preferredSeatId: body.preferredSeatId == null ? null : toInt(body.preferredSeatId, 0),
         isLocalPlayer: Boolean(body.isLocalPlayer),
         clientId: body.clientId == null ? null : String(body.clientId)
       });
-      const clientId = body.clientId == null ? null : String(body.clientId);
-      const viewer = clientId
-        ? (lobby.players || []).find((player) => player.clientId === clientId)
-        : lobby.players?.at(-1);
       sendJson(res, 200, {
-        lobby: sanitizeLobbyResponse(lobby),
-        viewerPlayerId: viewer?.playerId ?? null,
-        sessionToken: viewer?.sessionToken ?? null,
+        lobby: sanitizeLobbyResponse(joined.lobby),
+        viewerPlayerId: joined.viewerPlayerId,
+        sessionToken: joined.sessionToken,
       });
       return;
     }
@@ -254,21 +250,17 @@ async function handleApi(req, res, pathname, searchParams) {
 
   if (req.method === "POST" && pathname === `/api/lobbies/${encodeURIComponent(lobbyId)}/join`) {
     const body = await parseJsonBody(req);
-    const lobby = multiplayerService.joinLobby(lobbyId, {
+    const joined = multiplayerService.joinLobbyWithIdentity(lobbyId, {
       playerName: String(body.playerName ?? "Admiral"),
       role: body.role === "bot" ? "bot" : "human",
       preferredSeatId: body.preferredSeatId == null ? null : toInt(body.preferredSeatId, 0),
       isLocalPlayer: Boolean(body.isLocalPlayer),
       clientId: body.clientId == null ? null : String(body.clientId)
     });
-    const clientId = body.clientId == null ? null : String(body.clientId);
-    const viewer = clientId
-      ? (lobby.players || []).find((player) => player.clientId === clientId)
-      : lobby.players?.at(-1);
     sendJson(res, 200, {
-      lobby: sanitizeLobbyResponse(lobby),
-      viewerPlayerId: viewer?.playerId ?? null,
-      sessionToken: viewer?.sessionToken ?? null,
+      lobby: sanitizeLobbyResponse(joined.lobby),
+      viewerPlayerId: joined.viewerPlayerId,
+      sessionToken: joined.sessionToken,
     });
     return;
   }
@@ -445,33 +437,26 @@ io.on("connection", (socket) => {
         return;
       }
       const joinCode = String(payload.joinCode ?? payload.code ?? "").trim().toUpperCase();
-      const lobby = multiplayerService.joinLobbyByJoinCode(joinCode, {
+      const joined = multiplayerService.joinLobbyByJoinCodeWithIdentity(joinCode, {
         playerName: String(payload.playerName ?? "Admiral"),
         role: payload.role === "bot" ? "bot" : "human",
         preferredSeatId: payload.preferredSeatId == null ? null : toInt(payload.preferredSeatId, 0),
         isLocalPlayer: Boolean(payload.isLocalPlayer),
         clientId: payload.clientId == null ? null : String(payload.clientId)
       });
-      const clientId = payload.clientId == null ? null : String(payload.clientId);
-      const viewer = clientId
-        ? (lobby.players || []).find((player) => player.clientId === clientId)
-        : lobby.players?.at(-1);
-      if (!viewer) {
-        ack({ ok: false, error: "Failed to resolve joined player." });
-        return;
-      }
+      const lobby = joined.lobby;
       socketSessionRef.set(socket.id, {
         lobbyId: lobby.lobbyId,
-        playerId: viewer.playerId,
-        sessionToken: viewer.sessionToken
+        playerId: joined.viewerPlayerId,
+        sessionToken: joined.sessionToken
       });
       socket.join(lobby.lobbyId);
       emitLobbyState(io, lobby);
       ack({
         ok: true,
-        lobby: toSocketLobbyView(lobby, viewer.playerId),
-        viewerPlayerId: viewer.playerId,
-        sessionToken: viewer.sessionToken
+        lobby: toSocketLobbyView(lobby, joined.viewerPlayerId),
+        viewerPlayerId: joined.viewerPlayerId,
+        sessionToken: joined.sessionToken
       });
     } catch (error) {
       ack({ ok: false, error: error instanceof Error ? error.message : "Lobby join failed." });
