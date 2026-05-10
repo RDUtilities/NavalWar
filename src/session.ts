@@ -495,7 +495,6 @@ export class InMemoryMultiplayerService {
     if (sessionToken) {
       const byToken = lobby.players.find((player) => player.sessionToken === String(sessionToken).trim());
       assert(byToken, "Session token is not seated in this lobby.");
-      assert(byToken.playerId === actorId, "Command actor does not match session token owner.");
       return byToken.playerId;
     }
     assert(lobby.players.some((player) => player.playerId === actorId), `Player ${actorId} is not seated in this lobby.`);

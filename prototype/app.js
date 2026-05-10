@@ -962,6 +962,7 @@ let pendingDiceAdvanceDelay = 0;
 let autosaveTimer = null;
 let hasLaunchedMatch = false;
 let serverPollTimer = null;
+let autoEnterMatchInFlight = false;
 appState.serverSession = {
   connected: false,
   lobbyId: null,
@@ -1105,7 +1106,7 @@ function setServerSessionCore({ connected, lobbyId, viewerPlayerId, joinCode, st
   appState.serverSession.joinCode = joinCode;
   appState.serverSession.status = status;
   appState.serverSession.isHost = isHost;
-  appState.serverSession.sessionToken = sessionToken || appState.serverSession.sessionToken || null;
+  appState.serverSession.sessionToken = sessionToken ?? null;
   appState.serverSession.lastSyncAt = new Date().toISOString();
   appState.serverSession.lastError = null;
   appState.serverSession.localPlayerCount = playerCount;
@@ -1464,6 +1465,9 @@ async function refreshServerViewAndRender() {
       ? `/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/view?sessionToken=${encodeURIComponent(appState.serverSession.sessionToken)}`
       : `/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/view?playerId=${encodeURIComponent(appState.serverSession.viewerPlayerId)}`;
     const view = await serverGet(viewPath);
+    if (view?.viewerPlayerId) {
+      appState.serverSession.viewerPlayerId = view.viewerPlayerId;
+    }
     mapServerViewToLocalState(view);
     appState.serverSession.status = view.status || appState.serverSession.status;
     appState.serverSession.lastSyncAt = new Date().toISOString();
@@ -1472,6 +1476,68 @@ async function refreshServerViewAndRender() {
     renderPrototype();
   } catch (error) {
     appState.serverSession.lastError = error instanceof Error ? error.message : "Server refresh failed.";
+  }
+}
+
+async function tryAutoEnterRunningMatchFromLobby() {
+  if (autoEnterMatchInFlight) {
+    return false;
+  }
+  if (appState.setupMode !== "multiplayer") {
+    return false;
+  }
+  if (!appState.serverSession?.connected || !appState.serverSession?.lobbyId) {
+    return false;
+  }
+  if (document.querySelector("[data-screen='table']")?.classList.contains("is-active")) {
+    return false;
+  }
+
+  autoEnterMatchInFlight = true;
+  try {
+    if (!appState.serverSession.viewerPlayerId && appState.serverSession.joinCode) {
+      await reconnectLobbySession(appState.serverSession.joinCode);
+    }
+
+    if (appState.serverSession.sessionToken) {
+      const resumed = await serverPost(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/resume`, {
+        sessionToken: appState.serverSession.sessionToken,
+      });
+      if (resumed?.viewerPlayerId) {
+        appState.serverSession.viewerPlayerId = resumed.viewerPlayerId;
+      }
+      if (resumed?.sessionToken) {
+        appState.serverSession.sessionToken = resumed.sessionToken;
+      }
+    }
+
+    const lobby = await refreshLobbyInfo();
+    appState.serverSession.status = lobby?.status || appState.serverSession.status;
+    if (appState.serverSession.status !== "in_progress") {
+      return false;
+    }
+
+    const hasViewerSeat = (lobby?.players || []).some((player) => player.playerId === appState.serverSession.viewerPlayerId);
+    if (!hasViewerSeat && appState.serverSession.joinCode) {
+      const reconnected = await reconnectLobbySession(appState.serverSession.joinCode);
+      if (!reconnected) {
+        return false;
+      }
+      const refreshedLobby = await refreshLobbyInfo();
+      if (!(refreshedLobby?.players || []).some((player) => player.playerId === appState.serverSession.viewerPlayerId)) {
+        return false;
+      }
+    }
+
+    await refreshServerViewAndRender();
+    showScreen("table");
+    appendLog(`Match started from lobby ${appState.serverSession.joinCode}.`);
+    return true;
+  } catch (error) {
+    appState.serverSession.lastError = error instanceof Error ? error.message : "Auto-enter match failed.";
+    return false;
+  } finally {
+    autoEnterMatchInFlight = false;
   }
 }
 
@@ -1486,6 +1552,9 @@ function startServerPolling() {
       try {
         await refreshLobbyInfo();
         syncLobbySeatPreview();
+        if (appState.setupMode === "multiplayer" && appState.serverSession?.status === "in_progress") {
+          await tryAutoEnterRunningMatchFromLobby();
+        }
       } catch (error) {
         appState.serverSession.lastError = error instanceof Error ? error.message : "Lobby polling failed.";
       }
@@ -3319,6 +3388,9 @@ async function startHostedMatchFromUi() {
         });
         if (resumed?.viewerPlayerId) {
           appState.serverSession.viewerPlayerId = resumed.viewerPlayerId;
+        }
+        if (resumed?.sessionToken) {
+          appState.serverSession.sessionToken = resumed.sessionToken;
         }
       }
       const lobby = await refreshLobbyInfo();
