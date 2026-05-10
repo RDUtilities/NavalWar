@@ -36,6 +36,7 @@ export interface LobbyJoinOptions {
 export interface MultiplayerPlayerRecord {
   playerId: PlayerId;
   clientId: string | null;
+  sessionToken: string;
   playerName: string;
   role: "human" | "bot";
   preferredSeatId: SeatId | null;
@@ -232,6 +233,7 @@ export class InMemoryMultiplayerService {
     const hostRecord: MultiplayerPlayerRecord = {
       playerId: hostPlayerId,
       clientId: null,
+      sessionToken: createId("session"),
       playerName: sanitizeName(options.hostName, "Host Admiral"),
       role: "human",
       preferredSeatId: options.preferredSeatId ?? 0,
@@ -288,6 +290,7 @@ export class InMemoryMultiplayerService {
     const player: MultiplayerPlayerRecord = {
       playerId: createId("player"),
       clientId: normalizedClientId || null,
+      sessionToken: createId("session"),
       playerName: sanitizeName(options.playerName, "Admiral"),
       role: options.role ?? "human",
       preferredSeatId: options.preferredSeatId ?? null,
@@ -317,6 +320,24 @@ export class InMemoryMultiplayerService {
       status: lobby.status,
       playerCount: lobby.playerCount,
       viewerPlayerId: player.playerId,
+      sessionToken: player.sessionToken,
+      isHost: player.isHost
+    };
+  }
+
+  resumeSession(lobbyId: string, sessionToken: string) {
+    const lobby = this.requireMutableLobby(lobbyId);
+    const normalizedSessionToken = String(sessionToken || "").trim();
+    assert(normalizedSessionToken.length > 0, "A sessionToken is required to resume.");
+    const player = lobby.players.find((entry) => entry.sessionToken === normalizedSessionToken);
+    assert(player, "Session token is not seated in this lobby.");
+    return {
+      lobbyId: lobby.lobbyId,
+      joinCode: lobby.joinCode,
+      status: lobby.status,
+      playerCount: lobby.playerCount,
+      viewerPlayerId: player.playerId,
+      sessionToken: player.sessionToken,
       isHost: player.isHost
     };
   }
@@ -330,6 +351,7 @@ export class InMemoryMultiplayerService {
       lobby.players.push({
         playerId: createId("player"),
         clientId: null,
+        sessionToken: createId("session"),
         playerName: `${botNamePrefix} ${botIndex}`,
         role: "bot",
         preferredSeatId: null,
@@ -359,7 +381,7 @@ export class InMemoryMultiplayerService {
     });
 
     lobby.seats = occupiedSeatsToStatePlayers(lobby.seats, state);
-    lobby.players = synchronizeLobbyPlayersToState(lobby.players, lobby.seats);
+    lobby.players = synchronizeLobbyPlayersToState(lobby.players, occupiedSeats, lobby.seats);
     lobby.hostPlayerId = lobby.players.find((player) => player.isHost)?.playerId ?? lobby.hostPlayerId;
     lobby.state = state;
     this.runBotTurnsUntilHumanOrEnd(lobby);
@@ -367,17 +389,14 @@ export class InMemoryMultiplayerService {
     return cloneLobby(lobby);
   }
 
-  submitCommand(lobbyId: string, command: GameCommand): MultiplayerLobby {
+  submitCommand(lobbyId: string, command: GameCommand, sessionToken?: string | null): MultiplayerLobby {
     const lobby = this.requireMutableLobby(lobbyId);
     assert(lobby.status !== "lobby", "Match has not started yet.");
     assert(lobby.state, "Match state is missing.");
-    assert(
-      lobby.players.some((player) => player.playerId === command.actorId),
-      `Player ${command.actorId} is not seated in this lobby.`
-    );
+    const actorId = this.resolveActorId(lobby, command.actorId, sessionToken);
 
-    lobby.state = applyCommand(lobby.state, command, this.rng);
-    this.autoResolvePendingDestroyerSelection(lobby, command.actorId);
+    lobby.state = applyCommand(lobby.state, { ...command, actorId }, this.rng);
+    this.autoResolvePendingDestroyerSelection(lobby, actorId);
     this.runBotTurnsUntilHumanOrEnd(lobby);
     if (lobby.state.phase === "round_complete" || lobby.state.matchWinnerIds.length > 0) {
       lobby.status = "finished";
@@ -385,24 +404,21 @@ export class InMemoryMultiplayerService {
     return cloneLobby(lobby);
   }
 
-  getPlayerView(lobbyId: string, viewerPlayerId: PlayerId): MultiplayerPlayerView {
+  getPlayerView(lobbyId: string, viewerPlayerId: PlayerId | null, sessionToken?: string | null): MultiplayerPlayerView {
     const lobby = this.requireMutableLobby(lobbyId);
-    assert(
-      lobby.players.some((player) => player.playerId === viewerPlayerId),
-      `Player ${viewerPlayerId} is not seated in this lobby.`
-    );
+    const resolvedViewerId = this.resolveViewerId(lobby, viewerPlayerId, sessionToken);
 
-    const viewerSeatId = seatIdForPlayer(lobby, viewerPlayerId);
+    const viewerSeatId = seatIdForPlayer(lobby, resolvedViewerId);
     const seatLayout = buildClientSeatLayout(lobby.seats, viewerSeatId);
 
     return {
       lobbyId: lobby.lobbyId,
       joinCode: lobby.joinCode,
       status: lobby.status,
-      viewerPlayerId,
+      viewerPlayerId: resolvedViewerId,
       viewerSeatId,
       seatLayout,
-      legalCommands: lobby.state ? listLegalCommands(lobby.state, viewerPlayerId) : [],
+      legalCommands: lobby.state ? listLegalCommands(lobby.state, resolvedViewerId) : [],
       gameState: lobby.state
         ? {
             phase: lobby.state.phase,
@@ -435,10 +451,34 @@ export class InMemoryMultiplayerService {
               : null,
             options: { ...lobby.state.options },
             events: [...lobby.state.events],
-            players: buildVisiblePlayers(lobby, viewerPlayerId)
+            players: buildVisiblePlayers(lobby, resolvedViewerId)
           }
         : null
     };
+  }
+
+  private resolveViewerId(lobby: MultiplayerLobby, viewerPlayerId: PlayerId | null, sessionToken?: string | null): PlayerId {
+    if (sessionToken) {
+      const byToken = lobby.players.find((player) => player.sessionToken === String(sessionToken).trim());
+      assert(byToken, "Session token is not seated in this lobby.");
+      return byToken.playerId;
+    }
+    assert(
+      Boolean(viewerPlayerId) && lobby.players.some((player) => player.playerId === viewerPlayerId),
+      `Player ${viewerPlayerId} is not seated in this lobby.`
+    );
+    return viewerPlayerId as PlayerId;
+  }
+
+  private resolveActorId(lobby: MultiplayerLobby, actorId: PlayerId, sessionToken?: string | null): PlayerId {
+    if (sessionToken) {
+      const byToken = lobby.players.find((player) => player.sessionToken === String(sessionToken).trim());
+      assert(byToken, "Session token is not seated in this lobby.");
+      assert(byToken.playerId === actorId, "Command actor does not match session token owner.");
+      return byToken.playerId;
+    }
+    assert(lobby.players.some((player) => player.playerId === actorId), `Player ${actorId} is not seated in this lobby.`);
+    return actorId;
   }
 
   private runBotTurnsUntilHumanOrEnd(lobby: MultiplayerLobby) {
@@ -713,11 +753,20 @@ function cloneLobby(lobby: MultiplayerLobby): MultiplayerLobby {
 
 function synchronizeLobbyPlayersToState(
   players: MultiplayerPlayerRecord[],
-  seats: ServerSeatRecord[]
+  previousSeats: ServerSeatRecord[],
+  updatedSeats: ServerSeatRecord[]
 ): MultiplayerPlayerRecord[] {
+  const previousBySeat = new Map<SeatId, PlayerId>();
+  previousSeats.forEach((seat) => {
+    if (seat.assignment?.playerId != null) {
+      previousBySeat.set(seat.seatId, seat.assignment.playerId);
+    }
+  });
   return players.map((player) => {
-    const updatedSeat = seats.find((seat) => seat.assignment?.isHost === player.isHost && seat.assignment?.playerName === player.playerName)
-      ?? seats.find((seat) => seat.assignment?.playerName === player.playerName);
+    const oldSeat = [...previousBySeat.entries()].find(([, oldPlayerId]) => oldPlayerId === player.playerId);
+    const updatedSeat = oldSeat
+      ? updatedSeats.find((seat) => seat.seatId === oldSeat[0])
+      : updatedSeats.find((seat) => seat.assignment?.playerName === player.playerName);
 
     if (!updatedSeat?.assignment) {
       return { ...player };

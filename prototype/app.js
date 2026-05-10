@@ -968,6 +968,7 @@ appState.serverSession = {
   lastSyncAt: null,
   lastError: null,
   clientId: null,
+  sessionToken: null,
 };
 
 function createClientId() {
@@ -1001,6 +1002,7 @@ function persistServerSessionSnapshot() {
         lobbyId: session.lobbyId,
         joinCode: session.joinCode,
         viewerPlayerId: session.viewerPlayerId,
+        sessionToken: session.sessionToken || null,
         isHost: Boolean(session.isHost),
         status: session.status || "lobby",
       })
@@ -1088,13 +1090,14 @@ async function canUseServerApi() {
   }
 }
 
-function setServerSessionCore({ connected, lobbyId, viewerPlayerId, joinCode, status, isHost, playerCount }) {
+function setServerSessionCore({ connected, lobbyId, viewerPlayerId, joinCode, status, isHost, playerCount, sessionToken }) {
   appState.serverSession.connected = connected;
   appState.serverSession.lobbyId = lobbyId;
   appState.serverSession.viewerPlayerId = viewerPlayerId;
   appState.serverSession.joinCode = joinCode;
   appState.serverSession.status = status;
   appState.serverSession.isHost = isHost;
+  appState.serverSession.sessionToken = sessionToken || appState.serverSession.sessionToken || null;
   appState.serverSession.lastSyncAt = new Date().toISOString();
   appState.serverSession.lastError = null;
   appState.serverSession.localPlayerCount = playerCount;
@@ -1118,12 +1121,12 @@ async function hostLobbyFromSetup({ playerCount, matchMode, campaignTarget }) {
     preferredSeatId: 0,
     clientId: appState.serverSession.clientId,
   });
-  const lobbyId = created?.lobbyId;
+  const createdLobby = created?.lobby ?? created;
+  const lobbyId = createdLobby?.lobbyId;
   if (!lobbyId) {
     throw new Error("Server did not return a lobbyId.");
   }
-  const hostRecord = (created?.players || []).find((player) => player.isHost) || created?.players?.[0];
-  const viewerPlayerId = hostRecord?.playerId;
+  const viewerPlayerId = created?.viewerPlayerId;
   if (!viewerPlayerId) {
     throw new Error("Server did not return a host player id.");
   }
@@ -1131,10 +1134,11 @@ async function hostLobbyFromSetup({ playerCount, matchMode, campaignTarget }) {
     connected: true,
     lobbyId,
     viewerPlayerId,
-    joinCode: created?.joinCode ?? null,
-    status: created?.status ?? "lobby",
+    joinCode: createdLobby?.joinCode ?? null,
+    status: createdLobby?.status ?? "lobby",
     isHost: true,
     playerCount,
+    sessionToken: created?.sessionToken ?? null,
   });
   syncLobbySeatPreview();
   return true;
@@ -1152,22 +1156,20 @@ async function joinLobbyFromCode(joinCode, { playerCount }) {
     role: "human",
     clientId: appState.serverSession.clientId,
   });
-  const viewerRecord =
-    (joined?.players || []).find((player) => player.clientId && player.clientId === appState.serverSession.clientId) ||
-    (joined?.players || []).find((player) => player.playerName === getPlayerName("bottom")) ||
-    joined?.players?.at(-1);
-  const viewerPlayerId = viewerRecord?.playerId;
+  const joinedLobby = joined?.lobby ?? joined;
+  const viewerPlayerId = joined?.viewerPlayerId;
   if (!viewerPlayerId) {
     throw new Error("Server did not return a joined player id.");
   }
   setServerSessionCore({
     connected: true,
-    lobbyId: joined.lobbyId,
+    lobbyId: joinedLobby.lobbyId,
     viewerPlayerId,
-    joinCode: joined.joinCode ?? joinCode,
-    status: joined.status ?? "lobby",
+    joinCode: joinedLobby.joinCode ?? joinCode,
+    status: joinedLobby.status ?? "lobby",
     isHost: false,
     playerCount,
+    sessionToken: joined?.sessionToken ?? null,
   });
   syncLobbySeatPreview();
   return true;
@@ -1202,6 +1204,7 @@ async function reconnectLobbySession(joinCode) {
     status: response.status ?? "lobby",
     isHost: Boolean(response.isHost),
     playerCount: response.playerCount ?? getConfiguredPlayerCount(),
+    sessionToken: response.sessionToken ?? null,
   });
   return true;
 }
@@ -1380,9 +1383,10 @@ async function refreshServerViewAndRender() {
     return;
   }
   try {
-    const view = await serverGet(
-      `/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/view?playerId=${encodeURIComponent(appState.serverSession.viewerPlayerId)}`
-    );
+    const viewPath = appState.serverSession.sessionToken
+      ? `/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/view?sessionToken=${encodeURIComponent(appState.serverSession.sessionToken)}`
+      : `/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/view?playerId=${encodeURIComponent(appState.serverSession.viewerPlayerId)}`;
+    const view = await serverGet(viewPath);
     mapServerViewToLocalState(view);
     appState.serverSession.status = view.status || appState.serverSession.status;
     appState.serverSession.lastSyncAt = new Date().toISOString();
@@ -1414,7 +1418,10 @@ async function submitServerCommand(command) {
     return false;
   }
   try {
-    await serverPost(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/commands`, command);
+    await serverPost(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/commands`, {
+      ...command,
+      sessionToken: appState.serverSession.sessionToken ?? null,
+    });
     await refreshServerViewAndRender();
     return true;
   } catch (error) {
@@ -1621,6 +1628,7 @@ function renderLobbyDebugPanel() {
     `joinCode: ${session.joinCode || "-"}`,
     `lobbyId: ${session.lobbyId || "-"}`,
     `viewerPlayerId: ${session.viewerPlayerId || "-"}`,
+    `sessionToken: ${session.sessionToken || "-"}`,
     `lastSyncAt: ${session.lastSyncAt || "-"}`,
     `lastError: ${session.lastError || "-"}`,
   ];
@@ -3098,6 +3106,14 @@ async function startHostedMatchFromUi() {
     } else {
       if (!appState.serverSession.viewerPlayerId && appState.serverSession.joinCode) {
         await reconnectLobbySession(appState.serverSession.joinCode);
+      }
+      if (appState.serverSession.sessionToken) {
+        const resumed = await serverPost(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/resume`, {
+          sessionToken: appState.serverSession.sessionToken,
+        });
+        if (resumed?.viewerPlayerId) {
+          appState.serverSession.viewerPlayerId = resumed.viewerPlayerId;
+        }
       }
       const lobby = await serverGet(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}`);
       appState.serverSession.status = lobby.status || appState.serverSession.status;

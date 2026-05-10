@@ -105,6 +105,13 @@ function toInt(value, fallback) {
   return Number.isFinite(parsed) ? Math.trunc(parsed) : fallback;
 }
 
+function sanitizeLobbyResponse(lobby) {
+  return {
+    ...lobby,
+    players: (lobby.players || []).map(({ sessionToken, ...rest }) => ({ ...rest })),
+  };
+}
+
 function parseLobbyId(pathname) {
   const match = pathname.match(/^\/api\/lobbies\/([^/]+)(?:\/|$)/);
   return match ? decodeURIComponent(match[1]) : null;
@@ -129,7 +136,12 @@ async function handleApi(req, res, pathname, searchParams) {
       campaignTargetScore: Math.max(25, toInt(body.campaignTargetScore, 100)),
       preferredSeatId: body.preferredSeatId == null ? null : toInt(body.preferredSeatId, 0)
     });
-    sendJson(res, 201, lobby);
+    const host = (lobby.players || []).find((player) => player.isHost) || lobby.players?.[0];
+    sendJson(res, 201, {
+      lobby: sanitizeLobbyResponse(lobby),
+      viewerPlayerId: host?.playerId ?? null,
+      sessionToken: host?.sessionToken ?? null,
+    });
     return;
   }
 
@@ -138,7 +150,7 @@ async function handleApi(req, res, pathname, searchParams) {
     const joinCode = decodeURIComponent(byCodeMatch[1] || "").trim().toUpperCase();
     const action = byCodeMatch[2] || "";
     if (!action && req.method === "GET") {
-      sendJson(res, 200, multiplayerService.getLobbyByJoinCode(joinCode));
+      sendJson(res, 200, sanitizeLobbyResponse(multiplayerService.getLobbyByJoinCode(joinCode)));
       return;
     }
     if (action === "join" && req.method === "POST") {
@@ -150,7 +162,15 @@ async function handleApi(req, res, pathname, searchParams) {
         isLocalPlayer: Boolean(body.isLocalPlayer),
         clientId: body.clientId == null ? null : String(body.clientId)
       });
-      sendJson(res, 200, lobby);
+      const clientId = body.clientId == null ? null : String(body.clientId);
+      const viewer = clientId
+        ? (lobby.players || []).find((player) => player.clientId === clientId)
+        : lobby.players?.at(-1);
+      sendJson(res, 200, {
+        lobby: sanitizeLobbyResponse(lobby),
+        viewerPlayerId: viewer?.playerId ?? null,
+        sessionToken: viewer?.sessionToken ?? null,
+      });
       return;
     }
     if (action === "reconnect" && req.method === "POST") {
@@ -171,7 +191,7 @@ async function handleApi(req, res, pathname, searchParams) {
   }
 
   if (req.method === "GET" && pathname === `/api/lobbies/${encodeURIComponent(lobbyId)}`) {
-    sendJson(res, 200, multiplayerService.getLobby(lobbyId));
+    sendJson(res, 200, sanitizeLobbyResponse(multiplayerService.getLobby(lobbyId)));
     return;
   }
 
@@ -184,7 +204,15 @@ async function handleApi(req, res, pathname, searchParams) {
       isLocalPlayer: Boolean(body.isLocalPlayer),
       clientId: body.clientId == null ? null : String(body.clientId)
     });
-    sendJson(res, 200, lobby);
+    const clientId = body.clientId == null ? null : String(body.clientId);
+    const viewer = clientId
+      ? (lobby.players || []).find((player) => player.clientId === clientId)
+      : lobby.players?.at(-1);
+    sendJson(res, 200, {
+      lobby: sanitizeLobbyResponse(lobby),
+      viewerPlayerId: viewer?.playerId ?? null,
+      sessionToken: viewer?.sessionToken ?? null,
+    });
     return;
   }
 
@@ -194,22 +222,29 @@ async function handleApi(req, res, pathname, searchParams) {
       lobbyId,
       String(body.botNamePrefix ?? "Bot Admiral")
     );
-    sendJson(res, 200, lobby);
+    sendJson(res, 200, sanitizeLobbyResponse(lobby));
     return;
   }
 
   if (req.method === "POST" && pathname === `/api/lobbies/${encodeURIComponent(lobbyId)}/start`) {
-    sendJson(res, 200, multiplayerService.startMatch(lobbyId));
+    sendJson(res, 200, sanitizeLobbyResponse(multiplayerService.startMatch(lobbyId)));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === `/api/lobbies/${encodeURIComponent(lobbyId)}/resume`) {
+    const body = await parseJsonBody(req);
+    sendJson(res, 200, multiplayerService.resumeSession(lobbyId, String(body.sessionToken ?? "")));
     return;
   }
 
   if (req.method === "GET" && pathname === `/api/lobbies/${encodeURIComponent(lobbyId)}/view`) {
     const viewerPlayerId = searchParams.get("playerId");
-    if (!viewerPlayerId) {
-      sendJson(res, 400, { error: "Missing required query parameter: playerId" });
+    const sessionToken = searchParams.get("sessionToken");
+    if (!viewerPlayerId && !sessionToken) {
+      sendJson(res, 400, { error: "Missing required query parameter: playerId or sessionToken" });
       return;
     }
-    sendJson(res, 200, multiplayerService.getPlayerView(lobbyId, viewerPlayerId));
+    sendJson(res, 200, multiplayerService.getPlayerView(lobbyId, viewerPlayerId, sessionToken));
     return;
   }
 
@@ -219,7 +254,7 @@ async function handleApi(req, res, pathname, searchParams) {
       sendJson(res, 400, { error: "Command payload is missing required fields." });
       return;
     }
-    sendJson(res, 200, multiplayerService.submitCommand(lobbyId, body));
+    sendJson(res, 200, sanitizeLobbyResponse(multiplayerService.submitCommand(lobbyId, body, body.sessionToken ?? null)));
     return;
   }
 
