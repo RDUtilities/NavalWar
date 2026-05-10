@@ -1401,10 +1401,25 @@ function mapServerViewToLocalState(view) {
   appState.turnState.currentZone =
     Object.keys(playersBySide).find((side) => playersBySide[side]?.id === gameState.currentPlayerId) || "bottom";
   appState.turnState.turnNumber = gameState.turnNumber;
+  const legalCommandSet = new Set(view?.legalCommands || []);
+  const hasPlayAction = [...legalCommandSet].some(
+    (command) =>
+      command === "discard_play_card" ||
+      command === "resolve_destroyer_squadron_roll" ||
+      command === "select_destroyer_squadron_targets" ||
+      command.startsWith("play_")
+  );
+  const hasDrawAction = legalCommandSet.has("draw_play_card") || legalCommandSet.has("use_carrier_air_strikes");
+  const hasOnlyEndTurn = legalCommandSet.size === 1 && legalCommandSet.has("end_turn");
+
   appState.turnState.phase = gameState.phase === "round_complete"
     ? "complete"
-    : gameState.hasPerformedActionThisTurn
+    : gameState.hasPerformedActionThisTurn || hasOnlyEndTurn
     ? "complete"
+    : hasPlayAction
+    ? "play"
+    : hasDrawAction
+    ? "draw"
     : gameState.hasDrawnThisTurn || gameState.hasUsedCarrierStrikeThisTurn
     ? "play"
     : "draw";
