@@ -967,6 +967,9 @@ let multiplayerSocket = null;
 let realtimeEnabled = false;
 let autoEndTurnInFlight = false;
 let lastAutoEndTurnKey = null;
+let longPressTimer = null;
+let longPressTarget = null;
+let suppressClickUntil = 0;
 appState.serverSession = {
   connected: false,
   lobbyId: null,
@@ -6260,7 +6263,47 @@ victoryButtons.forEach((button) => {
   });
 });
 
+document.addEventListener("contextmenu", (event) => {
+  const zoomTarget = event.target.closest("[data-zoom-src]");
+  if (!zoomTarget) {
+    return;
+  }
+  event.preventDefault();
+  openZoom(zoomTarget.dataset.zoomSrc, zoomTarget.dataset.zoomLabel || "Card detail");
+});
+
+document.addEventListener("pointerdown", (event) => {
+  if (!IS_TOUCH_DEVICE || event.pointerType !== "touch") {
+    return;
+  }
+  const zoomTarget = event.target.closest("[data-zoom-src]");
+  if (!zoomTarget) {
+    return;
+  }
+  longPressTarget = zoomTarget;
+  window.clearTimeout(longPressTimer);
+  longPressTimer = window.setTimeout(() => {
+    if (!longPressTarget) return;
+    openZoom(longPressTarget.dataset.zoomSrc, longPressTarget.dataset.zoomLabel || "Card detail");
+    suppressClickUntil = Date.now() + 700;
+    longPressTarget = null;
+  }, 520);
+});
+
+document.addEventListener("pointerup", () => {
+  window.clearTimeout(longPressTimer);
+  longPressTarget = null;
+});
+
+document.addEventListener("pointercancel", () => {
+  window.clearTimeout(longPressTimer);
+  longPressTarget = null;
+});
+
 document.addEventListener("click", (event) => {
+  if (Date.now() < suppressClickUntil) {
+    return;
+  }
   if (event.target.closest("[data-next-campaign-round]")) {
     startNextCampaignRound();
     return;
@@ -6286,12 +6329,6 @@ document.addEventListener("click", (event) => {
       salvoTarget.dataset.salvoShip || "Ship",
       JSON.parse(salvoTarget.dataset.salvos || "[]")
     );
-    return;
-  }
-
-  const zoomTarget = event.target.closest("[data-zoom-src]");
-  if (zoomTarget) {
-    openZoom(zoomTarget.dataset.zoomSrc, zoomTarget.dataset.zoomLabel || "Card detail");
     return;
   }
 
@@ -6548,6 +6585,9 @@ document.addEventListener("dragend", () => {
 });
 
 document.addEventListener("click", (event) => {
+  if (Date.now() < suppressClickUntil) {
+    return;
+  }
   if (!IS_TOUCH_DEVICE || appState.match.isRoundOver || !isHumanTurn() || appState.turnState.phase !== "play") {
     return;
   }
