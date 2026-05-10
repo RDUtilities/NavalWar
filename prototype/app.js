@@ -82,6 +82,7 @@ const setupModeMultiplayerButton = document.getElementById("setup-mode-multiplay
 const copyJoinCodeButton = document.getElementById("copy-join-code-button");
 const lobbyReadySummary = document.getElementById("lobby-ready-summary");
 const lobbyReadyList = document.getElementById("lobby-ready-list");
+const menuLobbyPanel = document.getElementById("menu-lobby-panel");
 const cardSetDescription = document.getElementById("card-set-description");
 const cardSetPlayCount = document.getElementById("card-set-play-count");
 const cardSetShipCount = document.getElementById("card-set-ship-count");
@@ -1211,8 +1212,35 @@ async function startHostedMatchFromLobby() {
   if (!appState.serverSession?.lobbyId || !appState.serverSession?.isHost) {
     throw new Error("Only the host can start the match.");
   }
-  await serverPost(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/fill-bots`, {});
-  const started = await serverPost(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}/start`, {});
+  const lobbyId = encodeURIComponent(appState.serverSession.lobbyId);
+  const lobbyInfo = await refreshLobbyInfo();
+  if (lobbyInfo?.status === "in_progress") {
+    appState.serverSession.status = "in_progress";
+    persistServerSessionSnapshot();
+    return true;
+  }
+
+  const openSeats = Math.max(0, Number(lobbyInfo?.playerCount || 0) - Number((lobbyInfo?.players || []).length));
+  if (openSeats > 0) {
+    try {
+      await serverPost(`/api/lobbies/${lobbyId}/fill-bots`, {});
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error || "");
+      // If a parallel click/session already started the match, proceed to table instead of hard failing.
+      if (!message.includes("Bots can only be added before the match starts")) {
+        throw error;
+      }
+    }
+  }
+
+  const latestLobby = await refreshLobbyInfo();
+  if (latestLobby?.status === "in_progress") {
+    appState.serverSession.status = "in_progress";
+    persistServerSessionSnapshot();
+    return true;
+  }
+
+  const started = await serverPost(`/api/lobbies/${lobbyId}/start`, {});
   appState.serverSession.status = started?.status ?? "in_progress";
   persistServerSessionSnapshot();
   return true;
@@ -1676,6 +1704,12 @@ function syncLobbySeatPreview() {
   if (joinCodeInput) {
     joinCodeInput.disabled = appState.setupMode !== "multiplayer";
   }
+  if (menuLobbyPanel) {
+    menuLobbyPanel.hidden = appState.setupMode !== "multiplayer";
+  }
+  if (menuLobbyDebug) {
+    menuLobbyDebug.hidden = appState.setupMode !== "multiplayer";
+  }
   if (startMatchButton) {
     const allHumansReady = humans.length > 0 && readyHumans.length === humans.length;
     const canHostStart = appState.serverSession?.isHost && appState.serverSession?.lobbyId && allHumansReady;
@@ -1713,6 +1747,15 @@ function syncLobbySeatPreview() {
 }
 
 function renderLobbyDebugPanel() {
+  if (appState.setupMode !== "multiplayer") {
+    if (menuLobbyDebug) {
+      menuLobbyDebug.textContent = "";
+    }
+    if (tableLobbyDebug) {
+      tableLobbyDebug.textContent = "";
+    }
+    return;
+  }
   const session = appState.serverSession || {};
   const lines = [
     "Lobby Debug",

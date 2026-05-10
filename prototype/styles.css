@@ -308,6 +308,16 @@ button {
   white-space: pre-wrap;
 }
 
+.setup-lobby-panel {
+  margin-top: 4px;
+}
+
+.lobby-join-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .lobby-debug-table {
   margin: 0 14px 8px 14px;
 }

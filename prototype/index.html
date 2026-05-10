@@ -53,6 +53,24 @@
             <button class="secondary-button" data-target-screen="splash">Back To Splash</button>
           </div>
           <p class="menu-copy" id="save-status-copy">No saved game detected yet.</p>
+          <article class="setup-panel setup-lobby-panel" id="menu-lobby-panel">
+            <p class="eyebrow">Online Lobby</p>
+            <div class="lobby-card">
+              <div class="seat-row"><span>Join Code</span><strong id="lobby-join-code">Not hosted yet</strong></div>
+              <div class="seat-row"><span>Privacy</span><strong>Private match</strong></div>
+              <div class="seat-row"><span>Ready State</span><strong id="ready-state-copy">No active lobby</strong></div>
+              <div class="seat-row"><span>Lobby Ready</span><strong id="lobby-ready-summary">0 / 0 ready</strong></div>
+              <div id="lobby-ready-list" class="lobby-ready-list"></div>
+              <label class="setup-field" for="join-code-input">
+                <span>Join Existing Lobby</span>
+                <input id="join-code-input" type="text" maxlength="12" placeholder="Enter join code" />
+              </label>
+              <div class="lobby-join-actions">
+                <button class="secondary-button" id="join-lobby-button">Join Lobby</button>
+                <button class="secondary-button" id="copy-join-code-button">Copy Join Code</button>
+              </div>
+            </div>
+          </article>
           <div class="lobby-debug-panel" id="menu-lobby-debug"></div>
           <div class="setup-grid">
             <article class="setup-panel">
@@ -116,22 +134,6 @@
                 <div class="seat-row"><span>Play Deck</span><strong id="card-set-play-count">108 cards</strong></div>
                 <div class="seat-row"><span>Ship Deck</span><strong id="card-set-ship-count">54 ships</strong></div>
                 <button class="secondary-button" id="view-card-set-button">View Deck</button>
-              </div>
-            </article>
-            <article class="setup-panel">
-              <p class="eyebrow">Online Lobby</p>
-              <div class="lobby-card">
-                <div class="seat-row"><span>Join Code</span><strong id="lobby-join-code">Not hosted yet</strong></div>
-                <div class="seat-row"><span>Privacy</span><strong>Private match</strong></div>
-                <div class="seat-row"><span>Ready State</span><strong id="ready-state-copy">No active lobby</strong></div>
-                <div class="seat-row"><span>Lobby Ready</span><strong id="lobby-ready-summary">0 / 0 ready</strong></div>
-                <div id="lobby-ready-list" class="lobby-ready-list"></div>
-                <label class="setup-field" for="join-code-input">
-                  <span>Join Existing Lobby</span>
-                  <input id="join-code-input" type="text" maxlength="12" placeholder="Enter join code" />
-                </label>
-                <button class="secondary-button" id="join-lobby-button">Join Lobby</button>
-                <button class="secondary-button" id="copy-join-code-button">Copy Join Code</button>
               </div>
             </article>
           </div>
