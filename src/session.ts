@@ -438,8 +438,9 @@ export class InMemoryMultiplayerService {
     assert(lobby.status !== "lobby", "Match has not started yet.");
     assert(lobby.state, "Match state is missing.");
     const actorId = this.resolveActorId(lobby, command.actorId, sessionToken);
+    const normalizedCommand = normalizeCommandCardContext(lobby.state, { ...command, actorId });
 
-    lobby.state = applyCommand(lobby.state, { ...command, actorId }, this.rng);
+    lobby.state = applyCommand(lobby.state, normalizedCommand, this.rng);
     this.autoResolvePendingDestroyerSelection(lobby, actorId);
     this.runBotTurnsUntilHumanOrEnd(lobby);
     if (lobby.state.phase === "round_complete" || lobby.state.matchWinnerIds.length > 0) {
@@ -580,6 +581,112 @@ export class InMemoryMultiplayerService {
     const lobby = this.lobbies.get(lobbyId);
     assert(lobby, `Lobby ${lobbyId} was not found.`);
     return lobby;
+  }
+}
+
+function hasCardInHand(state: GameState, actorId: PlayerId, cardId: string | undefined): boolean {
+  if (!cardId) {
+    return false;
+  }
+  const actor = state.players.find((entry) => entry.id === actorId);
+  return Boolean(actor?.hand.some((card) => card.id === cardId));
+}
+
+function hasOpeningMinefieldTarget(state: GameState, actorId: PlayerId): boolean {
+  return state.players.some((targetPlayer) => {
+    if (targetPlayer.id === actorId || targetPlayer.eliminated) {
+      return false;
+    }
+    return !targetPlayer.fleetEffects.some((effect) => effect.kind === "minefield");
+  });
+}
+
+function chooseDiscardCard(state: GameState, actorId: PlayerId): PlayCard | undefined {
+  const actor = state.players.find((entry) => entry.id === actorId);
+  if (!actor) {
+    return undefined;
+  }
+
+  const openingTurnPending = state.openingTurnPendingPlayerIds.includes(actorId);
+  return (
+    actor.hand.find((card) => card.kind === "additional_damage") ||
+    (openingTurnPending && !hasOpeningMinefieldTarget(state, actorId)
+      ? actor.hand.find((card) => card.kind === "minefield")
+      : undefined) ||
+    actor.hand.find(
+      (card) =>
+        card.kind !== "minefield" &&
+        card.kind !== "submarine" &&
+        card.kind !== "torpedo_boat" &&
+        card.kind !== "additional_ship"
+    ) ||
+    actor.hand[0]
+  );
+}
+
+function chooseCardByKind(state: GameState, actorId: PlayerId, kind: PlayCard["kind"]): PlayCard | undefined {
+  return state.players.find((entry) => entry.id === actorId)?.hand.find((card) => card.kind === kind);
+}
+
+function normalizeCommandCardContext(state: GameState, command: GameCommand): GameCommand {
+  const commandWithCard = command as GameCommand & { cardId?: string };
+  if (commandWithCard.cardId && hasCardInHand(state, command.actorId, commandWithCard.cardId)) {
+    return command;
+  }
+
+  switch (command.type) {
+    case "discard_play_card": {
+      const card = chooseDiscardCard(state, command.actorId);
+      assert(card, `No card is available for ${command.actorId} to discard.`);
+      return { ...command, cardId: card.id };
+    }
+    case "play_additional_ship": {
+      const card = chooseCardByKind(state, command.actorId, "additional_ship");
+      assert(card, `No Additional Ship card is available in ${command.actorId}'s hand.`);
+      return { ...command, cardId: card.id };
+    }
+    case "play_minefield": {
+      const card = chooseCardByKind(state, command.actorId, "minefield");
+      assert(card, `No Minefield card is available in ${command.actorId}'s hand.`);
+      return { ...command, cardId: card.id };
+    }
+    case "play_additional_damage": {
+      const card = chooseCardByKind(state, command.actorId, "additional_damage");
+      assert(card, `No Additional Damage card is available in ${command.actorId}'s hand.`);
+      return { ...command, cardId: card.id };
+    }
+    case "play_submarine": {
+      const card = chooseCardByKind(state, command.actorId, "submarine");
+      assert(card, `No Submarine card is available in ${command.actorId}'s hand.`);
+      return { ...command, cardId: card.id };
+    }
+    case "play_torpedo_boat": {
+      const card = chooseCardByKind(state, command.actorId, "torpedo_boat");
+      assert(card, `No Torpedo Boat card is available in ${command.actorId}'s hand.`);
+      return { ...command, cardId: card.id };
+    }
+    case "play_smoke": {
+      const card = chooseCardByKind(state, command.actorId, "smoke");
+      assert(card, `No Smoke card is available in ${command.actorId}'s hand.`);
+      return { ...command, cardId: card.id };
+    }
+    case "play_destroyer_squadron": {
+      const card = chooseCardByKind(state, command.actorId, "destroyer_squadron");
+      assert(card, `No Destroyer Squadron card is available in ${command.actorId}'s hand.`);
+      return { ...command, cardId: card.id };
+    }
+    case "play_minesweeper": {
+      const card = chooseCardByKind(state, command.actorId, "minesweeper");
+      assert(card, `No Minesweeper card is available in ${command.actorId}'s hand.`);
+      return { ...command, cardId: card.id };
+    }
+    case "play_repair": {
+      const card = chooseCardByKind(state, command.actorId, "repair");
+      assert(card, `No Repair card is available in ${command.actorId}'s hand.`);
+      return { ...command, cardId: card.id };
+    }
+    default:
+      return command;
   }
 }
 
