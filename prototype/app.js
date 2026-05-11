@@ -967,6 +967,8 @@ let multiplayerSocket = null;
 let realtimeEnabled = false;
 let autoEndTurnInFlight = false;
 let lastAutoEndTurnKey = null;
+let lastServerCommandKey = null;
+let lastServerCommandAt = 0;
 let longPressTimer = null;
 let longPressTarget = null;
 let suppressClickUntil = 0;
@@ -1805,6 +1807,20 @@ async function submitServerCommand(command) {
   if (!appState.serverSession?.connected || !appState.serverSession.lobbyId) {
     return false;
   }
+  const commandKey = (() => {
+    try {
+      return JSON.stringify(command);
+    } catch (_) {
+      return String(command?.type || "unknown");
+    }
+  })();
+  const now = Date.now();
+  if (lastServerCommandKey === commandKey && now - lastServerCommandAt < 650) {
+    return true;
+  }
+  lastServerCommandKey = commandKey;
+  lastServerCommandAt = now;
+
   const originalHandCard =
     command?.cardId && Array.isArray(appState.hand)
       ? appState.hand.find((card) => card.id === command.cardId) || null
@@ -1855,6 +1871,10 @@ async function submitServerCommand(command) {
           }
         }
       }
+      await refreshServerViewAndRender();
+      if (/has already performed their draw/i.test(message) || /is not in .*hand/i.test(message)) {
+        return true;
+      }
       appendLog(`Server command failed: ${message}`);
       renderPrototype();
       return false;
@@ -1882,6 +1902,10 @@ async function submitServerCommand(command) {
           return false;
         }
       }
+    }
+    await refreshServerViewAndRender();
+    if (/has already performed their draw/i.test(message) || /is not in .*hand/i.test(message)) {
+      return true;
     }
     appendLog(`Server command failed: ${message}`);
     renderPrototype();
@@ -4127,6 +4151,12 @@ async function drawPlayCardForTurn() {
   }
 
   if (appState.serverSession?.connected) {
+    const legal = Array.isArray(appState.serverSession.legalCommands) ? appState.serverSession.legalCommands : [];
+    if (!legal.includes("draw_card")) {
+      await refreshServerViewAndRender();
+      renderPrototype();
+      return;
+    }
     const ok = await submitServerCommand({
       type: "draw_card",
       actorId: appState.serverSession.viewerPlayerId,
