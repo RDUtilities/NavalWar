@@ -221,6 +221,13 @@ Entry format:
 - Result: user-visible behavior change
 - Verification: commands run and result
 
+### 2026-05-11
+
+- `2026-05-11 09:xx America/Chicago` — Desktop select-target interaction option
+- Scope: `prototype/index.html`, `prototype/app.js`
+- Result: Added a `Drag Cards` top-bar toggle. Desktop defaults to click/select targeting like mobile, with selected cards highlighted and legal targets glowing; enabling the toggle restores drag-based card play/reordering.
+- Verification: `node --check prototype/app.js` (pass), `npm run check` (pass), `npm run build` (pass), local browser pass via `http://localhost:3000/prototype/index.html` (pass)
+
 ### 2026-05-09
 
 - `2026-05-09 13:xx America/Chicago` — Solo/Multiplayer setup split + lobby ready-check start gate

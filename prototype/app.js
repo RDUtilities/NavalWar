@@ -56,6 +56,7 @@ const scoringHint = document.getElementById("scoring-hint");
 const useAirStrikeButton = document.getElementById("use-airstrike-button");
 const endTurnButton = document.getElementById("end-turn-button");
 const targetBoardToggle = document.getElementById("target-board-toggle");
+const dragModeToggle = document.getElementById("drag-mode-toggle");
 const targetBoardSection = document.getElementById("target-board-section");
 const bottomBattleZone = document.getElementById("bottom-battle-zone");
 const quitGameButton = document.getElementById("quit-game-button");
@@ -875,6 +876,7 @@ const sampleState = {
   },
   ui: {
     showTargetBoard: true,
+    interactionMode: "select",
     highlightedDrawCardId: null,
     touchSelectedCardId: null,
   },
@@ -2364,6 +2366,14 @@ function isHumanTurn() {
   return getCurrentZone() === "bottom";
 }
 
+function isDragInteractionEnabled() {
+  return !IS_TOUCH_DEVICE && appState.ui.interactionMode === "drag";
+}
+
+function isSelectInteractionEnabled() {
+  return IS_TOUCH_DEVICE || appState.ui.interactionMode !== "drag";
+}
+
 function isOpeningTurnWindow() {
   const activePlayers = getActiveZones().length;
   return appState.turnState.turnNumber <= activePlayers;
@@ -2740,6 +2750,9 @@ function updateBottomStatus() {
   });
   targetBoardSection.hidden = !appState.ui.showTargetBoard;
   targetBoardToggle.checked = appState.ui.showTargetBoard;
+  if (dragModeToggle) {
+    dragModeToggle.checked = appState.ui.interactionMode === "drag";
+  }
 }
 
 function renderScoreTable() {
@@ -3043,6 +3056,13 @@ function highlightTouchTargetsForCard(card) {
       node.classList.add("is-valid-target");
     }
   });
+}
+
+function refreshSelectedTargetHighlights() {
+  if (!isSelectInteractionEnabled() || !appState.ui.touchSelectedCardId) {
+    return;
+  }
+  highlightTouchTargetsForCard(getDisplayedHandCardById(appState.ui.touchSelectedCardId));
 }
 
 function resolveHandCardDrop(card, dropTarget) {
@@ -4802,7 +4822,7 @@ function createShipCard(ship, zone, index) {
   if (ship.sunk) wrapper.classList.add("is-sunk");
   if (ship.isSinking) wrapper.classList.add("is-sinking-transition");
   if (zone === "bottom" && !ship.sunk) {
-    wrapper.draggable = !IS_TOUCH_DEVICE;
+    wrapper.draggable = isDragInteractionEnabled();
     wrapper.dataset.dragType = "fleet_ship";
     wrapper.dataset.isCarrier = String(ship.isCarrier);
   }
@@ -4865,7 +4885,7 @@ function createPlayCard(card, index) {
   wrapper.dataset.cardId = card.id;
   wrapper.dataset.dragType = "hand_card";
   wrapper.dataset.dropMode = card.dropMode;
-  wrapper.draggable = !IS_TOUCH_DEVICE;
+  wrapper.draggable = isDragInteractionEnabled();
   if (IMMEDIATE_PLAY_KINDS.has(card.kind)) {
     wrapper.classList.add("is-forced-special");
   }
@@ -4953,7 +4973,7 @@ function createEffectCard(effect, zone) {
     card.dataset.effectKind = effect.kind;
   }
   if (zone === "bottom" && effect.kind === "destroyer_squadron") {
-    card.draggable = !IS_TOUCH_DEVICE;
+    card.draggable = isDragInteractionEnabled();
     card.dataset.dragType = "battle_effect";
   }
 
@@ -5266,6 +5286,7 @@ function renderPrototype() {
   const drawPiles = document.getElementById("draw-piles");
   drawPiles.innerHTML = "";
   appState.drawPiles.forEach((pile) => drawPiles.appendChild(createDeckPile(pile)));
+  refreshSelectedTargetHighlights();
   flushPendingImpacts();
   scheduleAutosave();
 }
@@ -6286,6 +6307,15 @@ targetBoardToggle.addEventListener("change", () => {
   renderPrototype();
 });
 
+if (dragModeToggle) {
+  dragModeToggle.addEventListener("change", () => {
+    appState.ui.interactionMode = dragModeToggle.checked ? "drag" : "select";
+    clearTouchSelection();
+    clearTargetingLine();
+    renderPrototype();
+  });
+}
+
 useAirStrikeButton.addEventListener("click", () => {
   if (!isHumanTurn()) {
     return;
@@ -6502,6 +6532,10 @@ document.addEventListener("keydown", (event) => {
 document.addEventListener("dragstart", (event) => {
   const target = event.target.closest("[data-drag-type]");
   if (!target) return;
+  if (!isDragInteractionEnabled()) {
+    event.preventDefault();
+    return;
+  }
   if (!isHumanTurn()) {
     event.preventDefault();
     return;
@@ -6676,7 +6710,7 @@ document.addEventListener("click", (event) => {
   if (Date.now() < suppressClickUntil) {
     return;
   }
-  if (!IS_TOUCH_DEVICE || appState.match.isRoundOver || !isHumanTurn() || appState.turnState.phase !== "play") {
+  if (!isSelectInteractionEnabled() || appState.match.isRoundOver || !isHumanTurn() || appState.turnState.phase !== "play") {
     return;
   }
 
@@ -6697,7 +6731,6 @@ document.addEventListener("click", (event) => {
       return;
     }
     appState.ui.touchSelectedCardId = card.id;
-    highlightTouchTargetsForCard(card);
     renderPrototype();
     return;
   }
