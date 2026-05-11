@@ -1046,6 +1046,10 @@ function hasSocketIoClient() {
   return typeof window !== "undefined" && typeof window.io === "function";
 }
 
+function isRealtimeSocketConnected() {
+  return Boolean(multiplayerSocket?.connected);
+}
+
 function socketRequest(event, payload = {}, timeoutMs = 7000) {
   return new Promise((resolve, reject) => {
     if (!multiplayerSocket || !multiplayerSocket.connected) {
@@ -1113,11 +1117,40 @@ function bindRealtimeHandlers() {
     maybeAutoEndTurnForOpeningSpecialFlow();
   });
 
+  multiplayerSocket.on("connect", () => {
+    realtimeEnabled = true;
+    if (appState.serverSession?.lobbyId && appState.serverSession?.sessionToken) {
+      socketRequest("lobby:resume", {
+        lobbyId: appState.serverSession.lobbyId,
+        sessionToken: appState.serverSession.sessionToken,
+      })
+        .then((resumed) => {
+          if (resumed?.viewerPlayerId) {
+            appState.serverSession.viewerPlayerId = resumed.viewerPlayerId;
+          }
+          if (resumed?.sessionToken) {
+            appState.serverSession.sessionToken = resumed.sessionToken;
+          }
+          appState.serverSession.connected = true;
+          appState.serverSession.status = resumed?.status || appState.serverSession.status;
+          appState.serverSession.lastError = null;
+          persistServerSessionSnapshot();
+          startServerPolling();
+          if (appState.serverSession.status === "in_progress") {
+            refreshServerViewAndRender();
+          }
+        })
+        .catch(() => {
+          startServerPolling();
+        });
+    }
+  });
+
   multiplayerSocket.on("disconnect", () => {
-    appState.serverSession.connected = false;
     appState.serverSession.lastError = "Realtime disconnected.";
     syncLobbySeatPreview();
     renderPrototype();
+    startServerPolling();
   });
 }
 
@@ -1231,6 +1264,9 @@ function setServerSessionCore({ connected, lobbyId, viewerPlayerId, joinCode, st
     appState.serverSession.lobbyInfo = null;
   }
   persistServerSessionSnapshot();
+  if (connected) {
+    startServerPolling();
+  }
 }
 
 function setSetupMode(mode) {
@@ -1249,9 +1285,6 @@ async function refreshLobbyInfo() {
     appState.serverSession.lobbyInfo = null;
     return null;
   }
-  if (realtimeEnabled && appState.serverSession.lobbyInfo) {
-    return appState.serverSession.lobbyInfo;
-  }
   const lobby = await serverGet(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}`);
   appState.serverSession.lobbyInfo = lobby;
   appState.serverSession.status = lobby?.status || appState.serverSession.status;
@@ -1259,7 +1292,8 @@ async function refreshLobbyInfo() {
 }
 
 async function hostLobbyFromSetup({ playerCount, matchMode, campaignTarget }) {
-  if (ensureRealtimeConnection()) {
+  ensureRealtimeConnection();
+  if (isRealtimeSocketConnected()) {
     const created = await socketRequest("lobby:create", {
       hostName: getPlayerName("bottom"),
       playerCount,
@@ -1323,7 +1357,8 @@ async function hostLobbyFromSetup({ playerCount, matchMode, campaignTarget }) {
 }
 
 async function joinLobbyFromCode(joinCode, { playerCount }) {
-  if (ensureRealtimeConnection()) {
+  ensureRealtimeConnection();
+  if (isRealtimeSocketConnected()) {
     const joined = await socketRequest("lobby:join", {
       joinCode,
       playerName: getPlayerName("bottom"),
@@ -1379,7 +1414,8 @@ async function startHostedMatchFromLobby() {
   if (!appState.serverSession?.lobbyId || !appState.serverSession?.isHost) {
     throw new Error("Only the host can start the match.");
   }
-  if (ensureRealtimeConnection()) {
+  ensureRealtimeConnection();
+  if (isRealtimeSocketConnected()) {
     const started = await socketRequest("lobby:start", {});
     const lobby = started?.lobby ?? null;
     if (lobby?.status) appState.serverSession.status = lobby.status;
@@ -1422,7 +1458,8 @@ async function startHostedMatchFromLobby() {
 }
 
 async function reconnectLobbySession(joinCode) {
-  if (ensureRealtimeConnection()) {
+  ensureRealtimeConnection();
+  if (isRealtimeSocketConnected()) {
     if (!appState.serverSession?.lobbyId && !joinCode) {
       return false;
     }
@@ -1789,9 +1826,6 @@ function startServerPolling() {
   if (!appState.serverSession?.connected) {
     return;
   }
-  if (realtimeEnabled) {
-    return;
-  }
   serverPollTimer = window.setInterval(async () => {
     const menuActive = document.querySelector("[data-screen='menu']")?.classList.contains("is-active");
     if (menuActive) {
@@ -1847,7 +1881,8 @@ async function submitServerCommand(command) {
   };
 
   const tryCommand = async (payload) => {
-    if (ensureRealtimeConnection()) {
+    ensureRealtimeConnection();
+    if (isRealtimeSocketConnected()) {
       await socketRequest("game:action", { command: payload });
       return true;
     }
@@ -1859,7 +1894,8 @@ async function submitServerCommand(command) {
     return true;
   };
 
-  if (ensureRealtimeConnection()) {
+  ensureRealtimeConnection();
+  if (isRealtimeSocketConnected()) {
     try {
       await tryCommand(command);
       return true;
@@ -3658,7 +3694,8 @@ async function toggleReadyFromUi() {
     return;
   }
   try {
-    if (ensureRealtimeConnection()) {
+    ensureRealtimeConnection();
+    if (isRealtimeSocketConnected()) {
       const lobbyInfo = appState.serverSession.lobbyInfo || {};
       const me = (lobbyInfo?.players || []).find((player) => player.playerId === appState.serverSession.viewerPlayerId);
       const nextReady = !Boolean(me?.isReady);
@@ -6755,7 +6792,16 @@ document.addEventListener("click", (event) => {
 appState.serverSession.clientId = getOrCreateClientId();
 setSetupMode(appState.setupMode || "solo");
 renderPrototype();
-restoreServerSessionFromStorage().finally(() => {
+restoreServerSessionFromStorage().then(async (restored) => {
+  if (restored && appState.serverSession?.status === "in_progress") {
+    setSetupMode("multiplayer");
+    await refreshServerViewAndRender();
+    showScreen("table");
+    return;
+  }
+  renderPrototype();
+  showScreen("splash");
+}).catch(() => {
   renderPrototype();
   showScreen("splash");
 });

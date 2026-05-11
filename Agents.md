@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-11
 
+- `2026-05-11 11:xx America/Chicago` — Multiplayer browser sync hardening
+- Scope: `server.mjs`, `prototype/app.js`
+- Result: REST lobby/game actions now emit lobby and match updates to connected sockets; clients keep polling as a safety net even when realtime is available; disconnected realtime no longer marks the server session unusable; page refresh can resume an in-progress match directly from saved session data.
+- Verification: `node --check prototype/app.js` (pass), `node --check server.mjs` (pass), `npm run check` (pass), `npm run build` (pass), local REST sync smoke confirmed both human views advanced after one end-turn command (pass)
+
 - `2026-05-11 10:xx America/Chicago` — Multiplayer opening-turn API gate fix
 - Scope: `src/engine.ts`, `src/session.ts`
 - Result: Opening special-card cleanup now requires the first-round manual `end_turn` before normal draw/play commands unlock. API player views now expose `openingTurnPendingPlayerIds` for client/debug visibility.

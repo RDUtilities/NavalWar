@@ -271,6 +271,7 @@ async function handleApi(req, res, pathname, searchParams) {
       lobbyId,
       String(body.botNamePrefix ?? "Bot Admiral")
     );
+    emitLobbyState(io, lobby);
     sendJson(res, 200, sanitizeLobbyResponse(lobby));
     return;
   }
@@ -282,12 +283,21 @@ async function handleApi(req, res, pathname, searchParams) {
       String(body.sessionToken ?? ""),
       Boolean(body.ready)
     );
+    emitLobbyState(io, lobby);
     sendJson(res, 200, sanitizeLobbyResponse(lobby));
     return;
   }
 
   if (req.method === "POST" && pathname === `/api/lobbies/${encodeURIComponent(lobbyId)}/start`) {
-    sendJson(res, 200, sanitizeLobbyResponse(multiplayerService.startMatch(lobbyId)));
+    const lobby = multiplayerService.startMatch(lobbyId);
+    emitLobbyState(io, lobby);
+    io.to(lobbyId).emit("match:ready", {
+      lobbyId: lobby.lobbyId,
+      joinCode: lobby.joinCode,
+      status: lobby.status
+    });
+    emitMatchState(io, lobbyId);
+    sendJson(res, 200, sanitizeLobbyResponse(lobby));
     return;
   }
 
@@ -314,7 +324,10 @@ async function handleApi(req, res, pathname, searchParams) {
       sendJson(res, 400, { error: "Command payload is missing required fields." });
       return;
     }
-    sendJson(res, 200, sanitizeLobbyResponse(multiplayerService.submitCommand(lobbyId, body, body.sessionToken ?? null)));
+    const lobby = multiplayerService.submitCommand(lobbyId, body, body.sessionToken ?? null);
+    emitLobbyState(io, lobby);
+    emitMatchState(io, lobbyId);
+    sendJson(res, 200, sanitizeLobbyResponse(lobby));
     return;
   }
 
