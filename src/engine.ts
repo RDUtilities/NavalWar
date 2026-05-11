@@ -345,7 +345,6 @@ function maybeCompleteOpeningSpecialPhase(state: GameState, actor: PlayerState) 
   if (hasMandatorySpecialInHand(actor)) {
     return;
   }
-  completeOpeningTurnForPlayer(state, actor.id);
   addEvent(state, actor.id, "opening_specials_complete", `${actor.name} has completed opening special-card resolution.`);
 }
 

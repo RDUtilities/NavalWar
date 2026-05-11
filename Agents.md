@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-11
 
+- `2026-05-11 10:xx America/Chicago` — Multiplayer opening-turn API gate fix
+- Scope: `src/engine.ts`, `src/session.ts`
+- Result: Opening special-card cleanup now requires the first-round manual `end_turn` before normal draw/play commands unlock. API player views now expose `openingTurnPendingPlayerIds` for client/debug visibility.
+- Verification: `npm run check` (pass), `npm run build` (pass), `node --check server.mjs` (pass), local API smoke with 2 humans + 1 bot cleared opening specials and advanced to turn 6 (pass)
+
 - `2026-05-11 09:xx America/Chicago` — Desktop select-target interaction option
 - Scope: `prototype/index.html`, `prototype/app.js`
 - Result: Added a `Drag Cards` top-bar toggle. Desktop defaults to click/select targeting like mobile, with selected cards highlighted and legal targets glowing; enabling the toggle restores drag-based card play/reordering.

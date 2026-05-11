@@ -94,6 +94,7 @@ export interface MultiplayerPlayerView {
     shipDeckCount: number;
     destroyerSquadrons: GameState["destroyerSquadrons"];
     pendingDestroyerAttack: GameState["pendingDestroyerAttack"];
+    openingTurnPendingPlayerIds: PlayerId[];
     winnerIds: PlayerId[];
     matchWinnerIds: PlayerId[];
     roundEndReason: GameState["roundEndReason"];
@@ -480,6 +481,7 @@ export class InMemoryMultiplayerService {
             pendingDestroyerAttack: lobby.state.pendingDestroyerAttack
               ? { ...lobby.state.pendingDestroyerAttack }
               : null,
+            openingTurnPendingPlayerIds: [...lobby.state.openingTurnPendingPlayerIds],
             winnerIds: [...lobby.state.winnerIds],
             matchWinnerIds: [...lobby.state.matchWinnerIds],
             roundEndReason: lobby.state.roundEndReason,
