@@ -1597,7 +1597,7 @@ function mapServerViewToLocalState(view) {
       command === "select_destroyer_squadron_targets" ||
       command.startsWith("play_")
   );
-  const hasDrawAction = legalCommandSet.has("draw_play_card") || legalCommandSet.has("use_carrier_air_strikes");
+  const hasDrawAction = legalCommandSet.has("draw_card") || legalCommandSet.has("use_carrier_strike");
   const hasOnlyEndTurn = legalCommandSet.size === 1 && legalCommandSet.has("end_turn");
 
   appState.turnState.phase = gameState.phase === "round_complete"
@@ -1611,7 +1611,9 @@ function mapServerViewToLocalState(view) {
     : gameState.hasDrawnThisTurn || gameState.hasUsedCarrierStrikeThisTurn
     ? "play"
     : "draw";
-  appState.turnState.playedCard = Boolean(gameState.hasPerformedActionThisTurn);
+  appState.turnState.playedCard = Boolean(
+    gameState.hasPerformedActionThisTurn && !hasServerMandatorySpecialResolutionPending()
+  );
   appState.match.isRoundOver = gameState.phase === "round_complete";
   appState.match.roundEndReason = gameState.roundEndReason || null;
   appState.match.winnerZone =
@@ -2326,6 +2328,21 @@ function getCurrentZone() {
 
 function isHumanTurn() {
   return getCurrentZone() === "bottom";
+}
+
+function hasServerMandatorySpecialResolutionPending() {
+  const legal = Array.isArray(appState.serverSession?.legalCommands) ? appState.serverSession.legalCommands : [];
+  if (!legal.length) {
+    return false;
+  }
+  return legal.some(
+    (command) =>
+      command === "play_minefield" ||
+      command === "play_submarine" ||
+      command === "play_torpedo_boat" ||
+      command === "play_additional_damage" ||
+      command === "play_additional_ship"
+  );
 }
 
 function getHandForZone(zone) {
