@@ -388,7 +388,7 @@ function removeAllFleetEffects(player: PlayerState, kind: FleetEffect["kind"]): 
   return effects;
 }
 
-function clearSmokeBeforeDraw(state: GameState, actor: PlayerState) {
+function clearSmokeAtTurnStart(state: GameState, actor: PlayerState) {
   const smoke = removeFleetEffect(actor, "smoke");
   if (!smoke) {
     return;
@@ -712,7 +712,6 @@ export function applyCommand(state: GameState, command: GameCommand, rng: Random
       assert(!hasMandatorySpecialInHand(actor), `${actor.name} must play mandatory special cards before drawing.`);
       assert(!next.hasDrawnThisTurn, `${actor.name} has already performed their draw for this turn.`);
       assert(!next.hasUsedCarrierStrikeThisTurn, `${actor.name} cannot draw after choosing carrier air strikes this turn.`);
-      clearSmokeBeforeDraw(next, actor);
       assert(next.playDeck.length > 0, "Play deck is empty.");
       const result = rng.drawPlayCard(next.playDeck);
       next.playDeck = result.deck;
@@ -1169,6 +1168,7 @@ export function applyCommand(state: GameState, command: GameCommand, rng: Random
         `${actor.name} must take an action after drawing before ending their turn.`
       );
       next.currentPlayerId = nextPlayerId(next);
+      clearSmokeAtTurnStart(next, getPlayer(next, next.currentPlayerId));
       next.turnNumber += 1;
       next.hasDrawnThisTurn = false;
       next.hasUsedCarrierStrikeThisTurn = false;

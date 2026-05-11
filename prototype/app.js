@@ -3895,12 +3895,10 @@ function startNextTurn() {
   const nextZone = getNextZone(getCurrentZone());
   appState.turnState.turnNumber += 1;
   appState.turnState.currentZone = nextZone;
-  const expiringSmoke = (appState.effectsByFleet[nextZone] || []).filter(
-    (effect) => effect.kind === "smoke" && effect.expiresOnTurn <= appState.turnState.turnNumber
-  );
+  const expiringSmoke = (appState.effectsByFleet[nextZone] || []).filter((effect) => effect.kind === "smoke");
   if (expiringSmoke.length) {
     appState.effectsByFleet[nextZone] = appState.effectsByFleet[nextZone].filter(
-      (effect) => !(effect.kind === "smoke" && effect.expiresOnTurn <= appState.turnState.turnNumber)
+      (effect) => effect.kind !== "smoke"
     );
     addToDiscardPile(expiringSmoke.map((effect) => ({ image: effect.image, label: effect.label })));
     appendLog(`Smoke screen expires in front of ${getPlayerName(nextZone)}'s fleet.`);
@@ -4527,7 +4525,7 @@ function resolveBotBattleZoneCard(ownerZone, card) {
     image: card.image,
     damage: card.kind === "destroyer_squadron" ? "4 / 4" : undefined,
     salvos: card.kind === "destroyer_squadron" ? [] : undefined,
-    expiresOnTurn: card.kind === "smoke" ? appState.turnState.turnNumber + getActiveZones().length : undefined,
+    expiresOnTurn: undefined,
   });
   if (card.kind === "smoke") {
     showSpecialBanner("Smoke Screen", `${getPlayerName(ownerZone)} screens their fleet.`);
@@ -5932,7 +5930,7 @@ async function deployCenterCard(card) {
     image: card.image,
     damage: card.kind === "destroyer_squadron" ? "4 / 4" : undefined,
     salvos: card.kind === "destroyer_squadron" ? [] : undefined,
-    expiresOnTurn: card.kind === "smoke" ? appState.turnState.turnNumber + getActiveZones().length : undefined,
+    expiresOnTurn: undefined,
   });
   if (card.kind === "smoke") {
     playSmokeSound();
