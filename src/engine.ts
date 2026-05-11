@@ -358,6 +358,22 @@ function isMandatorySpecialResolutionCommand(type: GameCommand["type"]): boolean
   );
 }
 
+function isNormalPlayPhaseCommand(type: GameCommand["type"]): boolean {
+  return (
+    type === "play_salvo" ||
+    type === "play_additional_damage" ||
+    type === "play_smoke" ||
+    type === "play_minefield" ||
+    type === "play_additional_ship" ||
+    type === "play_minesweeper" ||
+    type === "play_repair" ||
+    type === "play_submarine" ||
+    type === "play_torpedo_boat" ||
+    type === "play_destroyer_squadron" ||
+    type === "attack_destroyer_squadron"
+  );
+}
+
 function addFleetEffect(player: PlayerState, effect: FleetEffect) {
   if (effect.kind !== "minefield") {
     player.fleetEffects = player.fleetEffects.filter((entry) => entry.kind !== effect.kind);
@@ -593,8 +609,16 @@ export function listLegalCommands(state: GameState, actorId: PlayerId): string[]
   if (openingTurnPending && !mandatorySpecialInHand) {
     return ["end_turn"];
   }
-  const allowTurnEnd = !state.hasDrawnThisTurn || state.hasPerformedActionThisTurn;
+  const readyDestroyerSquadron = state.destroyerSquadrons.some(
+    (entry) =>
+      entry.ownerId === actorId &&
+      entry.deployedTurn < state.turnNumber &&
+      livingShips(player).length > 0 &&
+      !state.pendingDestroyerAttack
+  );
+  const allowTurnEnd = state.hasPerformedActionThisTurn;
   const canTakePlayAction = !state.hasPerformedActionThisTurn || openingTurnPending;
+  const hasStartedNormalTurnAction = state.hasDrawnThisTurn || state.hasUsedCarrierStrikeThisTurn;
 
   if (mandatorySpecialInHand) {
     if (
@@ -631,24 +655,34 @@ export function listLegalCommands(state: GameState, actorId: PlayerId): string[]
     return legal;
   }
 
-  if (!openingTurnPending && !mandatorySpecialInHand && !state.hasDrawnThisTurn && !state.hasUsedCarrierStrikeThisTurn) {
+  if (
+    !openingTurnPending &&
+    !mandatorySpecialInHand &&
+    !state.hasDrawnThisTurn &&
+    !state.hasUsedCarrierStrikeThisTurn &&
+    !state.hasPerformedActionThisTurn &&
+    !readyDestroyerSquadron
+  ) {
     legal.push("draw_card");
   }
 
   const mustResolveSpecialsOnly = openingTurnPending || mandatorySpecialInHand;
+  const mustResolveReadyDestroyer = !mustResolveSpecialsOnly && readyDestroyerSquadron;
 
-  if (canTakePlayAction && (!mustResolveSpecialsOnly || player.hand.some((card) => card.kind === "salvo"))) {
+  if (canTakePlayAction && !mustResolveReadyDestroyer && (!mustResolveSpecialsOnly || player.hand.some((card) => card.kind === "salvo")) && hasStartedNormalTurnAction) {
     if (player.hand.some((card) => card.kind === "salvo")) legal.push("play_salvo");
   }
-  if (canTakePlayAction && player.hand.some((card) => card.kind === "additional_damage") && hasAdditionalDamageTargetForActor(state, player)) legal.push("play_additional_damage");
-  if (canTakePlayAction && (!mustResolveSpecialsOnly || player.hand.some((card) => card.kind === "smoke"))) {
+  if (canTakePlayAction && !mustResolveReadyDestroyer && hasStartedNormalTurnAction && player.hand.some((card) => card.kind === "additional_damage") && hasAdditionalDamageTargetForActor(state, player)) legal.push("play_additional_damage");
+  if (canTakePlayAction && !mustResolveReadyDestroyer && (!mustResolveSpecialsOnly || player.hand.some((card) => card.kind === "smoke")) && hasStartedNormalTurnAction) {
     if (player.hand.some((card) => card.kind === "smoke")) legal.push("play_smoke");
   }
-  if (canTakePlayAction && player.hand.some((card) => card.kind === "minefield")) legal.push("play_minefield");
-  if (canTakePlayAction && player.hand.some((card) => card.kind === "additional_ship")) legal.push("play_additional_ship");
+  if (canTakePlayAction && !mustResolveReadyDestroyer && hasStartedNormalTurnAction && player.hand.some((card) => card.kind === "minefield")) legal.push("play_minefield");
+  if (canTakePlayAction && !mustResolveReadyDestroyer && hasStartedNormalTurnAction && player.hand.some((card) => card.kind === "additional_ship")) legal.push("play_additional_ship");
   if (
     canTakePlayAction &&
+    !mustResolveReadyDestroyer &&
     !mustResolveSpecialsOnly &&
+    hasStartedNormalTurnAction &&
     player.hand.some((card) => card.kind === "minesweeper") &&
     state.players.some((entry) => fleetEffect(entry, "minefield"))
   ) {
@@ -656,7 +690,9 @@ export function listLegalCommands(state: GameState, actorId: PlayerId): string[]
   }
   if (
     canTakePlayAction &&
+    !mustResolveReadyDestroyer &&
     !mustResolveSpecialsOnly &&
+    hasStartedNormalTurnAction &&
     player.hand.some((card) => card.kind === "repair") &&
     livingShips(player).some((ship) =>
       ship.damage.some((damage) => damage.type === "salvo" || damage.type === "additional_damage")
@@ -664,18 +700,20 @@ export function listLegalCommands(state: GameState, actorId: PlayerId): string[]
   ) {
     legal.push("play_repair");
   }
-  if (canTakePlayAction && player.hand.some((card) => card.kind === "submarine") && hasEnemyShipTargetForActor(state, player, true)) {
+  if (canTakePlayAction && !mustResolveReadyDestroyer && hasStartedNormalTurnAction && player.hand.some((card) => card.kind === "submarine") && hasEnemyShipTargetForActor(state, player, true)) {
     legal.push("play_submarine");
   }
-  if (canTakePlayAction && player.hand.some((card) => card.kind === "torpedo_boat") && hasEnemyShipTargetForActor(state, player, false)) {
+  if (canTakePlayAction && !mustResolveReadyDestroyer && hasStartedNormalTurnAction && player.hand.some((card) => card.kind === "torpedo_boat") && hasEnemyShipTargetForActor(state, player, false)) {
     legal.push("play_torpedo_boat");
   }
-  if (canTakePlayAction && !mustResolveSpecialsOnly && player.hand.some((card) => card.kind === "destroyer_squadron")) {
+  if (canTakePlayAction && !mustResolveReadyDestroyer && !mustResolveSpecialsOnly && hasStartedNormalTurnAction && player.hand.some((card) => card.kind === "destroyer_squadron")) {
     legal.push("play_destroyer_squadron");
   }
   if (
     canTakePlayAction &&
+    !mustResolveReadyDestroyer &&
     !mustResolveSpecialsOnly &&
+    hasStartedNormalTurnAction &&
     player.hand.some((card) => card.kind === "salvo") &&
     state.destroyerSquadrons.some((entry) => entry.ownerId !== actorId)
   ) {
@@ -684,17 +722,11 @@ export function listLegalCommands(state: GameState, actorId: PlayerId): string[]
   if (
     canTakePlayAction &&
     !mustResolveSpecialsOnly &&
-    state.destroyerSquadrons.some(
-      (entry) =>
-        entry.ownerId === actorId &&
-        entry.deployedTurn < state.turnNumber &&
-        livingShips(player).length > 0 &&
-        !state.pendingDestroyerAttack
-    )
+    readyDestroyerSquadron
   ) {
     legal.push("resolve_destroyer_squadron_roll");
   }
-  if (canTakePlayAction && !mustResolveSpecialsOnly && state.pendingDestroyerAttack?.ownerId === actorId) {
+  if (!mustResolveSpecialsOnly && state.pendingDestroyerAttack?.ownerId === actorId) {
     legal.push("select_destroyer_squadron_targets");
   }
   if (
@@ -702,11 +734,13 @@ export function listLegalCommands(state: GameState, actorId: PlayerId): string[]
     !mandatorySpecialInHand &&
     !state.hasDrawnThisTurn &&
     !state.hasUsedCarrierStrikeThisTurn &&
+    !state.hasPerformedActionThisTurn &&
+    !readyDestroyerSquadron &&
     livingShips(player).some((ship) => ship.card.isCarrier)
   ) {
     legal.push("use_carrier_strike");
   }
-  if (state.hasDrawnThisTurn && !state.hasPerformedActionThisTurn && !mustResolveSpecialsOnly && player.hand.length > 0) {
+  if (state.hasDrawnThisTurn && !state.hasPerformedActionThisTurn && !mustResolveSpecialsOnly && !mustResolveReadyDestroyer && player.hand.length > 0) {
     legal.push("discard_play_card");
   }
   if (allowTurnEnd && !openingTurnPending && !mandatorySpecialInHand) {
@@ -748,12 +782,18 @@ export function applyCommand(state: GameState, command: GameCommand, rng: Random
     );
   }
 
+  if (!openingTurnPending && !mandatorySpecialInHand && isNormalPlayPhaseCommand(command.type)) {
+    assert(next.hasDrawnThisTurn, `${actor.name} must draw before taking a play action.`);
+    assert(!next.hasPerformedActionThisTurn, `${actor.name} has already taken their turn action.`);
+  }
+
   switch (command.type) {
     case "draw_card": {
       assert(!isOpeningTurnForPlayer(next, actor.id), `${actor.name} must resolve opening special cards before drawing.`);
       assert(!hasMandatorySpecialInHand(actor), `${actor.name} must play mandatory special cards before drawing.`);
       assert(!next.hasDrawnThisTurn, `${actor.name} has already performed their draw for this turn.`);
       assert(!next.hasUsedCarrierStrikeThisTurn, `${actor.name} cannot draw after choosing carrier air strikes this turn.`);
+      assert(!next.hasPerformedActionThisTurn, `${actor.name} cannot draw after taking a play action this turn.`);
       assert(next.playDeck.length > 0, "Play deck is empty.");
       const result = rng.drawPlayCard(next.playDeck);
       next.playDeck = result.deck;
@@ -1205,6 +1245,8 @@ export function applyCommand(state: GameState, command: GameCommand, rng: Random
       if (isOpeningTurnForPlayer(next, actor.id)) {
         assert(!hasMandatorySpecialInHand(actor), `${actor.name} must resolve all opening special cards before ending their turn.`);
         completeOpeningTurnForPlayer(next, actor.id);
+      } else if (!actor.eliminated) {
+        assert(next.hasPerformedActionThisTurn, `${actor.name} must take an action before ending their turn.`);
       }
       const canEndTurnWithUnplayableMandatory =
         hasMandatorySpecialInHand(actor) &&

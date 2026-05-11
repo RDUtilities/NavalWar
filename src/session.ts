@@ -643,12 +643,24 @@ function choosePlayableSalvo(state: GameState, actorId: PlayerId): PlayCard | un
   );
 }
 
-function chooseDefaultShipTarget(state: GameState, actorId: PlayerId) {
+function isFleetProtectedBySmoke(player: GameState["players"][number]): boolean {
+  return player.fleetEffects.some((effect) => effect.kind === "smoke");
+}
+
+function hasScreeningShips(player: GameState["players"][number]): boolean {
+  return player.ships.some((ship) => !ship.sunk && !ship.card.isCarrier);
+}
+
+function isTargetableShip(player: GameState["players"][number], ship: ShipInstance): boolean {
+  return !ship.sunk && (!ship.card.isCarrier || !hasScreeningShips(player));
+}
+
+function chooseDefaultShipTarget(state: GameState, actorId: PlayerId, options: { allowSmoke?: boolean } = {}) {
   for (const player of state.players) {
-    if (player.id === actorId || player.eliminated) {
+    if (player.id === actorId || player.eliminated || (!options.allowSmoke && isFleetProtectedBySmoke(player))) {
       continue;
     }
-    const targetShip = player.ships.find((ship) => !ship.sunk && (!ship.card.isCarrier || !player.ships.some((entry) => !entry.sunk && !entry.card.isCarrier)));
+    const targetShip = player.ships.find((ship) => isTargetableShip(player, ship));
     if (targetShip) {
       return { targetPlayerId: player.id, targetShipId: targetShip.card.id };
     }
@@ -782,7 +794,7 @@ function chooseBotCommand(state: GameState, actorId: PlayerId, rng: RandomSource
 
   if (inPriority("resolve_destroyer_squadron_roll")) {
     const squadron = state.destroyerSquadrons.find((entry) => entry.ownerId === actorId && entry.deployedTurn < state.turnNumber);
-    const target = enemyPlayers[0];
+    const target = enemyPlayers.find((player) => !isFleetProtectedBySmoke(player));
     if (squadron && target) {
       return { type: "resolve_destroyer_squadron_roll", actorId, destroyerId: squadron.id, targetPlayerId: target.id };
     }
@@ -794,15 +806,19 @@ function chooseBotCommand(state: GameState, actorId: PlayerId, rng: RandomSource
 
   const shipTargets = enemyPlayers.flatMap((enemy) =>
     enemy.ships
-      .filter((ship) => !ship.sunk)
+      .filter((ship) => isTargetableShip(enemy, ship))
       .map((ship) => ({ targetPlayerId: enemy.id, targetShipId: ship.card.id, ship }))
   );
+  const unprotectedShipTargets = shipTargets.filter(({ targetPlayerId }) => {
+    const player = state.players.find((entry) => entry.id === targetPlayerId);
+    return player ? !isFleetProtectedBySmoke(player) : false;
+  });
 
   if (inPriority("use_carrier_strike")) {
     const carriers = livingShips.filter((ship) => ship.card.isCarrier);
     const strikes = carriers
       .map((carrier) => {
-        const target = shipTargets[randomIndex(shipTargets.length)];
+        const target = unprotectedShipTargets[randomIndex(unprotectedShipTargets.length)];
         if (!target) return null;
         return { carrierShipId: carrier.card.id, targetPlayerId: target.targetPlayerId, targetShipId: target.targetShipId };
       })
@@ -833,7 +849,7 @@ function chooseBotCommand(state: GameState, actorId: PlayerId, rng: RandomSource
   }
   if (inPriority("play_torpedo_boat")) {
     const card = handByKind("torpedo_boat")[0];
-    const target = shipTargets[0];
+    const target = unprotectedShipTargets[0];
     if (card && target) return { type: "play_torpedo_boat", actorId, cardId: card.id, targetPlayerId: target.targetPlayerId, targetShipId: target.targetShipId };
   }
   if (inPriority("play_additional_damage")) {
@@ -868,7 +884,7 @@ function chooseBotCommand(state: GameState, actorId: PlayerId, rng: RandomSource
     const salvo = salvos.find((card) =>
       livingShips.some((ship) => ship.card.gunCaliber === card.gunCaliber)
     );
-    const target = shipTargets[0];
+    const target = unprotectedShipTargets[0];
     if (salvo && target) return { type: "play_salvo", actorId, cardId: salvo.id, targetPlayerId: target.targetPlayerId, targetShipId: target.targetShipId };
   }
   if (inPriority("attack_destroyer_squadron")) {

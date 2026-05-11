@@ -1,6 +1,6 @@
 # Naval War Game Agent Guide
 
-Last updated: 2026-05-08
+Last updated: 2026-05-11
 
 This file is the working handoff map for agents contributing to the Naval War Game project. Keep it practical: update it when scope changes, when a workstream moves from planned to active, or when a future agent needs a reliable place to resume.
 
@@ -222,6 +222,11 @@ Entry format:
 - Verification: commands run and result
 
 ### 2026-05-11
+
+- `2026-05-11 12:xx America/Chicago` — Server turn-order and bot targeting stabilization
+- Scope: `src/engine.ts`, `src/session.ts`
+- Result: Server legal commands now enforce the normal turn sequence: draw or carrier strike first, then exactly one play/discard action before end turn. Normal play actions can no longer appear before draw, draw cannot happen after a play action, and end turn cannot appear before the required action. Ready Destroyer Squadrons now block draw/airstrike/hand plays and must resolve on the owner's next turn. Bot targeting now respects smoke protection and carrier screening so bot continuation cannot crash a valid human command.
+- Verification: `npm run check` (pass), `npm run build` (pass), local API stress with 2 humans + 1 bot across 5 matches / 620 human-command steps (pass; no turn-sequence invariant failures; Destroyer Squadron resolved when ready in 4 matches)
 
 - `2026-05-11 11:xx America/Chicago` — Multiplayer browser sync hardening
 - Scope: `server.mjs`, `prototype/app.js`
