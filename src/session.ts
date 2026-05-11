@@ -650,7 +650,10 @@ function chooseBotCommand(state: GameState, actorId: PlayerId, rng: RandomSource
   }
   if (inPriority("play_minefield")) {
     const card = handByKind("minefield")[0];
-    const target = enemyPlayers[0];
+    const openingTurnPending = state.openingTurnPendingPlayerIds.includes(actorId);
+    const target = openingTurnPending
+      ? enemyPlayers.find((player) => !player.fleetEffects.some((effect) => effect.kind === "minefield")) ?? null
+      : enemyPlayers[0] ?? null;
     if (card && target) return { type: "play_minefield", actorId, cardId: card.id, targetPlayerId: target.id };
   }
   if (inPriority("play_submarine")) {

@@ -492,10 +492,32 @@ function hasEnemyShipTargetForActor(state: GameState, actor: PlayerState, allowS
   });
 }
 
+function hasOpeningMinefieldTargetForActor(state: GameState, actor: PlayerState): boolean {
+  return state.players.some((targetPlayer) => {
+    const sameTeam = actor.teamId && targetPlayer.teamId && actor.teamId === targetPlayer.teamId;
+    if (targetPlayer.id === actor.id || sameTeam || targetPlayer.eliminated) {
+      return false;
+    }
+    return fleetEffectsByKind(targetPlayer, "minefield").length === 0;
+  });
+}
+
 function hasPlayableMandatorySpecial(state: GameState, actor: PlayerState): boolean {
-  if (actor.hand.some((card) => card.kind === "minefield")) return true;
+  const openingTurnPending = isOpeningTurnForPlayer(state, actor.id);
+
+  if (actor.hand.some((card) => card.kind === "minefield")) {
+    if (!openingTurnPending || hasOpeningMinefieldTargetForActor(state, actor)) {
+      return true;
+    }
+  }
   if (actor.hand.some((card) => card.kind === "additional_ship")) return true;
-  if (actor.hand.some((card) => card.kind === "additional_damage") && hasAdditionalDamageTargetForActor(state, actor)) return true;
+  if (
+    actor.hand.some((card) => card.kind === "additional_damage") &&
+    !openingTurnPending &&
+    hasAdditionalDamageTargetForActor(state, actor)
+  ) {
+    return true;
+  }
   if (actor.hand.some((card) => card.kind === "submarine") && hasEnemyShipTargetForActor(state, actor, true)) return true;
   if (actor.hand.some((card) => card.kind === "torpedo_boat") && hasEnemyShipTargetForActor(state, actor, false)) return true;
   return false;
@@ -576,11 +598,30 @@ export function listLegalCommands(state: GameState, actorId: PlayerId): string[]
   const canTakePlayAction = !state.hasPerformedActionThisTurn || openingTurnPending;
 
   if (mandatorySpecialInHand) {
-    if (canTakePlayAction && player.hand.some((card) => card.kind === "minefield")) legal.push("play_minefield");
+    if (
+      canTakePlayAction &&
+      player.hand.some((card) => card.kind === "minefield") &&
+      (!openingTurnPending || hasOpeningMinefieldTargetForActor(state, player))
+    ) {
+      legal.push("play_minefield");
+    }
     if (canTakePlayAction && player.hand.some((card) => card.kind === "submarine") && hasEnemyShipTargetForActor(state, player, true)) legal.push("play_submarine");
     if (canTakePlayAction && player.hand.some((card) => card.kind === "torpedo_boat") && hasEnemyShipTargetForActor(state, player, false)) legal.push("play_torpedo_boat");
-    if (canTakePlayAction && player.hand.some((card) => card.kind === "additional_damage") && hasAdditionalDamageTargetForActor(state, player)) legal.push("play_additional_damage");
-    if (canTakePlayAction && player.hand.some((card) => card.kind === "additional_damage") && !hasAdditionalDamageTargetForActor(state, player)) {
+    if (
+      canTakePlayAction &&
+      player.hand.some((card) => card.kind === "additional_damage") &&
+      !openingTurnPending &&
+      hasAdditionalDamageTargetForActor(state, player)
+    ) {
+      legal.push("play_additional_damage");
+    }
+    if (
+      canTakePlayAction &&
+      (
+        player.hand.some((card) => card.kind === "additional_damage") ||
+        (openingTurnPending && player.hand.some((card) => card.kind === "minefield") && !hasOpeningMinefieldTargetForActor(state, player))
+      )
+    ) {
       legal.push("discard_play_card");
     }
     if (canTakePlayAction && player.hand.some((card) => card.kind === "additional_ship")) legal.push("play_additional_ship");
@@ -696,12 +737,14 @@ export function applyCommand(state: GameState, command: GameCommand, rng: Random
   if (mandatorySpecialInHand) {
     const canOnlyEndTurnSafely =
       command.type === "end_turn" && (next.hasPerformedActionThisTurn || !hasPlayableMandatorySpecial(next, actor));
-    const canDiscardOpeningAdditionalDamage =
+    const canDiscardMandatorySpecial =
       command.type === "discard_play_card" &&
-      actor.hand.some((card) => card.kind === "additional_damage") &&
-      !hasAdditionalDamageTargetForActor(next, actor);
+      (
+        actor.hand.some((card) => card.kind === "additional_damage") ||
+        (isOpeningTurnForPlayer(next, actor.id) && actor.hand.some((card) => card.kind === "minefield") && !hasOpeningMinefieldTargetForActor(next, actor))
+      );
     assert(
-      isMandatorySpecialResolutionCommand(command.type) || canOnlyEndTurnSafely || canDiscardOpeningAdditionalDamage,
+      isMandatorySpecialResolutionCommand(command.type) || canOnlyEndTurnSafely || canDiscardMandatorySpecial,
       `${actor.name} must resolve their mandatory special cards before taking any other action.`
     );
   }
@@ -756,6 +799,7 @@ export function applyCommand(state: GameState, command: GameCommand, rng: Random
     }
 
     case "play_additional_damage": {
+      assert(!isOpeningTurnForPlayer(next, actor.id), `${actor.name} must discard Additional Damage during opening special resolution.`);
       const card = removeCardFromHand(actor, command.cardId);
       assert(card.kind === "additional_damage", `Card ${card.id} is not Additional Damage.`);
 
@@ -1113,26 +1157,29 @@ export function applyCommand(state: GameState, command: GameCommand, rng: Random
     }
 
     case "discard_play_card": {
-      const canDiscardUnplayableAdditionalDamage =
+      const canDiscardMandatorySpecial =
         hasMandatorySpecialInHand(actor) &&
-        actor.hand.some((handCard) => handCard.kind === "additional_damage") &&
-        !hasAdditionalDamageTargetForActor(next, actor);
+        (
+          actor.hand.some((handCard) => handCard.kind === "additional_damage") ||
+          (isOpeningTurnForPlayer(next, actor.id) && actor.hand.some((handCard) => handCard.kind === "minefield") && !hasOpeningMinefieldTargetForActor(next, actor))
+        );
 
-      if (!canDiscardUnplayableAdditionalDamage) {
+      if (!canDiscardMandatorySpecial) {
         assert(next.hasDrawnThisTurn, `${actor.name} cannot discard as a play action before drawing.`);
         assert(!next.hasPerformedActionThisTurn, `${actor.name} has already taken their turn action.`);
       }
       const card = removeCardFromHand(actor, command.cardId);
-      if (canDiscardUnplayableAdditionalDamage) {
+      if (canDiscardMandatorySpecial) {
         assert(
-          card.kind === "additional_damage" && !hasAdditionalDamageTargetForActor(next, actor),
+          card.kind === "additional_damage" ||
+            (isOpeningTurnForPlayer(next, actor.id) && card.kind === "minefield" && !hasOpeningMinefieldTargetForActor(next, actor)),
           `${actor.name} must resolve mandatory special cards instead of discarding.`
         );
       } else if (hasMandatorySpecialInHand(actor)) {
         assert(false, `${actor.name} must resolve mandatory special cards instead of discarding.`);
       }
       discard(next, card);
-      if (canDiscardUnplayableAdditionalDamage) {
+      if (canDiscardMandatorySpecial) {
         drawReplacementAfterOpeningSpecial(next, actor, rng);
         if (isOpeningTurnForPlayer(next, actor.id)) {
           maybeCompleteOpeningSpecialPhase(next, actor);
@@ -1142,8 +1189,10 @@ export function applyCommand(state: GameState, command: GameCommand, rng: Random
         addEvent(
           next,
           actor.id,
-          "additional_damage_discarded_unplayable",
-          `${actor.name} discarded unplayable Additional Damage and drew a replacement card.`
+          card.kind === "minefield" ? "opening_minefield_discarded_unplayable" : "opening_additional_damage_discarded",
+          card.kind === "minefield"
+            ? `${actor.name} discarded an unplayable opening-turn Minefield and drew a replacement card.`
+            : `${actor.name} discarded Additional Damage during opening resolution and drew a replacement card.`
         );
       } else {
         next.hasPerformedActionThisTurn = true;
