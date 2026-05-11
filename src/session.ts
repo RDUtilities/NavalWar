@@ -628,6 +628,54 @@ function chooseCardByKind(state: GameState, actorId: PlayerId, kind: PlayCard["k
   return state.players.find((entry) => entry.id === actorId)?.hand.find((card) => card.kind === kind);
 }
 
+function choosePlayableSalvo(state: GameState, actorId: PlayerId): PlayCard | undefined {
+  const actor = state.players.find((entry) => entry.id === actorId);
+  if (!actor) {
+    return undefined;
+  }
+
+  return actor.hand.find(
+    (card) =>
+      card.kind === "salvo" &&
+      actor.ships.some((ship) => !ship.sunk && ship.card.gunCaliber === card.gunCaliber)
+  );
+}
+
+function chooseDefaultShipTarget(state: GameState, actorId: PlayerId) {
+  for (const player of state.players) {
+    if (player.id === actorId || player.eliminated) {
+      continue;
+    }
+    const targetShip = player.ships.find((ship) => !ship.sunk && (!ship.card.isCarrier || !player.ships.some((entry) => !entry.sunk && !entry.card.isCarrier)));
+    if (targetShip) {
+      return { targetPlayerId: player.id, targetShipId: targetShip.card.id };
+    }
+  }
+  return null;
+}
+
+function chooseDefaultCarrierStrikes(state: GameState, actorId: PlayerId) {
+  const actor = state.players.find((entry) => entry.id === actorId);
+  if (!actor) {
+    return [];
+  }
+
+  const strikes = [];
+  const carriers = actor.ships.filter((ship) => !ship.sunk && ship.card.isCarrier);
+  for (const carrier of carriers) {
+    const target = chooseDefaultShipTarget(state, actorId);
+    if (!target) {
+      continue;
+    }
+    strikes.push({
+      carrierShipId: carrier.card.id,
+      targetPlayerId: target.targetPlayerId,
+      targetShipId: target.targetShipId
+    });
+  }
+  return strikes;
+}
+
 function normalizeCommandCardContext(state: GameState, command: GameCommand): GameCommand {
   const commandWithCard = command as GameCommand & { cardId?: string };
   if (commandWithCard.cardId && hasCardInHand(state, command.actorId, commandWithCard.cardId)) {
@@ -684,6 +732,19 @@ function normalizeCommandCardContext(state: GameState, command: GameCommand): Ga
       const card = chooseCardByKind(state, command.actorId, "repair");
       assert(card, `No Repair card is available in ${command.actorId}'s hand.`);
       return { ...command, cardId: card.id };
+    }
+    case "play_salvo": {
+      const card = choosePlayableSalvo(state, command.actorId);
+      assert(card, `No playable Salvo card is available in ${command.actorId}'s hand.`);
+      return { ...command, cardId: card.id };
+    }
+    case "use_carrier_strike": {
+      if (Array.isArray(command.strikes) && command.strikes.length > 0) {
+        return command;
+      }
+      const strikes = chooseDefaultCarrierStrikes(state, command.actorId);
+      assert(strikes.length > 0, `No carrier strike targets are available for ${command.actorId}.`);
+      return { ...command, strikes };
     }
     default:
       return command;
