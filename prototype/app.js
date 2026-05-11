@@ -54,6 +54,7 @@ const roundPill = document.getElementById("round-pill");
 const formatPill = document.getElementById("format-pill");
 const scoringHint = document.getElementById("scoring-hint");
 const useAirStrikeButton = document.getElementById("use-airstrike-button");
+const endTurnButton = document.getElementById("end-turn-button");
 const targetBoardToggle = document.getElementById("target-board-toggle");
 const targetBoardSection = document.getElementById("target-board-section");
 const bottomBattleZone = document.getElementById("bottom-battle-zone");
@@ -1667,6 +1668,7 @@ async function maybeAutoEndTurnForOpeningSpecialFlow() {
   if (autoEndTurnInFlight) return;
   if (!appState.serverSession?.connected) return;
   if (!isHumanTurn()) return;
+  if (shouldRequireManualEndTurn()) return;
   const legal = Array.isArray(appState.serverSession.legalCommands) ? appState.serverSession.legalCommands : [];
   if (!(legal.length === 1 && legal[0] === "end_turn")) return;
   if (!appState.serverSession.viewerPlayerId) return;
@@ -2354,6 +2356,15 @@ function isHumanTurn() {
   return getCurrentZone() === "bottom";
 }
 
+function isOpeningTurnWindow() {
+  const activePlayers = getActiveZones().length;
+  return appState.turnState.turnNumber <= activePlayers;
+}
+
+function shouldRequireManualEndTurn() {
+  return !appState.match.isRoundOver && isHumanTurn() && isOpeningTurnWindow();
+}
+
 function hasServerMandatorySpecialResolutionPending() {
   const legal = Array.isArray(appState.serverSession?.legalCommands) ? appState.serverSession.legalCommands : [];
   if (!legal.length) {
@@ -2685,6 +2696,15 @@ function updateBottomStatus() {
   useAirStrikeButton.hidden =
     appState.match.isRoundOver || !isHumanTurn() || appState.turnState.phase !== "draw" || forcedCard !== null || availableCarriers.length === 0;
   useAirStrikeButton.disabled = useAirStrikeButton.hidden;
+  const serverLegal = Array.isArray(appState.serverSession?.legalCommands) ? appState.serverSession.legalCommands : [];
+  const canEndTurnNow = appState.serverSession?.connected
+    ? serverLegal.includes("end_turn")
+    : appState.turnState.phase === "complete";
+  const showManualEndTurn = shouldRequireManualEndTurn() && canEndTurnNow;
+  if (endTurnButton) {
+    endTurnButton.hidden = !showManualEndTurn;
+    endTurnButton.disabled = !showManualEndTurn;
+  }
   ["top", "left", "right"].forEach((zone) => {
     const metaNode = PLAYER_META_NODES[zone];
     const nameNode = PLAYER_NAME_NODES[zone];
@@ -3901,6 +3921,15 @@ function completeActionForTurn(logEntry) {
 function finalizeHumanTurn(logEntry, delayMs = 650) {
   completeActionForTurn(logEntry);
   renderPrototype();
+  if (shouldRequireManualEndTurn()) {
+    setDiceResolution(
+      "—",
+      "Opening turn action complete",
+      "Click End Turn to pass to the next player.",
+      "Opening-round turns require a manual end-turn confirmation."
+    );
+    return;
+  }
   window.clearTimeout(humanTurnAdvanceTimer);
   if (appState.match.isRoundOver) {
     return;
@@ -6325,6 +6354,22 @@ useAirStrikeButton.addEventListener("click", () => {
   }
   startAirStrikePhase();
 });
+
+if (endTurnButton) {
+  endTurnButton.addEventListener("click", async () => {
+    if (!shouldRequireManualEndTurn() || !isHumanTurn()) {
+      return;
+    }
+    if (appState.serverSession?.connected) {
+      await submitServerCommand({
+        type: "end_turn",
+        actorId: appState.serverSession.viewerPlayerId,
+      });
+      return;
+    }
+    startNextTurn();
+  });
+}
 
 if (quitGameButton) {
   quitGameButton.addEventListener("click", () => {
