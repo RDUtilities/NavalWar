@@ -489,22 +489,30 @@ const minesweeperAudio = new Audio("../assets/sound/minesweeper.wav");
 const minesAudio = new Audio("../assets/sound/mines.wav");
 const diceAudio = new Audio("../assets/sound/Dice.wav");
 const winnerAudio = new Audio("../assets/sound/WinnerSound.wav");
-smallSalvoAudio.preload = "auto";
-bigSalvoAudio.preload = "auto";
-shipSinkAudio.preload = "auto";
-submarineAudio.preload = "auto";
-airStrikeAudio.preload = "auto";
-drawCardAudio.preload = "auto";
-smokeAudio.preload = "auto";
-destroyersAudio.preload = "auto";
-additionalDamageAudio.preload = "auto";
-repairAudio.preload = "auto";
-torpedoBoatAudio.preload = "auto";
-invalidCardAudio.preload = "auto";
-minesweeperAudio.preload = "auto";
-minesAudio.preload = "auto";
-diceAudio.preload = "auto";
-winnerAudio.preload = "auto";
+const GAME_AUDIO_EFFECTS = [
+  smallSalvoAudio,
+  bigSalvoAudio,
+  shipSinkAudio,
+  submarineAudio,
+  airStrikeAudio,
+  drawCardAudio,
+  smokeAudio,
+  destroyersAudio,
+  additionalDamageAudio,
+  repairAudio,
+  torpedoBoatAudio,
+  invalidCardAudio,
+  minesweeperAudio,
+  minesAudio,
+  diceAudio,
+  winnerAudio,
+];
+let audioUnlocked = false;
+
+GAME_AUDIO_EFFECTS.forEach((audio) => {
+  audio.preload = "auto";
+  audio.load();
+});
 const targetingLine = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 targetingLine.setAttribute("class", "targeting-line");
 targetingLine.setAttribute("width", String(window.innerWidth));
@@ -3325,186 +3333,116 @@ function highlightDrawnCard(cardId) {
   }, 1800);
 }
 
-function playSalvoHitSound(card) {
-  const gunSize = normalizeGunSize(card?.gunSize || "");
-  const audio = gunSize === '11"' || gunSize === '12.6"' ? smallSalvoAudio : bigSalvoAudio;
+async function unlockGameAudio() {
+  if (audioUnlocked) {
+    return;
+  }
+  audioUnlocked = true;
+
+  await Promise.all(
+    GAME_AUDIO_EFFECTS.map(async (audio) => {
+      try {
+        const previousMuted = audio.muted;
+        const previousVolume = audio.volume;
+        audio.muted = true;
+        audio.volume = 0;
+        audio.currentTime = 0;
+        const playback = audio.play();
+        if (playback?.then) {
+          await playback;
+        }
+        audio.pause();
+        audio.currentTime = 0;
+        audio.volume = previousVolume;
+        audio.muted = previousMuted;
+      } catch (_) {
+        audio.muted = false;
+        audio.volume = 1;
+      }
+    })
+  );
+}
+
+function playGameAudio(audio) {
+  unlockGameAudio();
   try {
+    audio.pause();
     audio.currentTime = 0;
     const playback = audio.play();
     if (playback?.catch) {
-      playback.catch(() => {});
+      playback.catch(() => {
+        audioUnlocked = false;
+      });
     }
   } catch (_) {
-    // Ignore browsers that block autoplay-like playback until more interaction.
+    audioUnlocked = false;
   }
+}
+
+["pointerdown", "touchend", "click", "keydown"].forEach((eventName) => {
+  window.addEventListener(eventName, unlockGameAudio, { once: true, passive: true });
+});
+
+function playSalvoHitSound(card) {
+  const gunSize = normalizeGunSize(card?.gunSize || "");
+  const audio = gunSize === '11"' || gunSize === '12.6"' ? smallSalvoAudio : bigSalvoAudio;
+  playGameAudio(audio);
 }
 
 function playShipSinkSound() {
-  try {
-    shipSinkAudio.currentTime = 0;
-    const playback = shipSinkAudio.play();
-    if (playback?.catch) {
-      playback.catch(() => {});
-    }
-  } catch (_) {
-    // Ignore browsers that block autoplay-like playback until more interaction.
-  }
+  playGameAudio(shipSinkAudio);
 }
 
 function playSubmarineSound() {
-  try {
-    submarineAudio.currentTime = 0;
-    const playback = submarineAudio.play();
-    if (playback?.catch) {
-      playback.catch(() => {});
-    }
-  } catch (_) {
-    // Ignore browsers that block autoplay-like playback until more interaction.
-  }
+  playGameAudio(submarineAudio);
 }
 
 function playAirStrikeSound() {
-  try {
-    airStrikeAudio.currentTime = 0;
-    const playback = airStrikeAudio.play();
-    if (playback?.catch) {
-      playback.catch(() => {});
-    }
-  } catch (_) {
-    // Ignore browsers that block autoplay-like playback until more interaction.
-  }
+  playGameAudio(airStrikeAudio);
 }
 
 function playDrawCardSound() {
-  try {
-    drawCardAudio.currentTime = 0;
-    const playback = drawCardAudio.play();
-    if (playback?.catch) {
-      playback.catch(() => {});
-    }
-  } catch (_) {
-    // Ignore browsers that block autoplay-like playback until more interaction.
-  }
+  playGameAudio(drawCardAudio);
 }
 
 function playSmokeSound() {
-  try {
-    smokeAudio.currentTime = 0;
-    const playback = smokeAudio.play();
-    if (playback?.catch) {
-      playback.catch(() => {});
-    }
-  } catch (_) {
-    // Ignore browsers that block autoplay-like playback until more interaction.
-  }
+  playGameAudio(smokeAudio);
 }
 
 function playDestroyersSound() {
-  try {
-    destroyersAudio.currentTime = 0;
-    const playback = destroyersAudio.play();
-    if (playback?.catch) {
-      playback.catch(() => {});
-    }
-  } catch (_) {
-    // Ignore browsers that block autoplay-like playback until more interaction.
-  }
+  playGameAudio(destroyersAudio);
 }
 
 function playAdditionalDamageSound() {
-  try {
-    additionalDamageAudio.currentTime = 0;
-    const playback = additionalDamageAudio.play();
-    if (playback?.catch) {
-      playback.catch(() => {});
-    }
-  } catch (_) {
-    // Ignore browsers that block autoplay-like playback until more interaction.
-  }
+  playGameAudio(additionalDamageAudio);
 }
 
 function playRepairSound() {
-  try {
-    repairAudio.currentTime = 0;
-    const playback = repairAudio.play();
-    if (playback?.catch) {
-      playback.catch(() => {});
-    }
-  } catch (_) {
-    // Ignore browsers that block autoplay-like playback until more interaction.
-  }
+  playGameAudio(repairAudio);
 }
 
 function playTorpedoBoatSound() {
-  try {
-    torpedoBoatAudio.currentTime = 0;
-    const playback = torpedoBoatAudio.play();
-    if (playback?.catch) {
-      playback.catch(() => {});
-    }
-  } catch (_) {
-    // Ignore browsers that block autoplay-like playback until more interaction.
-  }
+  playGameAudio(torpedoBoatAudio);
 }
 
 function playInvalidCardSound() {
-  try {
-    invalidCardAudio.currentTime = 0;
-    const playback = invalidCardAudio.play();
-    if (playback?.catch) {
-      playback.catch(() => {});
-    }
-  } catch (_) {
-    // Ignore browsers that block autoplay-like playback until more interaction.
-  }
+  playGameAudio(invalidCardAudio);
 }
 
 function playMinesweeperSound() {
-  try {
-    minesweeperAudio.currentTime = 0;
-    const playback = minesweeperAudio.play();
-    if (playback?.catch) {
-      playback.catch(() => {});
-    }
-  } catch (_) {
-    // Ignore browsers that block autoplay-like playback until more interaction.
-  }
+  playGameAudio(minesweeperAudio);
 }
 
 function playMinesSound() {
-  try {
-    minesAudio.currentTime = 0;
-    const playback = minesAudio.play();
-    if (playback?.catch) {
-      playback.catch(() => {});
-    }
-  } catch (_) {
-    // Ignore browsers that block autoplay-like playback until more interaction.
-  }
+  playGameAudio(minesAudio);
 }
 
 function playDiceSound() {
-  try {
-    diceAudio.currentTime = 0;
-    const playback = diceAudio.play();
-    if (playback?.catch) {
-      playback.catch(() => {});
-    }
-  } catch (_) {
-    // Ignore browsers that block autoplay-like playback until more interaction.
-  }
+  playGameAudio(diceAudio);
 }
 
 function playWinnerSound() {
-  try {
-    winnerAudio.currentTime = 0;
-    const playback = winnerAudio.play();
-    if (playback?.catch) {
-      playback.catch(() => {});
-    }
-  } catch (_) {
-    // Ignore browsers that block autoplay-like playback until more interaction.
-  }
+  playGameAudio(winnerAudio);
 }
 
 function hasFleetSmoke(zone) {
