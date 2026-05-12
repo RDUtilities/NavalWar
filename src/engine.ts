@@ -517,6 +517,16 @@ function hasEnemyShipTargetForActor(state: GameState, actor: PlayerState, allowS
   });
 }
 
+function hasDestroyerSquadronTargetForActor(state: GameState, actor: PlayerState): boolean {
+  return state.players.some((targetPlayer) => {
+    const sameTeam = actor.teamId && targetPlayer.teamId && actor.teamId === targetPlayer.teamId;
+    if (targetPlayer.id === actor.id || sameTeam || targetPlayer.eliminated || isProtectedBySmoke(targetPlayer)) {
+      return false;
+    }
+    return livingShips(targetPlayer).length > 0;
+  });
+}
+
 function hasOpeningMinefieldTargetForActor(state: GameState, actor: PlayerState): boolean {
   return state.players.some((targetPlayer) => {
     const sameTeam = actor.teamId && targetPlayer.teamId && actor.teamId === targetPlayer.teamId;
@@ -624,6 +634,7 @@ export function listLegalCommands(state: GameState, actorId: PlayerId): string[]
       entry.ownerId === actorId &&
       entry.deployedTurn < state.turnNumber &&
       livingShips(player).length > 0 &&
+      hasDestroyerSquadronTargetForActor(state, player) &&
       !state.pendingDestroyerAttack
   );
   const allowTurnEnd = state.hasPerformedActionThisTurn;

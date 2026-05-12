@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-11
 
+- `2026-05-11 23:41 America/Chicago` — 3-player multiplayer stress pass and release-blocker fixes
+- Scope: `src/engine.ts`, `src/session.ts`, `prototype/app.js`, `prototype/index.html`, `assets/cards/ships/Modern/manifest.json`
+- Result: Ran 2-human + 1-bot stress testing beyond 200 turns. Fixed a Destroyer Squadron stuck state where `resolve_destroyer_squadron_roll` could be exposed without a legal smoke-free target, corrected manifest filenames for Caio Duilio and Repulse, refreshed stale lobby Turn Summary text after live match entry, and updated Target Board copy for click-select-first UX.
+- Verification: `node --check prototype/app.js` (pass), `npm run check` (pass), `npm run build` (pass), `/tmp/naval-war-3p-stress.mjs` after fixes (258 turns, 4/4 matches finished, no failures), manifest/sound filesystem check (0 missing)
+
 - `2026-05-11 23:23 America/Chicago` — Air Strike carrier targeting rule correction
 - Scope: `src/engine.ts`, `src/session.ts`, `prototype/app.js`
 - Result: Air Strikes can now legally target carriers even while screening ships remain, as long as the target fleet is not protected by smoke. Salvo carrier-screening remains unchanged.

@@ -1643,6 +1643,26 @@ function announceServerTurnChange(gameState, playersBySide) {
   showTurnBanner(currentPlayer.name, phaseLabel);
 }
 
+function maybeRefreshServerTurnSummary(gameState, playersBySide) {
+  const staleLobbyTitles = new Set(["Lobby Hosted", "Lobby Joined", "Starting Match"]);
+  if (!staleLobbyTitles.has(appState.turnSummary?.title)) {
+    return;
+  }
+  const currentPlayer = Object.values(playersBySide).find((player) => player?.id === gameState.currentPlayerId);
+  const playerName = currentPlayer?.name || "Current player";
+  const phaseLabel =
+    gameState.phase === "round_complete"
+      ? "Round complete"
+      : gameState.hasDrawnThisTurn || gameState.hasUsedCarrierStrikeThisTurn
+        ? "Play phase"
+        : "Draw phase";
+  setTurnSummary(
+    `Turn ${gameState.turnNumber} • ${phaseLabel}`,
+    `${playerName} is active.`,
+    gameState.hasPerformedActionThisTurn ? "Waiting for turn completion." : "Choose the next legal action."
+  );
+}
+
 function mapServerViewToLocalState(view) {
   const gameState = view?.gameState;
   if (!gameState) {
@@ -1824,6 +1844,7 @@ function mapServerViewToLocalState(view) {
   }
 
   playSoundsForServerEvents(gameState.events || []);
+  maybeRefreshServerTurnSummary(gameState, playersBySide);
   announceServerTurnChange(gameState, playersBySide);
 
   appState.drawPiles = [

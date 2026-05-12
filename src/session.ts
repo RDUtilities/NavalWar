@@ -814,7 +814,7 @@ function chooseBotCommand(state: GameState, actorId: PlayerId, rng: RandomSource
 
   if (inPriority("resolve_destroyer_squadron_roll")) {
     const squadron = state.destroyerSquadrons.find((entry) => entry.ownerId === actorId && entry.deployedTurn < state.turnNumber);
-    const target = enemyPlayers.find((player) => !isFleetProtectedBySmoke(player));
+    const target = enemyPlayers.find((player) => !isFleetProtectedBySmoke(player) && player.ships.some((ship) => !ship.sunk));
     if (squadron && target) {
       return { type: "resolve_destroyer_squadron_roll", actorId, destroyerId: squadron.id, targetPlayerId: target.id };
     }
