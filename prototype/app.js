@@ -493,6 +493,24 @@ const minesweeperAudio = new Audio("../assets/sound/minesweeper.wav");
 const minesAudio = new Audio("../assets/sound/mines.wav");
 const diceAudio = new Audio("../assets/sound/Dice.wav");
 const winnerAudio = new Audio("../assets/sound/WinnerSound.wav");
+const AUDIO_PATH_BY_ELEMENT = new Map([
+  [smallSalvoAudio, "../assets/sound/Salvo-small.wav"],
+  [bigSalvoAudio, "../assets/sound/Salvo-big.wav"],
+  [shipSinkAudio, "../assets/sound/shipsink.wav"],
+  [submarineAudio, "../assets/sound/submarine.wav"],
+  [airStrikeAudio, "../assets/sound/AirStrike.wav"],
+  [drawCardAudio, "../assets/sound/draw-card.wav"],
+  [smokeAudio, "../assets/sound/smoke.wav"],
+  [destroyersAudio, "../assets/sound/Destroyers.wav"],
+  [additionalDamageAudio, "../assets/sound/AdditionalDamnage.wav"],
+  [repairAudio, "../assets/sound/repairCard.wav"],
+  [torpedoBoatAudio, "../assets/sound/TorpedoBoat.wav"],
+  [invalidCardAudio, "../assets/sound/invalidcard.wav"],
+  [minesweeperAudio, "../assets/sound/minesweeper.wav"],
+  [minesAudio, "../assets/sound/mines.wav"],
+  [diceAudio, "../assets/sound/Dice.wav"],
+  [winnerAudio, "../assets/sound/WinnerSound.wav"],
+]);
 const GAME_AUDIO_EFFECTS = [
   smallSalvoAudio,
   bigSalvoAudio,
@@ -513,6 +531,8 @@ const GAME_AUDIO_EFFECTS = [
 ];
 let audioUnlocked = false;
 let audioEnabled = true;
+let audioContext = null;
+const audioBufferCache = new Map();
 const audioDiagnostics = {
   status: "not tested",
   lastError: null,
@@ -3712,11 +3732,59 @@ function setAudioStatus(status, { ok = false, error = false, event = null } = {}
   renderLobbyDebugPanel();
 }
 
+function getAudioContext() {
+  const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextConstructor) {
+    return null;
+  }
+  if (!audioContext) {
+    audioContext = new AudioContextConstructor();
+  }
+  return audioContext;
+}
+
+async function loadAudioBuffer(path) {
+  const context = getAudioContext();
+  if (!context) {
+    throw new Error("Web Audio API is not available.");
+  }
+  if (audioBufferCache.has(path)) {
+    return audioBufferCache.get(path);
+  }
+  const response = await fetch(path, { cache: "force-cache" });
+  if (!response.ok) {
+    throw new Error(`Audio fetch failed ${response.status}: ${path}`);
+  }
+  const data = await response.arrayBuffer();
+  const buffer = await context.decodeAudioData(data.slice(0));
+  audioBufferCache.set(path, buffer);
+  return buffer;
+}
+
+async function playWebAudio(path, eventName = "sound") {
+  const context = getAudioContext();
+  if (!context) {
+    throw new Error("Web Audio API is not available.");
+  }
+  if (context.state !== "running") {
+    await context.resume();
+  }
+  const buffer = await loadAudioBuffer(path);
+  const source = context.createBufferSource();
+  source.buffer = buffer;
+  source.connect(context.destination);
+  source.start(0);
+  audioUnlocked = true;
+  setAudioStatus("playing web", { ok: true, event: eventName });
+  return true;
+}
+
 async function playAudioElement(audio, eventName = "sound") {
   if (!audioEnabled) {
     setAudioStatus("off", { event: eventName });
     return false;
   }
+  const path = AUDIO_PATH_BY_ELEMENT.get(audio);
   try {
     audio.pause();
     audio.currentTime = 0;
@@ -3728,8 +3796,19 @@ async function playAudioElement(audio, eventName = "sound") {
     setAudioStatus("playing", { ok: true, event: eventName });
     return true;
   } catch (error) {
+    const htmlAudioError = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    if (path) {
+      try {
+        return await playWebAudio(path, `${eventName}:web-audio`);
+      } catch (webAudioError) {
+        const webAudioMessage = webAudioError instanceof Error ? `${webAudioError.name}: ${webAudioError.message}` : String(webAudioError);
+        audioUnlocked = false;
+        setAudioStatus("blocked", { error: `HTMLAudio ${htmlAudioError}; WebAudio ${webAudioMessage}`, event: eventName });
+        return false;
+      }
+    }
     audioUnlocked = false;
-    setAudioStatus("blocked", { error: error instanceof Error ? `${error.name}: ${error.message}` : String(error), event: eventName });
+    setAudioStatus("blocked", { error: htmlAudioError, event: eventName });
     return false;
   }
 }
@@ -6798,7 +6877,16 @@ if (testSoundButton) {
     }
     audioDiagnostics.lastTestAt = new Date().toISOString();
     setAudioStatus("testing", { event: "manual-test" });
-    const ok = await playAudioElement(drawCardAudio, "manual-test:draw-card.wav");
+    let ok = false;
+    try {
+      ok = await playWebAudio("../assets/sound/draw-card.wav", "manual-test:web-audio");
+    } catch (webAudioError) {
+      setAudioStatus("web blocked", {
+        error: webAudioError instanceof Error ? `${webAudioError.name}: ${webAudioError.message}` : String(webAudioError),
+        event: "manual-test:web-audio",
+      });
+      ok = await playAudioElement(drawCardAudio, "manual-test:draw-card.wav");
+    }
     if (ok) {
       appendLog("Audio test succeeded.");
     } else {
