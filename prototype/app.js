@@ -3198,7 +3198,7 @@ function highlightValidTargets() {
       });
     }
 
-    if (!IMMEDIATE_PLAY_KINDS.has(card.kind) || card.kind === "additional_ship") {
+    if (canDiscardCardAsAction(card)) {
       const discardTargets = [...document.querySelectorAll("[data-drop-type='discard_action']")];
       discardTargets.forEach((node) => {
         node.classList.add("is-valid-target");
@@ -4028,6 +4028,22 @@ function canAdditionalDamageTargetShip(zone, targetIndex) {
   return Boolean(ship && !ship.sunk && Array.isArray(ship.salvos) && ship.salvos.length > 0);
 }
 
+function canDiscardCardAsAction(card) {
+  if (!card) {
+    return false;
+  }
+  if (card.kind === "additional_ship") {
+    return true;
+  }
+  if (appState.serverSession?.connected) {
+    const legal = Array.isArray(appState.serverSession.legalCommands) ? appState.serverSession.legalCommands : [];
+    if (legal.includes("discard_play_card") && (card.kind === "additional_damage" || card.kind === "minefield")) {
+      return true;
+    }
+  }
+  return !IMMEDIATE_PLAY_KINDS.has(card.kind);
+}
+
 function isCarrierScreened(zone, targetIndex) {
   const fleet = appState.fleets[zone] || [];
   const ship = fleet[targetIndex];
@@ -4040,7 +4056,7 @@ function isCarrierScreened(zone, targetIndex) {
 
 function canHandCardDropOnTarget(card, dropTarget) {
   if (dropTarget.dataset.dropType === "discard_action") {
-    return card.kind === "additional_ship" || !IMMEDIATE_PLAY_KINDS.has(card.kind);
+    return canDiscardCardAsAction(card);
   }
 
   if (card.kind === "carrier_airstrike") {
@@ -6190,6 +6206,10 @@ function playOwnShipCard(card, targetIndex, targetShipIdOverride = null) {
 }
 
 async function discardHandCardAsAction(card) {
+  if (card.kind === "additional_ship") {
+    resolveAdditionalShipCard(card);
+    return;
+  }
   if (appState.serverSession?.connected) {
     await submitServerCommand({
       type: "discard_play_card",
@@ -6206,10 +6226,6 @@ async function discardHandCardAsAction(card) {
   if (appState.turnState.playedCard) {
     appendLog(`Only one action can be taken each turn. ${card.label} stays in hand.`);
     renderPrototype();
-    return;
-  }
-  if (card.kind === "additional_ship") {
-    resolveAdditionalShipCard(card);
     return;
   }
   if (ensureForcedCard(card) === false || IMMEDIATE_PLAY_KINDS.has(card.kind)) {

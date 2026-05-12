@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-11
 
+- `2026-05-11 18:xx America/Chicago` — Opening special discard/drop UI fix
+- Scope: `prototype/app.js`
+- Result: Live human test on lobby `6MLZDG` showed the server allowed Miles to discard opening Additional Damage and play Additional Ship, but the browser blocked those drop targets. Discard pile targeting now allows server-legal opening Additional Damage/Minefield discards, and dropping Additional Ship on the discard pile resolves `play_additional_ship` instead of sending an invalid discard command.
+- Verification: live lobby inspection confirmed server legal commands were `discard_play_card` and `play_additional_ship`; `node --check prototype/app.js` (pass), `node --check server.mjs` (pass), `npm run check` (pass), `npm run build` (pass)
+
 - `2026-05-11 13:xx America/Chicago` — Live Render multiplayer follow-up fixes
 - Scope: `src/engine.ts`, `src/session.ts`, `server.mjs`
 - Result: Fixed live-test findings from 2-human + 1-bot Render matches: `play_salvo` no longer appears unless the player has a matching afloat gun caliber, per-view seat layouts now mark the viewer as `isLocalPlayer`, and API rule rejections now return HTTP 400 `Request rejected` instead of looking like server crashes.
