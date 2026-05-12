@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-12
 
+- `2026-05-12 15:xx America/Chicago` — Hard-hide full layout in Target Board View
+- Scope: `prototype/app.js`, `service-worker.js`
+- Result: Corrected the Target Board View toggle so checked mode explicitly hides the top/left/right opponent zones and central Battle Zone with DOM `hidden`, not just CSS classes. Unchecking the toggle restores the full Battle Zone layout. Bumped the service-worker cache again so deployed clients replace the previous layout code.
+- Verification: `node --check prototype/app.js` (pass), `node --check service-worker.js` (pass), `npm run check` (pass), `npm run build` (pass), local browser smoke on fresh port confirmed checked Target Board View hides full layout and unchecked view restores full Battle Zone (pass)
+
 - `2026-05-12 15:xx America/Chicago` — Target Board or Battle Zone view toggle
 - Scope: `prototype/index.html`, `prototype/app.js`, `prototype/styles.css`, `service-worker.js`
 - Result: Changed the top-bar Target Board control into a true layout switch. Target Board View now hides the full opponent/battle-zone layout and focuses the local player command panel with the mirrored target board, draw/discard row, and mini battle zone. Turning it off restores the traditional full Battle Zone layout. Bumped the service-worker cache version so deployed clients pick up the new CSS/app behavior.

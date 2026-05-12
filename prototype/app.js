@@ -101,6 +101,7 @@ const saveStatusCopy = document.getElementById("save-status-copy");
 const menuLobbyDebug = document.getElementById("menu-lobby-debug");
 const tableLobbyDebug = document.getElementById("table-lobby-debug");
 const warTable = document.querySelector(".war-table");
+const battleZone = document.querySelector(".battle-zone");
 let dragState = null;
 let fleetDropPreview = null;
 let dragPointer = null;
@@ -5859,11 +5860,15 @@ function renderPrototype() {
   PLAYER_ORDER.forEach((zone) => {
     const node = PLAYER_ZONE_NODES[zone];
     if (node) {
+      node.hidden = appState.ui.showTargetBoard && zone !== "bottom";
       node.classList.toggle("is-inactive", !isZoneActive(zone));
       node.dataset.zone = zone;
       node.dataset.dropType = isZoneActive(zone) ? "fleet_target" : "";
     }
   });
+  if (battleZone) {
+    battleZone.hidden = appState.ui.showTargetBoard;
+  }
   if (appState.match.isRoundOver) {
     document.body.classList.add("is-round-over");
   } else {
