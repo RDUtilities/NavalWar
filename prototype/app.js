@@ -994,6 +994,7 @@ appState.serverSession = {
   isHost: false,
   status: "offline",
   localRoleByZone: { bottom: "human", left: "bot", top: "bot", right: "bot" },
+  activeSides: ["bottom", "left", "top", "right"],
   localPlayerCount: 4,
   lastSyncAt: null,
   lastError: null,
@@ -1278,6 +1279,9 @@ function setServerSessionCore({ connected, lobbyId, viewerPlayerId, joinCode, st
   appState.serverSession.lastSyncAt = new Date().toISOString();
   appState.serverSession.lastError = null;
   appState.serverSession.localPlayerCount = playerCount;
+  if (Number.isFinite(Number(playerCount))) {
+    appState.tableConfig.playerCount = Math.min(4, Math.max(2, Number(playerCount)));
+  }
   if (isDifferentSession) {
     lastServerViewSignature = null;
     appState.serverSession.eventSoundLobbyId = null;
@@ -1288,6 +1292,7 @@ function setServerSessionCore({ connected, lobbyId, viewerPlayerId, joinCode, st
   }
   if (!connected) {
     appState.serverSession.lobbyInfo = null;
+    appState.serverSession.activeSides = ["bottom", "left", "top", "right"];
   }
   persistServerSessionSnapshot();
   if (connected) {
@@ -1312,8 +1317,12 @@ async function refreshLobbyInfo() {
     return null;
   }
   const lobby = await serverGet(`/api/lobbies/${encodeURIComponent(appState.serverSession.lobbyId)}`);
-  appState.serverSession.lobbyInfo = lobby;
-  appState.serverSession.status = lobby?.status || appState.serverSession.status;
+    appState.serverSession.lobbyInfo = lobby;
+    appState.serverSession.status = lobby?.status || appState.serverSession.status;
+    if (Number.isFinite(Number(lobby?.playerCount))) {
+      appState.serverSession.localPlayerCount = Number(lobby.playerCount);
+      appState.tableConfig.playerCount = Math.min(4, Math.max(2, Number(lobby.playerCount)));
+    }
   return lobby;
 }
 
@@ -1391,17 +1400,18 @@ async function joinLobbyFromCode(joinCode, { playerCount }) {
       role: "human",
       clientId: appState.serverSession.clientId,
     });
-    const joinedLobby = joined?.lobby ?? joined;
-    setServerSessionCore({
-      connected: true,
-      lobbyId: joinedLobby?.lobbyId ?? null,
-      viewerPlayerId: joined?.viewerPlayerId ?? joinedLobby?.viewerPlayerId ?? null,
-      joinCode: joinedLobby?.joinCode ?? joinCode,
-      status: joinedLobby?.status ?? "lobby",
-      isHost: Boolean(joinedLobby?.youAreHost ?? false),
-      playerCount,
-      sessionToken: joined?.sessionToken ?? null,
-    });
+  const joinedLobby = joined?.lobby ?? joined;
+  const serverPlayerCount = joinedLobby?.playerCount ?? playerCount;
+  setServerSessionCore({
+    connected: true,
+    lobbyId: joinedLobby?.lobbyId ?? null,
+    viewerPlayerId: joined?.viewerPlayerId ?? joinedLobby?.viewerPlayerId ?? null,
+    joinCode: joinedLobby?.joinCode ?? joinCode,
+    status: joinedLobby?.status ?? "lobby",
+    isHost: Boolean(joinedLobby?.youAreHost ?? false),
+    playerCount: serverPlayerCount,
+    sessionToken: joined?.sessionToken ?? null,
+  });
     appState.serverSession.lobbyInfo = joinedLobby ?? null;
     syncLobbySeatPreview();
     return true;
@@ -1418,6 +1428,7 @@ async function joinLobbyFromCode(joinCode, { playerCount }) {
     clientId: appState.serverSession.clientId,
   });
   const joinedLobby = joined?.lobby ?? joined;
+  const serverPlayerCount = joinedLobby?.playerCount ?? playerCount;
   const viewerPlayerId = joined?.viewerPlayerId;
   if (!viewerPlayerId) {
     throw new Error("Server did not return a joined player id.");
@@ -1429,7 +1440,7 @@ async function joinLobbyFromCode(joinCode, { playerCount }) {
     joinCode: joinedLobby.joinCode ?? joinCode,
     status: joinedLobby.status ?? "lobby",
     isHost: false,
-    playerCount,
+    playerCount: serverPlayerCount,
     sessionToken: joined?.sessionToken ?? null,
   });
   syncLobbySeatPreview();
@@ -1668,7 +1679,11 @@ function mapServerViewToLocalState(view) {
     appState.fleetsByZone[mappedSide] = { playerId: entry.player.id, name: entry.player.name };
     appState.serverSession.localRoleByZone[mappedSide] = entry.role || "human";
   });
-  appState.tableConfig.playerCount = Math.min(4, Math.max(2, gameState.players.length || appState.tableConfig.playerCount || 4));
+  appState.serverSession.activeSides = ["bottom", "left", "top", "right"].filter((side) => playersBySide[side]);
+  if (!appState.serverSession.activeSides.includes("bottom")) {
+    appState.serverSession.activeSides.unshift("bottom");
+  }
+  appState.tableConfig.playerCount = Math.min(4, Math.max(2, appState.serverSession.activeSides.length || gameState.players.length || appState.tableConfig.playerCount || 4));
 
   const sides = ["bottom", "left", "top", "right"];
   sides.forEach((side) => {
@@ -2147,6 +2162,14 @@ function getConfiguredPlayerCount() {
 }
 
 function getActiveZones() {
+  if (appState.serverSession?.connected) {
+    const activeSides = Array.isArray(appState.serverSession.activeSides)
+      ? appState.serverSession.activeSides.filter((zone) => PLAYER_ORDER.includes(zone))
+      : [];
+    if (activeSides.length) {
+      return activeSides;
+    }
+  }
   return ACTIVE_ZONE_LAYOUTS[getConfiguredPlayerCount()] || ACTIVE_ZONE_LAYOUTS[4];
 }
 
@@ -2159,6 +2182,19 @@ function getBotZones() {
 }
 
 function getLayoutMode() {
+  if (appState.serverSession?.connected) {
+    const activeSides = getActiveZones();
+    if (activeSides.length === 2) {
+      return "duel";
+    }
+    if (activeSides.length === 3 && activeSides.includes("right") && !activeSides.includes("top")) {
+      return "four-way";
+    }
+    if (activeSides.length === 3) {
+      return "triangle";
+    }
+    return "four-way";
+  }
   const playerCount = getConfiguredPlayerCount();
   if (playerCount === 2) {
     return "duel";

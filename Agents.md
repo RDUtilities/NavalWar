@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-11
 
+- `2026-05-11 22:32 America/Chicago` — Server-driven active sides for rotated multiplayer layouts
+- Scope: `prototype/app.js`
+- Result: Joined clients now adopt the host lobby's server player count and active seat sides instead of relying on their local setup dropdown. This fixes rotated 3-player views where a guest could hide the host on the right side and show an empty default Admiral Tanaka seat, which also blocked valid discard/Destroyer targeting flows.
+- Verification: `node --check prototype/app.js` (pass), `npm run check` (pass), `npm run build` (pass)
+
 - `2026-05-11 21:22 America/Chicago` — Sunk ship persistence and ready Destroyer UX
 - Scope: `src/engine.ts`, `prototype/app.js`
 - Result: Sunk ships are no longer removed from the authoritative fleet list, allowing clients to keep showing the ship-card back with SUNK status while still awarding the ship to the attacker's Victory Pile. Ready Destroyer Squadrons now appear as virtual activation cards in the local player's hand, can be played onto legal enemy fleets, and respect smoke targeting. Air Strike targeting now rejects screened carriers before sending a server command, and turn banners are shown after server event banners/sounds so they are less likely to be overwritten.
