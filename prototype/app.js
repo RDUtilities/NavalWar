@@ -57,6 +57,7 @@ const useAirStrikeButton = document.getElementById("use-airstrike-button");
 const endTurnButton = document.getElementById("end-turn-button");
 const targetBoardToggle = document.getElementById("target-board-toggle");
 const dragModeToggle = document.getElementById("drag-mode-toggle");
+const soundToggle = document.getElementById("sound-toggle");
 const targetBoardSection = document.getElementById("target-board-section");
 const bottomBattleZone = document.getElementById("bottom-battle-zone");
 const quitGameButton = document.getElementById("quit-game-button");
@@ -509,6 +510,7 @@ const GAME_AUDIO_EFFECTS = [
   winnerAudio,
 ];
 let audioUnlocked = false;
+let audioEnabled = true;
 
 GAME_AUDIO_EFFECTS.forEach((audio) => {
   audio.preload = "auto";
@@ -998,6 +1000,8 @@ appState.serverSession = {
   sessionToken: null,
   lobbyInfo: null,
   legalCommands: [],
+  eventSoundLobbyId: null,
+  eventSoundCount: 0,
 };
 appState.setupMode = "solo";
 
@@ -1649,9 +1653,18 @@ function mapServerViewToLocalState(view) {
   );
   const hasDrawAction = legalCommandSet.has("draw_card") || legalCommandSet.has("use_carrier_strike");
   const hasOnlyEndTurn = legalCommandSet.size === 1 && legalCommandSet.has("end_turn");
+  const hasPendingServerAirStrikeSelection = Boolean(
+    appState.turnState.airStrikeMode &&
+      legalCommandSet.has("use_carrier_strike") &&
+      gameState.currentPlayerId === viewerPlayerId &&
+      !gameState.hasDrawnThisTurn &&
+      !gameState.hasPerformedActionThisTurn
+  );
 
   appState.turnState.phase = gameState.phase === "round_complete"
     ? "complete"
+    : hasPendingServerAirStrikeSelection
+    ? "play"
     : hasPlayAction
     ? "play"
     : hasDrawAction
@@ -1664,6 +1677,11 @@ function mapServerViewToLocalState(view) {
   appState.turnState.playedCard = Boolean(
     gameState.hasPerformedActionThisTurn && !hasServerMandatorySpecialResolutionPending()
   );
+  appState.turnState.airStrikeMode = hasPendingServerAirStrikeSelection;
+  appState.turnState.usedAirStrike = Boolean(gameState.hasUsedCarrierStrikeThisTurn);
+  if (!hasPendingServerAirStrikeSelection && !gameState.hasUsedCarrierStrikeThisTurn) {
+    appState.turnState.usedCarrierIndices = [];
+  }
   appState.match.isRoundOver = gameState.phase === "round_complete";
   appState.match.roundEndReason = gameState.roundEndReason || null;
   appState.match.winnerZone =
@@ -1687,6 +1705,8 @@ function mapServerViewToLocalState(view) {
       total: 0,
     }));
   }
+
+  playSoundsForServerEvents(gameState.events || []);
 
   appState.drawPiles = [
     {
@@ -3079,6 +3099,9 @@ function highlightTouchTargetsForCard(card) {
   if (!card) {
     return;
   }
+  if (card.kind === "carrier_airstrike") {
+    appState.turnState.airStrikeMode = true;
+  }
   const forcedCard = getForcedImmediateCard();
   if (forcedCard && forcedCard.id !== card.id) {
     return;
@@ -3226,7 +3249,11 @@ function highlightValidTargets() {
     const validTargets = [...document.querySelectorAll("[data-drop-type='enemy_ship'], [data-drop-type='destroyer_target']")];
     validTargets.forEach((node) => {
       const zone = node.dataset.zone;
-      if (isDestroyerTarget(node) || (zone && canTargetFleetWithAction("carrier_airstrike", zone))) {
+      const targetIndex = Number(node.dataset.shipIndex);
+      if (
+        (!appState.serverSession?.connected && isDestroyerTarget(node)) ||
+        (zone && canTargetFleetWithAction("carrier_airstrike", zone) && !isCarrierScreened(zone, targetIndex))
+      ) {
         node.classList.add("is-valid-target");
       }
     });
@@ -3390,6 +3417,9 @@ function highlightDrawnCard(cardId) {
 }
 
 async function unlockGameAudio() {
+  if (!audioEnabled) {
+    return;
+  }
   if (audioUnlocked) {
     return;
   }
@@ -3420,6 +3450,9 @@ async function unlockGameAudio() {
 }
 
 function playGameAudio(audio) {
+  if (!audioEnabled) {
+    return;
+  }
   unlockGameAudio();
   try {
     audio.pause();
@@ -3433,6 +3466,78 @@ function playGameAudio(audio) {
   } catch (_) {
     audioUnlocked = false;
   }
+}
+
+function playSalvoSoundFromDetail(detail) {
+  const match = String(detail || "").match(/attached\s+([0-9.]+)"/i);
+  const gunSize = match ? `${match[1]}"` : "";
+  playGameAudio(gunSize === '11"' || gunSize === '12.6"' ? smallSalvoAudio : bigSalvoAudio);
+}
+
+function playSoundForServerEvent(event) {
+  switch (event?.type) {
+    case "salvo_fired":
+    case "destroyer_squadron_hit":
+      playSalvoSoundFromDetail(event.detail);
+      break;
+    case "ship_sunk":
+    case "destroyer_squadron_sunk":
+      playShipSinkSound();
+      break;
+    case "submarine_roll":
+      playSubmarineSound();
+      playDiceSound();
+      break;
+    case "torpedo_boat_roll":
+      playTorpedoBoatSound();
+      playDiceSound();
+      break;
+    case "carrier_roll":
+      playAirStrikeSound();
+      playDiceSound();
+      break;
+    case "minefield_deployed":
+      playMinesSound();
+      break;
+    case "minefield_cleared":
+      playMinesweeperSound();
+      break;
+    case "smoke_deployed":
+      playSmokeSound();
+      break;
+    case "destroyer_squadron_deployed":
+      playDestroyersSound();
+      break;
+    case "additional_damage_played":
+      playAdditionalDamageSound();
+      break;
+    case "ship_repaired":
+      playRepairSound();
+      break;
+    case "card_drawn":
+    case "additional_ship_drawn":
+    case "ship_added":
+      playDrawCardSound();
+      break;
+    case "campaign_won":
+      playWinnerSound();
+      break;
+  }
+}
+
+function playSoundsForServerEvents(events) {
+  if (!appState.serverSession?.connected || !Array.isArray(events)) {
+    return;
+  }
+  const lobbyId = appState.serverSession.lobbyId || "local";
+  if (appState.serverSession.eventSoundLobbyId !== lobbyId) {
+    appState.serverSession.eventSoundLobbyId = lobbyId;
+    appState.serverSession.eventSoundCount = events.length;
+    return;
+  }
+  const previousCount = Math.min(appState.serverSession.eventSoundCount || 0, events.length);
+  events.slice(previousCount).forEach(playSoundForServerEvent);
+  appState.serverSession.eventSoundCount = events.length;
 }
 
 ["pointerdown", "touchend", "click", "keydown"].forEach((eventName) => {
@@ -4060,8 +4165,17 @@ function canHandCardDropOnTarget(card, dropTarget) {
   }
 
   if (card.kind === "carrier_airstrike") {
-    if (dropTarget.dataset.dropType === "enemy_ship" || isDestroyerTarget(dropTarget)) {
-      return true;
+    if (dropTarget.dataset.dropType === "enemy_ship") {
+      const zone = dropTarget.dataset.zone;
+      const targetIndex = Number(dropTarget.dataset.shipIndex);
+      return Boolean(
+        zone &&
+          canTargetFleetWithAction("carrier_airstrike", zone) &&
+          !isCarrierScreened(zone, targetIndex)
+      );
+    }
+    if (isDestroyerTarget(dropTarget)) {
+      return !appState.serverSession?.connected;
     }
     return false;
   }
@@ -4129,6 +4243,15 @@ function startAirStrikePhase() {
     appendLog("No afloat carriers are available for an air strike.");
     renderPrototype();
     return;
+  }
+  if (appState.serverSession?.connected) {
+    const legal = Array.isArray(appState.serverSession.legalCommands) ? appState.serverSession.legalCommands : [];
+    if (!legal.includes("use_carrier_strike")) {
+      appendLog("Air strikes are not available from the server for this turn.");
+      refreshServerViewAndRender();
+      renderPrototype();
+      return;
+    }
   }
 
   appState.turnState.phase = "play";
@@ -6369,6 +6492,17 @@ if (dragModeToggle) {
   });
 }
 
+if (soundToggle) {
+  audioEnabled = soundToggle.checked;
+  soundToggle.addEventListener("change", () => {
+    audioEnabled = soundToggle.checked;
+    if (audioEnabled) {
+      unlockGameAudio();
+      playGameAudio(invalidCardAudio);
+    }
+  });
+}
+
 useAirStrikeButton.addEventListener("click", () => {
   if (!isHumanTurn()) {
     return;
@@ -6649,7 +6783,9 @@ document.addEventListener("dragover", (event) => {
       !getForcedImmediateCard() &&
       hasUnusedCarrier(dragState.fromIndex) &&
       (dropTarget.dataset.dropType === "enemy_ship" || dropTarget.dataset.dropType === "destroyer_target") &&
-      (isDestroyerTarget(dropTarget) || canTargetFleetWithAction("carrier_airstrike", dropTarget.dataset.zone))) ||
+      ((!appState.serverSession?.connected && isDestroyerTarget(dropTarget)) ||
+        (canTargetFleetWithAction("carrier_airstrike", dropTarget.dataset.zone) &&
+          !isCarrierScreened(dropTarget.dataset.zone, Number(dropTarget.dataset.shipIndex))))) ||
     (dragState.type === "hand_card" &&
       draggedHandCard &&
       appState.turnState.phase === "play" &&
@@ -6718,6 +6854,11 @@ document.addEventListener("drop", (event) => {
     (dropTarget.dataset.dropType === "enemy_ship" || dropTarget.dataset.dropType === "destroyer_target")
   ) {
     if (isDestroyerTarget(dropTarget)) {
+      if (appState.serverSession?.connected) {
+        markRejectedHandCard(`carrier-airstrike-${dragState.fromIndex}`);
+        dragState = null;
+        return;
+      }
       resolveCarrierAirStrikeOnDestroyer(dragState.fromIndex, dropTarget.dataset.zone, dropTarget.dataset.effectId);
     } else {
       resolveCarrierAirStrike(dragState.fromIndex, dropTarget.dataset.zone, Number(dropTarget.dataset.shipIndex));

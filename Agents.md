@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-11
 
+- `2026-05-11 20:xx America/Chicago` — Online Air Strike targeting and server-event audio
+- Scope: `prototype/index.html`, `prototype/app.js`
+- Result: Live human test on lobby `Q89RRA` showed server-linked Air Strike could create virtual carrier cards but target selection was overwritten by server draw-phase refreshes. Server views now preserve local air-strike target-selection mode while `use_carrier_strike` is legal, carrier strike targets honor smoke and carrier screening, and synced server combat-log events now trigger sounds for salvos, sinking, dice rolls, mines, smoke, destroyers, repairs, draws, and air strikes. Added a top-bar Sound toggle to unlock/test browser audio.
+- Verification: live lobby inspection confirmed Rob had `draw_card` + `use_carrier_strike`; `node --check prototype/app.js` (pass), `node --check server.mjs` (pass), `npm run check` (pass), `npm run build` (pass)
+
 - `2026-05-11 18:xx America/Chicago` — Opening special discard/drop UI fix
 - Scope: `prototype/app.js`
 - Result: Live human test on lobby `6MLZDG` showed the server allowed Miles to discard opening Additional Damage and play Additional Ship, but the browser blocked those drop targets. Discard pile targeting now allows server-legal opening Additional Damage/Minefield discards, and dropping Additional Ship on the discard pile resolves `play_additional_ship` instead of sending an invalid discard command.
