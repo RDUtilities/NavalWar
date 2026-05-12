@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-12
 
+- `2026-05-12 10:29 America/Chicago` — iPad media audio output selector
+- Scope: `prototype/index.html`, `prototype/app.js`, `prototype/styles.css`
+- Result: Added an `Audio` output selector with `Auto`, `WebAudio`, and `Media` modes. iPadOS defaults to `Media`, exposes a small native audio control during testing, and routes game effects through that mode when selected so Safari's silent WebAudio path can be bypassed.
+- Verification: `node --check prototype/app.js` (pass), `npm run check` (pass), `npm run build` (pass)
+
 - `2026-05-12 09:53 America/Chicago` — iPad Safari WebAudio-first sound routing
 - Scope: `prototype/app.js`
 - Result: Added a louder WebAudio tone to the manual sound test and made a successful WebAudio test switch the game to WebAudio-first playback for later effects. This avoids iPad Safari's HTMLAudio path that can report playback and show the speaker icon while remaining inaudible. Multiplayer debug now also reports the active audio output mode.

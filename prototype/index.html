@@ -181,7 +181,16 @@
                 <span>Sound</span>
               </label>
               <button class="secondary-button top-bar-button audio-test-button" id="test-sound-button" type="button">Test Sound</button>
+              <label class="audio-output-control" for="audio-output-select">
+                <span>Audio</span>
+                <select id="audio-output-select">
+                  <option value="auto">Auto</option>
+                  <option value="web">WebAudio</option>
+                  <option value="media">Media</option>
+                </select>
+              </label>
               <span class="audio-status-pill" id="audio-status-pill">Audio: not tested</span>
+              <audio class="audio-probe-player" id="audio-probe-player" controls playsinline hidden></audio>
               <button class="secondary-button top-bar-button" data-open-score="true">Score Card</button>
               <span class="scoring-hint" id="scoring-hint">Skirmish: last fleet afloat wins.</span>
               <button class="secondary-button top-bar-button" data-open-log="true">Combat Log</button>

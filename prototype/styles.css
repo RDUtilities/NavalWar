@@ -349,6 +349,40 @@ button {
   padding-inline: 14px;
 }
 
+.audio-output-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(233, 213, 162, 0.2);
+  border-radius: 999px;
+  background: rgba(7, 14, 20, 0.42);
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.audio-output-control select {
+  border: 0;
+  border-radius: 999px;
+  background: rgba(242, 236, 219, 0.12);
+  color: var(--paper);
+  font: inherit;
+  letter-spacing: 0;
+  outline: none;
+  padding: 5px 8px;
+  text-transform: none;
+}
+
+.audio-probe-player {
+  width: 140px;
+  height: 34px;
+  filter: sepia(0.2) saturate(0.8);
+}
+
 .menu-cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
