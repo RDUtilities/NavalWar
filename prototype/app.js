@@ -58,6 +58,8 @@ const endTurnButton = document.getElementById("end-turn-button");
 const targetBoardToggle = document.getElementById("target-board-toggle");
 const dragModeToggle = document.getElementById("drag-mode-toggle");
 const soundToggle = document.getElementById("sound-toggle");
+const testSoundButton = document.getElementById("test-sound-button");
+const audioStatusPill = document.getElementById("audio-status-pill");
 const targetBoardSection = document.getElementById("target-board-section");
 const bottomBattleZone = document.getElementById("bottom-battle-zone");
 const quitGameButton = document.getElementById("quit-game-button");
@@ -511,9 +513,16 @@ const GAME_AUDIO_EFFECTS = [
 ];
 let audioUnlocked = false;
 let audioEnabled = true;
+const audioDiagnostics = {
+  status: "not tested",
+  lastError: null,
+  lastEvent: null,
+  lastTestAt: null,
+};
 
 GAME_AUDIO_EFFECTS.forEach((audio) => {
   audio.preload = "auto";
+  audio.setAttribute("playsinline", "true");
   audio.load();
 });
 const targetingLine = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -2415,6 +2424,9 @@ function renderLobbyDebugPanel() {
     `sessionToken: ${session.sessionToken || "-"}`,
     `lastSyncAt: ${session.lastSyncAt || "-"}`,
     `lastError: ${session.lastError || "-"}`,
+    `audioStatus: ${audioDiagnostics.status}`,
+    `audioLastEvent: ${audioDiagnostics.lastEvent || "-"}`,
+    `audioLastError: ${audioDiagnostics.lastError || "-"}`,
   ];
   const text = lines.join("\n");
   if (menuLobbyDebug) {
@@ -3621,54 +3633,21 @@ function highlightDrawnCard(cardId) {
 
 async function unlockGameAudio() {
   if (!audioEnabled) {
+    setAudioStatus("off");
     return;
   }
   if (audioUnlocked) {
     return;
   }
-  audioUnlocked = true;
-
-  await Promise.all(
-    GAME_AUDIO_EFFECTS.map(async (audio) => {
-      try {
-        const previousMuted = audio.muted;
-        const previousVolume = audio.volume;
-        audio.muted = true;
-        audio.volume = 0;
-        audio.currentTime = 0;
-        const playback = audio.play();
-        if (playback?.then) {
-          await playback;
-        }
-        audio.pause();
-        audio.currentTime = 0;
-        audio.volume = previousVolume;
-        audio.muted = previousMuted;
-      } catch (_) {
-        audio.muted = false;
-        audio.volume = 1;
-      }
-    })
-  );
+  setAudioStatus("needs tap");
 }
 
 function playGameAudio(audio) {
   if (!audioEnabled) {
+    setAudioStatus("off");
     return;
   }
-  unlockGameAudio();
-  try {
-    audio.pause();
-    audio.currentTime = 0;
-    const playback = audio.play();
-    if (playback?.catch) {
-      playback.catch(() => {
-        audioUnlocked = false;
-      });
-    }
-  } catch (_) {
-    audioUnlocked = false;
-  }
+  playAudioElement(audio, audio?.src?.split("/").pop() || "sound");
 }
 
 function playSalvoSoundFromDetail(detail) {
@@ -3718,6 +3697,41 @@ function showDiceResolutionForServerEvent(event) {
   setTurnSummary(title, event.detail || "Die rolled.", outcome);
   pendingDiceAdvanceDelay = Math.max(pendingDiceAdvanceDelay, 4200);
   showDiceBanner(appState.diceState);
+}
+
+function setAudioStatus(status, { ok = false, error = false, event = null } = {}) {
+  audioDiagnostics.status = status;
+  audioDiagnostics.lastEvent = event || audioDiagnostics.lastEvent;
+  audioDiagnostics.lastError = error ? String(error) : null;
+  if (audioStatusPill) {
+    audioStatusPill.textContent = `Audio: ${status}`;
+    audioStatusPill.classList.toggle("is-ok", Boolean(ok));
+    audioStatusPill.classList.toggle("is-error", Boolean(error));
+    audioStatusPill.title = error ? String(error) : "";
+  }
+  renderLobbyDebugPanel();
+}
+
+async function playAudioElement(audio, eventName = "sound") {
+  if (!audioEnabled) {
+    setAudioStatus("off", { event: eventName });
+    return false;
+  }
+  try {
+    audio.pause();
+    audio.currentTime = 0;
+    const playback = audio.play();
+    if (playback?.then) {
+      await playback;
+    }
+    audioUnlocked = true;
+    setAudioStatus("playing", { ok: true, event: eventName });
+    return true;
+  } catch (error) {
+    audioUnlocked = false;
+    setAudioStatus("blocked", { error: error instanceof Error ? `${error.name}: ${error.message}` : String(error), event: eventName });
+    return false;
+  }
 }
 
 function playSoundForServerEvent(event) {
@@ -6768,9 +6782,29 @@ if (soundToggle) {
   soundToggle.addEventListener("change", () => {
     audioEnabled = soundToggle.checked;
     if (audioEnabled) {
-      unlockGameAudio();
-      playGameAudio(invalidCardAudio);
+      setAudioStatus("tap Test Sound", { event: "sound-toggle" });
     }
+    if (!audioEnabled) {
+      setAudioStatus("off", { event: "sound-toggle" });
+    }
+  });
+}
+
+if (testSoundButton) {
+  testSoundButton.addEventListener("click", async () => {
+    audioEnabled = true;
+    if (soundToggle) {
+      soundToggle.checked = true;
+    }
+    audioDiagnostics.lastTestAt = new Date().toISOString();
+    setAudioStatus("testing", { event: "manual-test" });
+    const ok = await playAudioElement(drawCardAudio, "manual-test:draw-card.wav");
+    if (ok) {
+      appendLog("Audio test succeeded.");
+    } else {
+      appendLog(`Audio test failed: ${audioDiagnostics.lastError || "browser blocked playback"}`);
+    }
+    renderPrototype();
   });
 }
 

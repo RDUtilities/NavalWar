@@ -221,6 +221,13 @@ Entry format:
 - Result: user-visible behavior change
 - Verification: commands run and result
 
+### 2026-05-12
+
+- `2026-05-12 08:26 America/Chicago` — Mobile Safari audio diagnostics and manual unlock
+- Scope: `prototype/index.html`, `prototype/app.js`, `prototype/styles.css`
+- Result: Added a top-bar `Test Sound` button and visible audio status pill so iPhone/iPad Safari can explicitly unlock audio from a user tap and report whether playback is working or blocked. Reworked game audio playback to record `playing`, `blocked`, `off`, and last error details instead of silently failing on mobile browsers.
+- Verification: `node --check prototype/app.js` (pass), `npm run check` (pass), `npm run build` (pass)
+
 ### 2026-05-11
 
 - `2026-05-11 23:41 America/Chicago` — 3-player multiplayer stress pass and release-blocker fixes
