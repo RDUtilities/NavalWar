@@ -26,6 +26,7 @@ const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
@@ -58,12 +59,19 @@ function safeResolve(urlPath) {
   return join(ROOT, cleaned);
 }
 
+function getStaticCacheControl(filePath) {
+  const ext = extname(filePath).toLowerCase();
+  return filePath.endsWith("service-worker.js") || ext === ".webmanifest"
+    ? "no-cache"
+    : "public, max-age=300";
+}
+
 function serveFile(res, filePath) {
   const ext = extname(filePath).toLowerCase();
   const contentType = MIME_TYPES[ext] || "application/octet-stream";
   res.writeHead(200, {
     "Content-Type": contentType,
-    "Cache-Control": "public, max-age=300"
+    "Cache-Control": getStaticCacheControl(filePath)
   });
   createReadStream(filePath).pipe(res);
 }
@@ -384,7 +392,7 @@ const httpServer = createServer(async (req, res) => {
       const ext = extname(filePath).toLowerCase();
       res.writeHead(200, {
         "Content-Type": MIME_TYPES[ext] || "application/octet-stream",
-        "Cache-Control": "public, max-age=300"
+        "Cache-Control": getStaticCacheControl(filePath)
       });
       res.end();
       return;

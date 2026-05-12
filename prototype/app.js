@@ -992,7 +992,8 @@ const ACTIVE_ZONE_LAYOUTS = {
   4: ["bottom", "left", "top", "right"],
 };
 const BOT_TURN_DELAY_MS = 900;
-const LOCAL_SAVE_KEY = "naval-war-prototype-save-v1";
+const LOCAL_SAVE_KEY = "naval-war-save-v1";
+const LEGACY_LOCAL_SAVE_KEY = "naval-war-prototype-save-v1";
 const MULTIPLAYER_CLIENT_ID_KEY = "naval-war-client-id-v1";
 const MULTIPLAYER_SESSION_KEY = "naval-war-session-v1";
 const SERVER_API_BASE = `${window.location.origin}`;
@@ -2463,7 +2464,7 @@ function renderLobbyDebugPanel() {
 
 function safelyReadLocalSave() {
   try {
-    const raw = window.localStorage.getItem(LOCAL_SAVE_KEY);
+    const raw = window.localStorage.getItem(LOCAL_SAVE_KEY) || window.localStorage.getItem(LEGACY_LOCAL_SAVE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch (_) {
     return null;
@@ -6284,7 +6285,7 @@ function resolveDestroyerSquadronStrike(effectId, targetZone) {
     "Destroyer squadron attack roll",
     `${getPlayerName("bottom")} sends the destroyers against the ${targetZone} fleet.`,
     shipsToSink.length
-      ? `Prototype auto-selects ${shipsToSink.length} ship(s) to sink from that fleet.`
+      ? `Naval War auto-selects ${shipsToSink.length} ship(s) to sink from that fleet.`
       : "No ships remain afloat in the targeted fleet."
   );
   appendLog(`Destroyer Squadron rolls ${roll} against the ${targetZone} fleet.`);
@@ -7404,6 +7405,15 @@ document.addEventListener("click", (event) => {
     renderPrototype();
   }
 });
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("../service-worker.js").catch(() => {
+      // PWA support is optional; gameplay still works if registration is unavailable.
+    });
+  });
+}
+
 appState.serverSession.clientId = getOrCreateClientId();
 setSetupMode(appState.setupMode || "solo");
 renderPrototype();
