@@ -962,7 +962,7 @@ export function applyCommand(state: GameState, command: GameCommand, rng: Random
         next,
         actor.id,
         "minefield_cleared",
-        `${actor.name} used Minesweeper to clear ${minefields.length} minefield(s) in front of ${targetPlayer.name}'s fleet.`
+        `${actor.name} used Minesweeper to clear ${minefields.length} minefield(s) in front of ${targetPlayer.name}'s fleet. Existing mine damage remains.`
       );
       next.hasPerformedActionThisTurn = true;
       maybeCompleteRound(next);

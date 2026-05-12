@@ -3366,6 +3366,10 @@ function resolveHandCardDrop(card, dropTarget) {
     resolveDestroyerSquadronStrike(card.effectId, dropTarget.dataset.zone);
     return true;
   }
+  if (card.kind === "destroyer_activation" && dropTarget.dataset.dropType === "enemy_ship") {
+    resolveDestroyerSquadronStrike(card.effectId, dropTarget.dataset.zone);
+    return true;
+  }
   if (card.dropMode === "enemy_ship" && dropTarget.dataset.dropType === "enemy_ship") {
     attachCardToEnemyShip(card, dropTarget.dataset.zone, Number(dropTarget.dataset.shipIndex), dropTarget.dataset.shipId || null);
     return true;
@@ -3446,6 +3450,15 @@ function highlightValidTargets() {
         }
         node.classList.add("is-valid-target");
       });
+      if (card.kind === "destroyer_activation") {
+        const shipTargets = [...document.querySelectorAll("[data-drop-type='enemy_ship']")];
+        shipTargets.forEach((node) => {
+          const zone = node.dataset.zone;
+          if (zone && zone !== "bottom" && canTargetFleetWithAction("destroyer_squadron", zone)) {
+            node.classList.add("is-valid-target");
+          }
+        });
+      }
     } else if (card.dropMode === "own_ship") {
       const validTargets = [...document.querySelectorAll("[data-drop-type='own_ship']")];
       validTargets.forEach((node) => {
@@ -4436,6 +4449,7 @@ function startNextTurn() {
   appState.turnState.playedCard = false;
   appState.turnState.forcedCardId = null;
   setDiceResolution("—", "Awaiting action", `${getPlayerName(nextZone)} begins the turn.`, "One draw, one action, then the turn ends.");
+  showTurnBanner(getPlayerName(nextZone), "draw phase");
   renderPrototype();
   scheduleBotTurnIfNeeded();
 }
@@ -4561,7 +4575,7 @@ function canHandCardDropOnTarget(card, dropTarget) {
   if (card.kind === "destroyer_activation") {
     const zone = dropTarget.dataset.zone;
     return Boolean(
-      dropTarget.dataset.dropType === "fleet_target" &&
+      (dropTarget.dataset.dropType === "fleet_target" || dropTarget.dataset.dropType === "enemy_ship") &&
         zone &&
         zone !== "bottom" &&
         canTargetFleetWithAction("destroyer_squadron", zone)
@@ -5091,9 +5105,9 @@ function resolveBotFleetCard(ownerZone, card, targetZone) {
     );
     discardCardForZone(ownerZone, card);
     addToDiscardPile(minefields.map((effect) => ({ image: effect.image, label: effect.label })));
-    showSpecialBanner("Minesweeper", `${getPlayerName(ownerZone)} clears mines from ${getPlayerName(targetZone)}.`);
+    showSpecialBanner("Minesweeper", `${getPlayerName(ownerZone)} clears mines from ${getPlayerName(targetZone)}. Existing mine damage remains.`);
     playMinesweeperSound();
-    appendLog(`${getPlayerName(ownerZone)} clears minefields from ${getPlayerName(targetZone)}.`);
+    appendLog(`${getPlayerName(ownerZone)} clears minefields from ${getPlayerName(targetZone)}. Existing mine damage remains.`);
   }
 }
 
@@ -6613,9 +6627,9 @@ async function playFleetTargetCard(card, targetZone) {
       ...minefields.map((effect) => ({ image: effect.image, label: effect.label })),
       { image: card.image, label: card.label },
     ]);
-    showSpecialBanner("Minesweeper", `Minefields are cleared from the ${targetZone} fleet.`);
+    showSpecialBanner("Minesweeper", `Minefields are cleared from the ${targetZone} fleet. Existing mine damage remains.`);
     playMinesweeperSound();
-    appendLog(`Minesweeper clears the minefields in front of the ${targetZone} fleet.`);
+    appendLog(`Minesweeper clears the minefields in front of the ${targetZone} fleet. Existing mine damage remains.`);
     finalizeHumanTurn(`${getPlayerName("bottom")}'s turn ends after sweeping the mines.`);
   }
 }
@@ -7339,7 +7353,7 @@ document.addEventListener("click", (event) => {
       renderPrototype();
       return;
     }
-    if (!isCardPlayableNow(card) && !IMMEDIATE_PLAY_KINDS.has(card.kind)) {
+    if (!isCardPlayableNow(card) && !canDiscardCardAsAction(card) && !IMMEDIATE_PLAY_KINDS.has(card.kind)) {
       markRejectedHandCard(card.id);
       renderPrototype();
       return;
