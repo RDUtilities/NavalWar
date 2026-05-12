@@ -403,6 +403,26 @@ function removeAllFleetEffects(player: PlayerState, kind: FleetEffect["kind"]): 
   return effects;
 }
 
+function clearMinefieldDamageFromAfloatShips(targetPlayer: PlayerState, minefields: FleetEffect[]): number {
+  const minefieldCardIds = new Set(minefields.map((minefield) => minefield.card.id));
+  let clearedHits = 0;
+  for (const ship of targetPlayer.ships) {
+    if (ship.sunk) {
+      continue;
+    }
+    const keptDamage = [];
+    for (const damage of ship.damage) {
+      if (damage.type === "minefield" && minefieldCardIds.has(damage.cardId)) {
+        clearedHits += damage.hits;
+      } else {
+        keptDamage.push(damage);
+      }
+    }
+    ship.damage = keptDamage;
+  }
+  return clearedHits;
+}
+
 function clearSmokeAtTurnStart(state: GameState, actor: PlayerState) {
   const smoke = removeFleetEffect(actor, "smoke");
   if (!smoke) {
@@ -956,13 +976,14 @@ export function applyCommand(state: GameState, command: GameCommand, rng: Random
       const targetPlayer = getPlayer(next, command.targetPlayerId);
       const minefields = removeAllFleetEffects(targetPlayer, "minefield");
       assert(minefields.length > 0, `${targetPlayer.name} does not currently have a minefield in front of their fleet.`);
+      const clearedHits = clearMinefieldDamageFromAfloatShips(targetPlayer, minefields);
 
       discard(next, card, ...minefields.map((minefield) => minefield.card));
       addEvent(
         next,
         actor.id,
         "minefield_cleared",
-        `${actor.name} used Minesweeper to clear ${minefields.length} minefield(s) in front of ${targetPlayer.name}'s fleet. Existing mine damage remains.`
+        `${actor.name} used Minesweeper to clear ${minefields.length} minefield(s) and ${clearedHits} mine damage from ${targetPlayer.name}'s fleet.`
       );
       next.hasPerformedActionThisTurn = true;
       maybeCompleteRound(next);

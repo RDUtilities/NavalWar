@@ -5103,11 +5103,12 @@ function resolveBotFleetCard(ownerZone, card, targetZone) {
     appState.effectsByFleet[targetZone] = (appState.effectsByFleet[targetZone] || []).filter(
       (effect) => effect.kind !== "minefield"
     );
+    const clearedHits = clearMinefieldDamageFromFleet(targetZone, minefields);
     discardCardForZone(ownerZone, card);
     addToDiscardPile(minefields.map((effect) => ({ image: effect.image, label: effect.label })));
-    showSpecialBanner("Minesweeper", `${getPlayerName(ownerZone)} clears mines from ${getPlayerName(targetZone)}. Existing mine damage remains.`);
+    showSpecialBanner("Minesweeper", `${getPlayerName(ownerZone)} clears mines and restores ${clearedHits} mine damage from ${getPlayerName(targetZone)}.`);
     playMinesweeperSound();
-    appendLog(`${getPlayerName(ownerZone)} clears minefields from ${getPlayerName(targetZone)}. Existing mine damage remains.`);
+    appendLog(`${getPlayerName(ownerZone)} clears minefields and ${clearedHits} mine damage from ${getPlayerName(targetZone)}.`);
   }
 }
 
@@ -5376,12 +5377,34 @@ function applyMinefieldDamageToFleet(zone, effect, ownerZone = "bottom") {
     const { remaining, total } = parseDamage(ship.damage);
     const nextRemaining = Math.max(remaining - hits, 0);
     ship.damage = formatDamage(nextRemaining, total);
+    ship.mineDamage = ship.mineDamage || [];
+    ship.mineDamage.push({ effectId: effect.id, hits });
     appendLog(`${effect.label} deals ${hits} damage to ${ship.ship}.`);
     if (nextRemaining === 0) {
       sinkFleetShip(zone, index, ownerZone);
       queueShipImpact(zone, index, true);
     }
   });
+}
+
+function clearMinefieldDamageFromFleet(zone, minefields) {
+  const minefieldIds = new Set(minefields.map((effect) => effect.id));
+  let clearedHits = 0;
+  appState.fleets[zone].forEach((ship) => {
+    if (ship.sunk || !Array.isArray(ship.mineDamage)) {
+      return;
+    }
+    const restoredHits = ship.mineDamage
+      .filter((damage) => minefieldIds.has(damage.effectId))
+      .reduce((sum, damage) => sum + Number(damage.hits || 0), 0);
+    if (restoredHits > 0) {
+      const { remaining, total } = parseDamage(ship.damage);
+      ship.damage = formatDamage(Math.min(remaining + restoredHits, total), total);
+      clearedHits += restoredHits;
+    }
+    ship.mineDamage = ship.mineDamage.filter((damage) => !minefieldIds.has(damage.effectId));
+  });
+  return clearedHits;
 }
 
 function createShipCard(ship, zone, index) {
@@ -6622,14 +6645,15 @@ async function playFleetTargetCard(card, targetZone) {
     appState.effectsByFleet[targetZone] = (appState.effectsByFleet[targetZone] || []).filter(
       (effect) => effect.kind !== "minefield"
     );
+    const clearedHits = clearMinefieldDamageFromFleet(targetZone, minefields);
     removeHandCard(card.id);
     addToDiscardPile([
       ...minefields.map((effect) => ({ image: effect.image, label: effect.label })),
       { image: card.image, label: card.label },
     ]);
-    showSpecialBanner("Minesweeper", `Minefields are cleared from the ${targetZone} fleet. Existing mine damage remains.`);
+    showSpecialBanner("Minesweeper", `Minefields are cleared from the ${targetZone} fleet and ${clearedHits} mine damage is repaired.`);
     playMinesweeperSound();
-    appendLog(`Minesweeper clears the minefields in front of the ${targetZone} fleet. Existing mine damage remains.`);
+    appendLog(`Minesweeper clears the minefields and ${clearedHits} mine damage from the ${targetZone} fleet.`);
     finalizeHumanTurn(`${getPlayerName("bottom")}'s turn ends after sweeping the mines.`);
   }
 }

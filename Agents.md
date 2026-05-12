@@ -223,9 +223,14 @@ Entry format:
 
 ### 2026-05-12
 
+- `2026-05-12 13:06 America/Chicago` — Minesweeper restores mine damage
+- Scope: `src/engine.ts`, `prototype/app.js`
+- Result: Corrected Minesweeper behavior so clearing minefield cards also removes/restores the damage caused by those minefields on afloat ships. Ships already sunk and moved to victory piles remain sunk.
+- Verification: `node --check prototype/app.js` (pass), `npm run check` (pass), `npm run build` (pass)
+
 - `2026-05-12 12:58 America/Chicago` — Touch play deadlock fixes and solo turn banner
 - Scope: `prototype/app.js`, `src/engine.ts`
-- Result: Touch/select mode now allows unplayable non-mandatory hand cards, such as salvos without matching guns, to be selected and discarded as the turn action. Ready Destroyer activation can target an opponent fleet by tapping any enemy ship in that fleet. Solo games now show the same next-player turn banner as multiplayer. Minesweeper messaging now clarifies that clearing minefields does not heal existing mine damage.
+- Result: Touch/select mode now allows unplayable non-mandatory hand cards, such as salvos without matching guns, to be selected and discarded as the turn action. Ready Destroyer activation can target an opponent fleet by tapping any enemy ship in that fleet. Solo games now show the same next-player turn banner as multiplayer.
 - Verification: `node --check prototype/app.js` (pass), `npm run check` (pass), `npm run build` (pass)
 
 - `2026-05-12 11:54 America/Chicago` — Cleaned up temporary iPad audio diagnostics
