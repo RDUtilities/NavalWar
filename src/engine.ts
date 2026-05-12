@@ -169,13 +169,13 @@ function sinkShip(
   targetShip: ShipInstance
 ) {
   targetShip.sunk = true;
-  targetPlayer.ships = targetPlayer.ships.filter((ship) => ship.card.id !== targetShip.card.id);
 
   const attacker = getPlayer(state, attackerId);
   attacker.victoryPile.push(targetShip.card);
 
   if (targetShip.attachments.length > 0) {
     discard(state, ...targetShip.attachments.map((attachment) => attachment.card));
+    targetShip.attachments = [];
   }
 
   addEvent(

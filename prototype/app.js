@@ -1784,7 +1784,6 @@ function mapServerViewToLocalState(view) {
   if (!hasPendingServerAirStrikeSelection && !gameState.hasUsedCarrierStrikeThisTurn) {
     appState.turnState.usedCarrierIndices = [];
   }
-  announceServerTurnChange(gameState, playersBySide);
   appState.match.isRoundOver = gameState.phase === "round_complete";
   appState.match.roundEndReason = gameState.roundEndReason || null;
   appState.match.winnerZone =
@@ -1810,6 +1809,7 @@ function mapServerViewToLocalState(view) {
   }
 
   playSoundsForServerEvents(gameState.events || []);
+  announceServerTurnChange(gameState, playersBySide);
 
   appState.drawPiles = [
     {
@@ -2591,8 +2591,27 @@ function getAirStrikeHandCards() {
     }));
 }
 
+function getReadyDestroyerActivationCards() {
+  const legal = Array.isArray(appState.serverSession?.legalCommands) ? appState.serverSession.legalCommands : [];
+  if (!isHumanTurn() || !legal.includes("resolve_destroyer_squadron_roll")) {
+    return [];
+  }
+
+  return (appState.effectsByFleet.bottom || [])
+    .filter((effect) => effect.kind === "destroyer_squadron")
+    .map((effect) => ({
+      id: `destroyer-activation-${effect.id}`,
+      kind: "destroyer_activation",
+      label: "Activate Destroyer Squadron",
+      image: effect.image,
+      dropMode: "fleet_target",
+      effectId: effect.id,
+      isVirtual: true,
+    }));
+}
+
 function getDisplayedHandCards() {
-  return [...appState.hand, ...getAirStrikeHandCards()];
+  return [...appState.hand, ...getAirStrikeHandCards(), ...getReadyDestroyerActivationCards()];
 }
 
 function getDisplayedHandCardById(cardId) {
@@ -3219,6 +3238,9 @@ function highlightTouchTargetsForCard(card) {
   if (appState.turnState.airStrikeMode && card.kind !== "carrier_airstrike") {
     return;
   }
+  if (card.kind === "destroyer_activation") {
+    appState.turnState.airStrikeMode = false;
+  }
   const candidates = [...document.querySelectorAll("[data-drop-type], [data-zone='bottom'][data-ship-index]")];
   candidates.forEach((node) => {
     if (canHandCardDropOnTarget(card, node)) {
@@ -3245,6 +3267,10 @@ function resolveHandCardDrop(card, dropTarget) {
   }
   if (card.kind === "carrier_airstrike" && isDestroyerTarget(dropTarget)) {
     resolveCarrierAirStrikeOnDestroyer(card.fromIndex, dropTarget.dataset.zone, dropTarget.dataset.effectId);
+    return true;
+  }
+  if (card.kind === "destroyer_activation" && dropTarget.dataset.dropType === "fleet_target") {
+    resolveDestroyerSquadronStrike(card.effectId, dropTarget.dataset.zone);
     return true;
   }
   if (card.dropMode === "enemy_ship" && dropTarget.dataset.dropType === "enemy_ship") {
@@ -3320,6 +3346,9 @@ function highlightValidTargets() {
       validTargets.forEach((node) => {
         const zone = node.dataset.zone;
         if (card.kind === "minefield" && zone === "bottom") {
+          return;
+        }
+        if (card.kind === "destroyer_activation" && (zone === "bottom" || !canTargetFleetWithAction("destroyer_squadron", zone))) {
           return;
         }
         node.classList.add("is-valid-target");
@@ -4267,6 +4296,11 @@ function isCardPlayableNow(card) {
     return card.kind === "carrier_airstrike";
   }
 
+  if (card.kind === "destroyer_activation") {
+    const legal = Array.isArray(appState.serverSession?.legalCommands) ? appState.serverSession.legalCommands : [];
+    return legal.includes("resolve_destroyer_squadron_roll");
+  }
+
   if (appState.turnState.playedCard) {
     return false;
   }
@@ -4283,6 +4317,8 @@ function isCardPlayableNow(card) {
     case "destroyer_squadron":
       return true;
     case "carrier_airstrike":
+      return true;
+    case "destroyer_activation":
       return true;
     default:
       return false;
@@ -4345,6 +4381,16 @@ function canHandCardDropOnTarget(card, dropTarget) {
       return !appState.serverSession?.connected;
     }
     return false;
+  }
+
+  if (card.kind === "destroyer_activation") {
+    const zone = dropTarget.dataset.zone;
+    return Boolean(
+      dropTarget.dataset.dropType === "fleet_target" &&
+        zone &&
+        zone !== "bottom" &&
+        canTargetFleetWithAction("destroyer_squadron", zone)
+    );
   }
 
   if (card.dropMode === "enemy_ship" && dropTarget.dataset.dropType === "enemy_ship") {
@@ -5496,6 +5542,8 @@ function createTargetColumn(zone, title) {
   const fleet = appState.fleets[zone];
   const column = document.createElement("section");
   column.className = "target-board-column";
+  column.dataset.zone = zone;
+  column.dataset.dropType = "fleet_target";
 
   const header = document.createElement("div");
   header.className = "target-column-header";
@@ -5568,6 +5616,8 @@ function renderPrototype() {
     const node = PLAYER_ZONE_NODES[zone];
     if (node) {
       node.classList.toggle("is-inactive", !isZoneActive(zone));
+      node.dataset.zone = zone;
+      node.dataset.dropType = isZoneActive(zone) ? "fleet_target" : "";
     }
   });
   if (appState.match.isRoundOver) {
@@ -5847,6 +5897,19 @@ function resolveTorpedoBoatStrike(card, targetZone, targetIndex) {
 }
 
 function resolveCarrierAirStrike(fromIndex, targetZone, targetIndex) {
+  if (isCarrierScreened(targetZone, targetIndex)) {
+    markRejectedHandCard(`carrier-airstrike-${fromIndex}`);
+    appendLog("Carrier air strike blocked: carriers cannot be targeted while screening ships remain.");
+    setDiceResolution(
+      "—",
+      "Carrier screened",
+      `${appState.fleets[targetZone]?.[targetIndex]?.ship || "Carrier"} is protected by the rest of the fleet.`,
+      "Sink every non-carrier ship in that fleet before targeting the carrier."
+    );
+    renderPrototype();
+    return;
+  }
+
   if (appState.serverSession?.connected) {
     const carrierShipId = appState.fleets.bottom?.[fromIndex]?.shipId;
     const targetShipId = appState.fleets[targetZone]?.[targetIndex]?.shipId;

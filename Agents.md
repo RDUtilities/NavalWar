@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-11
 
+- `2026-05-11 21:22 America/Chicago` — Sunk ship persistence and ready Destroyer UX
+- Scope: `src/engine.ts`, `prototype/app.js`
+- Result: Sunk ships are no longer removed from the authoritative fleet list, allowing clients to keep showing the ship-card back with SUNK status while still awarding the ship to the attacker's Victory Pile. Ready Destroyer Squadrons now appear as virtual activation cards in the local player's hand, can be played onto legal enemy fleets, and respect smoke targeting. Air Strike targeting now rejects screened carriers before sending a server command, and turn banners are shown after server event banners/sounds so they are less likely to be overwritten.
+- Verification: `node --check prototype/app.js` (pass), `npm run check` (pass), `npm run build` (pass), `npm run simulate:quick` (pass; 20/20 completed)
+
 - `2026-05-11 20:42 America/Chicago` — Live multiplayer UI polish for sync, sunk ships, and dice feedback
 - Scope: `prototype/app.js`, `prototype/styles.css`
 - Result: Server views now skip redundant re-renders to reduce browser flicker during hosted multiplayer. Server-mapped sunk ships remain visible with the ship-card back and SUNK badge on the main board and target board. Server dice events now show the dice-resolution banner for air strikes, submarines, torpedo boats, and destroyer rolls. Added a brief Next Turn banner when server turn ownership advances.
