@@ -671,12 +671,16 @@ function isTargetableShip(player: GameState["players"][number], ship: ShipInstan
   return !ship.sunk && (!ship.card.isCarrier || !hasScreeningShips(player));
 }
 
-function chooseDefaultShipTarget(state: GameState, actorId: PlayerId, options: { allowSmoke?: boolean } = {}) {
+function chooseDefaultShipTarget(
+  state: GameState,
+  actorId: PlayerId,
+  options: { allowSmoke?: boolean; allowScreenedCarrier?: boolean } = {}
+) {
   for (const player of state.players) {
     if (player.id === actorId || player.eliminated || (!options.allowSmoke && isFleetProtectedBySmoke(player))) {
       continue;
     }
-    const targetShip = player.ships.find((ship) => isTargetableShip(player, ship));
+    const targetShip = player.ships.find((ship) => !ship.sunk && (options.allowScreenedCarrier || isTargetableShip(player, ship)));
     if (targetShip) {
       return { targetPlayerId: player.id, targetShipId: targetShip.card.id };
     }
@@ -693,7 +697,7 @@ function chooseDefaultCarrierStrikes(state: GameState, actorId: PlayerId) {
   const strikes = [];
   const carriers = actor.ships.filter((ship) => !ship.sunk && ship.card.isCarrier);
   for (const carrier of carriers) {
-    const target = chooseDefaultShipTarget(state, actorId);
+    const target = chooseDefaultShipTarget(state, actorId, { allowScreenedCarrier: true });
     if (!target) {
       continue;
     }

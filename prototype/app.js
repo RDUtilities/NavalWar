@@ -3424,10 +3424,9 @@ function highlightValidTargets() {
     const validTargets = [...document.querySelectorAll("[data-drop-type='enemy_ship'], [data-drop-type='destroyer_target']")];
     validTargets.forEach((node) => {
       const zone = node.dataset.zone;
-      const targetIndex = Number(node.dataset.shipIndex);
       if (
         (!appState.serverSession?.connected && isDestroyerTarget(node)) ||
-        (zone && canTargetFleetWithAction("carrier_airstrike", zone) && !isCarrierScreened(zone, targetIndex))
+        (zone && canTargetFleetWithAction("carrier_airstrike", zone))
       ) {
         node.classList.add("is-valid-target");
       }
@@ -4406,11 +4405,9 @@ function canHandCardDropOnTarget(card, dropTarget) {
   if (card.kind === "carrier_airstrike") {
     if (dropTarget.dataset.dropType === "enemy_ship") {
       const zone = dropTarget.dataset.zone;
-      const targetIndex = Number(dropTarget.dataset.shipIndex);
       return Boolean(
         zone &&
-          canTargetFleetWithAction("carrier_airstrike", zone) &&
-          !isCarrierScreened(zone, targetIndex)
+          canTargetFleetWithAction("carrier_airstrike", zone)
       );
     }
     if (isDestroyerTarget(dropTarget)) {
@@ -5933,19 +5930,6 @@ function resolveTorpedoBoatStrike(card, targetZone, targetIndex) {
 }
 
 function resolveCarrierAirStrike(fromIndex, targetZone, targetIndex) {
-  if (isCarrierScreened(targetZone, targetIndex)) {
-    markRejectedHandCard(`carrier-airstrike-${fromIndex}`);
-    appendLog("Carrier air strike blocked: carriers cannot be targeted while screening ships remain.");
-    setDiceResolution(
-      "—",
-      "Carrier screened",
-      `${appState.fleets[targetZone]?.[targetIndex]?.ship || "Carrier"} is protected by the rest of the fleet.`,
-      "Sink every non-carrier ship in that fleet before targeting the carrier."
-    );
-    renderPrototype();
-    return;
-  }
-
   if (appState.serverSession?.connected) {
     const carrierShipId = appState.fleets.bottom?.[fromIndex]?.shipId;
     const targetShipId = appState.fleets[targetZone]?.[targetIndex]?.shipId;
@@ -7050,8 +7034,7 @@ document.addEventListener("dragover", (event) => {
       hasUnusedCarrier(dragState.fromIndex) &&
       (dropTarget.dataset.dropType === "enemy_ship" || dropTarget.dataset.dropType === "destroyer_target") &&
       ((!appState.serverSession?.connected && isDestroyerTarget(dropTarget)) ||
-        (canTargetFleetWithAction("carrier_airstrike", dropTarget.dataset.zone) &&
-          !isCarrierScreened(dropTarget.dataset.zone, Number(dropTarget.dataset.shipIndex))))) ||
+        canTargetFleetWithAction("carrier_airstrike", dropTarget.dataset.zone))) ||
     (dragState.type === "hand_card" &&
       draggedHandCard &&
       appState.turnState.phase === "play" &&

@@ -1170,7 +1170,6 @@ export function applyCommand(state: GameState, command: GameCommand, rng: Random
         ensureEnemy(actor, targetPlayer);
         assert(!isProtectedBySmoke(targetPlayer), `${targetPlayer.name} is protected by smoke.`);
         const targetShip = getShip(targetPlayer, strike.targetShipId);
-        enforceCarrierTargeting(targetPlayer, targetShip);
 
         const roll = rng.rollDie();
         addEvent(

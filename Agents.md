@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-11
 
+- `2026-05-11 23:23 America/Chicago` — Air Strike carrier targeting rule correction
+- Scope: `src/engine.ts`, `src/session.ts`, `prototype/app.js`
+- Result: Air Strikes can now legally target carriers even while screening ships remain, as long as the target fleet is not protected by smoke. Salvo carrier-screening remains unchanged.
+- Verification: `node --check prototype/app.js` (pass), `npm run check` (pass), `npm run build` (pass)
+
 - `2026-05-11 22:32 America/Chicago` — Server-driven active sides for rotated multiplayer layouts
 - Scope: `prototype/app.js`
 - Result: Joined clients now adopt the host lobby's server player count and active seat sides instead of relying on their local setup dropdown. This fixes rotated 3-player views where a guest could hide the host on the right side and show an empty default Admiral Tanaka seat, which also blocked valid discard/Destroyer targeting flows.
