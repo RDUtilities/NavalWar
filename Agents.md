@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-12
 
+- `2026-05-12 15:xx America/Chicago` — Target Board or Battle Zone view toggle
+- Scope: `prototype/index.html`, `prototype/app.js`, `prototype/styles.css`, `service-worker.js`
+- Result: Changed the top-bar Target Board control into a true layout switch. Target Board View now hides the full opponent/battle-zone layout and focuses the local player command panel with the mirrored target board, draw/discard row, and mini battle zone. Turning it off restores the traditional full Battle Zone layout. Bumped the service-worker cache version so deployed clients pick up the new CSS/app behavior.
+- Verification: `node --check prototype/app.js` (pass), `node --check service-worker.js` (pass), `npm run check` (pass), `npm run build` (pass), local browser smoke on a fresh localhost port confirmed Target Board View and Battle Zone View both render (pass)
+
 - `2026-05-12 14:xx America/Chicago` — PWA Phase 3 optimized card runtime assets
 - Scope: `scripts/optimize_card_assets.mjs`, `scripts/build_pwa_assets.mjs`, `assets/optimized/cards/`, `prototype/app.js`, `service-worker.js`, `package.json`, `pwa-assets.json`
 - Result: Added a WebP card optimization pipeline that keeps original PNG card art as masters while generating table-size and zoom-size runtime assets. The browser now uses optimized table WebPs during gameplay and optimized zoom WebPs for card detail views. The service worker pre-caches the lightweight table tier and sound effects, while zoom/rules art cache on demand. Runtime card masters were reduced from 274.7 MB of PNGs to 43.8 MB of WebPs, with the gameplay table tier only 6.4 MB.

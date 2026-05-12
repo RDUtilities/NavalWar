@@ -691,6 +691,23 @@ button {
   grid-column: 2;
 }
 
+.war-table.view-target-board {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto;
+}
+
+.war-table.view-target-board .player-zone-top,
+.war-table.view-target-board .player-zone-left,
+.war-table.view-target-board .player-zone-right,
+.war-table.view-target-board .battle-zone {
+  display: none;
+}
+
+.war-table.view-target-board .player-zone-bottom {
+  grid-column: 1;
+  grid-row: 1;
+}
+
 .war-table::before {
   content: "";
   position: absolute;

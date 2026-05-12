@@ -5853,8 +5853,9 @@ function renderPrototype() {
   renderTurnSummary();
   renderScoreTable();
   const layoutMode = getLayoutMode();
-  warTable.classList.remove("layout-duel", "layout-triangle", "layout-four-way");
+  warTable.classList.remove("layout-duel", "layout-triangle", "layout-four-way", "view-target-board", "view-battle-zone");
   warTable.classList.add(`layout-${layoutMode}`);
+  warTable.classList.add(appState.ui.showTargetBoard ? "view-target-board" : "view-battle-zone");
   PLAYER_ORDER.forEach((zone) => {
     const node = PLAYER_ZONE_NODES[zone];
     if (node) {
