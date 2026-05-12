@@ -1,0 +1,471 @@
+{
+  "generatedAt": "2026-05-12T19:27:30.144Z",
+  "assetCount": 116,
+  "totalBytes": 328273580,
+  "assets": [
+    {
+      "url": "/assets/cards/play/Modern/Additional-Damnage-1pt.png",
+      "bytes": 3144140
+    },
+    {
+      "url": "/assets/cards/play/Modern/Additional-Damnage-2pt.png",
+      "bytes": 3009718
+    },
+    {
+      "url": "/assets/cards/play/Modern/Additional-Ship.png",
+      "bytes": 3148965
+    },
+    {
+      "url": "/assets/cards/play/Modern/cardback-Play.png",
+      "bytes": 3196711
+    },
+    {
+      "url": "/assets/cards/play/Modern/deck-definition.json",
+      "bytes": 3938
+    },
+    {
+      "url": "/assets/cards/play/Modern/Destroyer-4hits.png",
+      "bytes": 3128877
+    },
+    {
+      "url": "/assets/cards/play/Modern/manifest.json",
+      "bytes": 4352
+    },
+    {
+      "url": "/assets/cards/play/Modern/Minefield-1hit.png",
+      "bytes": 3097671
+    },
+    {
+      "url": "/assets/cards/play/Modern/Minefield-2hits.png",
+      "bytes": 3235727
+    },
+    {
+      "url": "/assets/cards/play/Modern/MineSweeper.png",
+      "bytes": 3017915
+    },
+    {
+      "url": "/assets/cards/play/Modern/Repair-card.png",
+      "bytes": 2994457
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-11-1pts.png",
+      "bytes": 3250835
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-11-2pts.png",
+      "bytes": 2755509
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-12_6-1pt.png",
+      "bytes": 3423763
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-12_6-2pts.png",
+      "bytes": 3252992
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-14-1pts.png",
+      "bytes": 3225242
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-14-2pts.png",
+      "bytes": 2620959
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-14-3pts.png",
+      "bytes": 2867117
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-15-1pt.png",
+      "bytes": 3182557
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-15-2pts.png",
+      "bytes": 3265167
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-15-3pts.png",
+      "bytes": 2383663
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-16-1pts.png",
+      "bytes": 3189174
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-16-2pts.png",
+      "bytes": 2960086
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-16-3pts.png",
+      "bytes": 2970990
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-16-4pts.png",
+      "bytes": 2889415
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-18-2pts.png",
+      "bytes": 3009979
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-18-3pts.png",
+      "bytes": 3379992
+    },
+    {
+      "url": "/assets/cards/play/Modern/Salvo-18-4pts.png",
+      "bytes": 3062184
+    },
+    {
+      "url": "/assets/cards/play/Modern/smoke-card.png",
+      "bytes": 3181657
+    },
+    {
+      "url": "/assets/cards/play/Modern/Submarine.png",
+      "bytes": 3185195
+    },
+    {
+      "url": "/assets/cards/play/Modern/template-coverage.json",
+      "bytes": 3733
+    },
+    {
+      "url": "/assets/cards/play/Modern/Torpedo-boat.png",
+      "bytes": 3126798
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Akagi-Japan-3.png",
+      "bytes": 3241728
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Andrea Doria-Italy-4.png",
+      "bytes": 3328857
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Ark Royal-GB-3.png",
+      "bytes": 3506727
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Bismarck-Germany-8.png",
+      "bytes": 3507734
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Caio Duilio-Italy-4.png",
+      "bytes": 3056055
+    },
+    {
+      "url": "/assets/cards/ships/Modern/California-US-5.png",
+      "bytes": 3675402
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Cardback-Ship.png",
+      "bytes": 3018428
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Conte di Cavour-Italy-4.png",
+      "bytes": 3634722
+    },
+    {
+      "url": "/assets/cards/ships/Modern/DukeofYork-GB-9.png",
+      "bytes": 3509377
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Enterprise-US-3.png",
+      "bytes": 3273963
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Fuso-Japan-5.png",
+      "bytes": 3534911
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Giulio Cesare-Italy-4.png",
+      "bytes": 3547529
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Gneisenau-Germany-5.png",
+      "bytes": 2900113
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Graf Spee-Germany-3.png",
+      "bytes": 3461961
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Haruna-Japan-5.png",
+      "bytes": 3639214
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Hiei-Japan-5.png",
+      "bytes": 3088097
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Hood-GB-5.png",
+      "bytes": 3547362
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Hyuga-Japan-5.png",
+      "bytes": 3396209
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Iowa-US-7.png",
+      "bytes": 3627116
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Ise-Japan-5.png",
+      "bytes": 3452944
+    },
+    {
+      "url": "/assets/cards/ships/Modern/King GeorgeV-GB-9.png",
+      "bytes": 2482761
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Kirishima-Japan-5.png",
+      "bytes": 3338995
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Kongo-Japan-5.png",
+      "bytes": 3158778
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Littorio-Italy-9.png",
+      "bytes": 3445970
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Lutzow-Germany-3.png",
+      "bytes": 3546614
+    },
+    {
+      "url": "/assets/cards/ships/Modern/manifest.json",
+      "bytes": 6095
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Maryland-US-5.png",
+      "bytes": 3485542
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Mississippi-US-5.png",
+      "bytes": 3704584
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Missouri-US-7.png",
+      "bytes": 3690099
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Musashi-Japan-9.png",
+      "bytes": 3478815
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Mutsu-Japan-9.png",
+      "bytes": 2306371
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Nagato-Japan-9.png",
+      "bytes": 3499004
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Nelson-GB-9.png",
+      "bytes": 2944605
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Nevada-US-5.png",
+      "bytes": 3622991
+    },
+    {
+      "url": "/assets/cards/ships/Modern/New Jersey-US-7.png",
+      "bytes": 3318897
+    },
+    {
+      "url": "/assets/cards/ships/Modern/NorthCarolina-US-9.png",
+      "bytes": 2721703
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Pennsylvania-US-5.png",
+      "bytes": 3593929
+    },
+    {
+      "url": "/assets/cards/ships/Modern/PrinceOfWales-GB-9.png",
+      "bytes": 3686257
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Ramillies-GB-4.png",
+      "bytes": 3554587
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Renown-GB-4.png",
+      "bytes": 2924021
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Repulse-GB-4.png",
+      "bytes": 3582690
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Revenge-GB-4.png",
+      "bytes": 3602028
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Rodney-GB-9.png",
+      "bytes": 3559952
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Roma-Italy-6.png",
+      "bytes": 3704185
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Scharnhorst-Germany-5.png",
+      "bytes": 3599532
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Scheer-Germany-3.png",
+      "bytes": 3495088
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Shokaku-Japan-AirCraftCarrier-3.png",
+      "bytes": 3493663
+    },
+    {
+      "url": "/assets/cards/ships/Modern/SouthDakota-US-9.png",
+      "bytes": 3262655
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Texas-US-4.png",
+      "bytes": 3535154
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Tirpitz-Germany-8.png",
+      "bytes": 3582273
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Valiant-GB-5.png",
+      "bytes": 2514366
+    },
+    {
+      "url": "/assets/cards/ships/Modern/VittorioVento-Italy-9.png",
+      "bytes": 3393039
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Warspite-GB-5.png",
+      "bytes": 3285565
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Washington-US-9.png",
+      "bytes": 3248285
+    },
+    {
+      "url": "/assets/cards/ships/Modern/WestVirginia-US-5.png",
+      "bytes": 3670631
+    },
+    {
+      "url": "/assets/cards/ships/Modern/Yamato-Japan-9.png",
+      "bytes": 3552740
+    },
+    {
+      "url": "/assets/sound/AdditionalDamnage.wav",
+      "bytes": 169178
+    },
+    {
+      "url": "/assets/sound/AirStrike.wav",
+      "bytes": 548476
+    },
+    {
+      "url": "/assets/sound/Destroyers.wav",
+      "bytes": 553038
+    },
+    {
+      "url": "/assets/sound/Dice.wav",
+      "bytes": 31738
+    },
+    {
+      "url": "/assets/sound/draw-card.wav",
+      "bytes": 42818
+    },
+    {
+      "url": "/assets/sound/invalidcard.wav",
+      "bytes": 142926
+    },
+    {
+      "url": "/assets/sound/mines.wav",
+      "bytes": 72050
+    },
+    {
+      "url": "/assets/sound/minesweeper.wav",
+      "bytes": 117582
+    },
+    {
+      "url": "/assets/sound/naval_salvo_hit.wav",
+      "bytes": 132344
+    },
+    {
+      "url": "/assets/sound/repairCard.wav",
+      "bytes": 235044
+    },
+    {
+      "url": "/assets/sound/Salvo-big.wav",
+      "bytes": 271950
+    },
+    {
+      "url": "/assets/sound/Salvo-small.wav",
+      "bytes": 152142
+    },
+    {
+      "url": "/assets/sound/ship_destroyed.wav",
+      "bytes": 220544
+    },
+    {
+      "url": "/assets/sound/shipsink.wav",
+      "bytes": 184398
+    },
+    {
+      "url": "/assets/sound/smoke.wav",
+      "bytes": 94542
+    },
+    {
+      "url": "/assets/sound/submarine.wav",
+      "bytes": 193614
+    },
+    {
+      "url": "/assets/sound/TorpedoBoat.wav",
+      "bytes": 257862
+    },
+    {
+      "url": "/assets/sound/WinnerSound.wav",
+      "bytes": 68714
+    },
+    {
+      "url": "/prototype/rules-art/Naval War!-Rules-OnlineVersion.pdf.png",
+      "bytes": 6159448
+    },
+    {
+      "url": "/prototype/rules-art/pages/PlayDeckCardback.png",
+      "bytes": 214213
+    },
+    {
+      "url": "/prototype/rules-art/pages/rules-page-03.png",
+      "bytes": 6119709
+    },
+    {
+      "url": "/prototype/rules-art/pages/rules-page-04.png",
+      "bytes": 6142345
+    },
+    {
+      "url": "/prototype/rules-art/pages/rules-page-05.png",
+      "bytes": 6186266
+    },
+    {
+      "url": "/prototype/rules-art/pages/rules-page-06.png",
+      "bytes": 6155109
+    },
+    {
+      "url": "/prototype/rules-art/pages/rules-page-07.png",
+      "bytes": 6158248
+    },
+    {
+      "url": "/prototype/rules-art/pages/rules-page-08.png",
+      "bytes": 5524810
+    },
+    {
+      "url": "/prototype/rules-art/pages/rules-page-09.png",
+      "bytes": 5858865
+    },
+    {
+      "url": "/prototype/rules-art/pages/ShipExampleCard.png",
+      "bytes": 1555216
+    }
+  ]
+}

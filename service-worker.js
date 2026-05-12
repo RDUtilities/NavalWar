@@ -1,4 +1,4 @@
-const CACHE_VERSION = "naval-war-shell-v1";
+const CACHE_VERSION = "naval-war-assets-v2";
 const SHELL_ASSETS = [
   "/",
   "/prototype/index.html",
@@ -6,16 +6,77 @@ const SHELL_ASSETS = [
   "/prototype/app.js",
   "/prototype/rules.html",
   "/manifest.webmanifest",
+  "/pwa-assets.json",
   "/assets/navalWarLogo-Transparent.png",
   "/assets/icons/icon-192.png",
   "/assets/icons/icon-512.png",
   "/assets/icons/apple-touch-icon.png",
   "/assets/War-Table.png"
 ];
+const INSTALL_ASSET_MAX_BYTES = 2_000_000;
+const INSTALL_ASSET_PREFIXES = ["/assets/sound/"];
+const INSTALL_ASSET_URLS = [
+  "/prototype/rules-art/pages/PlayDeckCardback.png",
+  "/prototype/rules-art/pages/ShipExampleCard.png"
+];
+
+async function cacheAsset(cache, assetUrl) {
+  try {
+    const response = await fetch(new Request(assetUrl, { cache: "reload" }));
+    if (!response || response.status !== 200) {
+      return false;
+    }
+    await cache.put(assetUrl, response);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function cacheAssets(cache, assetUrls) {
+  await Promise.all(assetUrls.map((assetUrl) => cacheAsset(cache, assetUrl)));
+}
+
+async function loadRuntimeAssetList(cache) {
+  try {
+    const response = await fetch(new Request("/pwa-assets.json", { cache: "reload" }));
+    if (!response || response.status !== 200) {
+      return [];
+    }
+    const responseCopy = response.clone();
+    await cache.put("/pwa-assets.json", responseCopy);
+    const payload = await response.json();
+    if (!Array.isArray(payload.assets)) {
+      return [];
+    }
+    return payload.assets
+      .map((asset) => (typeof asset === "string" ? asset : asset.url))
+      .filter((assetUrl) => typeof assetUrl === "string" && assetUrl.startsWith("/"));
+  } catch {
+    return [];
+  }
+}
+
+function shouldCacheAtInstall(asset) {
+  const assetUrl = typeof asset === "string" ? asset : asset.url;
+  const bytes = typeof asset === "string" ? 0 : asset.bytes ?? 0;
+  if (typeof assetUrl !== "string") {
+    return false;
+  }
+  return (
+    INSTALL_ASSET_URLS.includes(assetUrl) ||
+    (bytes <= INSTALL_ASSET_MAX_BYTES &&
+      INSTALL_ASSET_PREFIXES.some((prefix) => assetUrl.startsWith(prefix)))
+  );
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_VERSION).then((cache) => cache.addAll(SHELL_ASSETS))
+    caches.open(CACHE_VERSION).then(async (cache) => {
+      await cacheAssets(cache, SHELL_ASSETS);
+      const runtimeAssets = (await loadRuntimeAssetList(cache)).filter(shouldCacheAtInstall);
+      await cacheAssets(cache, runtimeAssets);
+    })
   );
   self.skipWaiting();
 });

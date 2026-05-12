@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-12
 
+- `2026-05-12 14:28 America/Chicago` — PWA Phase 2 asset-aware runtime caching
+- Scope: `service-worker.js`, `scripts/build_pwa_assets.mjs`, `pwa-assets.json`, `package.json`
+- Result: Added a generated PWA runtime asset manifest covering Modern play cards, Modern ship cards, sound effects, and rules artwork. The service worker now pre-caches the app shell plus lightweight audio/rules support assets, while caching heavyweight card/rules art on demand to avoid forcing a 328 MB install download before image optimization.
+- Verification: `node --check service-worker.js` (pass), `node --check scripts/build_pwa_assets.mjs` (pass), `node --check prototype/app.js` (pass), manifest JSON parse (pass), `npm run check` (pass), `npm run build` (pass), local server smoke for `/service-worker.js`, `/manifest.webmanifest`, and `/pwa-assets.json` (pass)
+
 - `2026-05-12 13:28 America/Chicago` — PWA Phase 1 shell
 - Scope: `prototype/index.html`, `prototype/app.js`, `server.mjs`, `manifest.webmanifest`, `service-worker.js`, `assets/icons/`
 - Result: Added installable PWA metadata, app icons generated from `assets/navalWarLogo-Transparent.png`, a root service worker that caches the app shell, iOS home-screen tags, and manifest MIME/no-cache handling on the Node server. Removed visible `Prototype` naming from the app title/menu and migrated the local save key while preserving legacy saves.
