@@ -1,6 +1,6 @@
 # Naval War Game Agent Guide
 
-Last updated: 2026-05-11
+Last updated: 2026-05-12
 
 This file is the working handoff map for agents contributing to the Naval War Game project. Keep it practical: update it when scope changes, when a workstream moves from planned to active, or when a future agent needs a reliable place to resume.
 
@@ -222,6 +222,11 @@ Entry format:
 - Verification: commands run and result
 
 ### 2026-05-12
+
+- `2026-05-12 09:53 America/Chicago` — iPad Safari WebAudio-first sound routing
+- Scope: `prototype/app.js`
+- Result: Added a louder WebAudio tone to the manual sound test and made a successful WebAudio test switch the game to WebAudio-first playback for later effects. This avoids iPad Safari's HTMLAudio path that can report playback and show the speaker icon while remaining inaudible. Multiplayer debug now also reports the active audio output mode.
+- Verification: `node --check prototype/app.js` (pass), `npm run check` (pass), `npm run build` (pass)
 
 - `2026-05-12 09:19 America/Chicago` — iOS Safari Web Audio fallback
 - Scope: `prototype/app.js`

@@ -532,12 +532,15 @@ const GAME_AUDIO_EFFECTS = [
 let audioUnlocked = false;
 let audioEnabled = true;
 let audioContext = null;
+let audioMasterGain = null;
 const audioBufferCache = new Map();
 const audioDiagnostics = {
   status: "not tested",
   lastError: null,
   lastEvent: null,
   lastTestAt: null,
+  outputMode: "html",
+  preferWebAudio: false,
 };
 
 GAME_AUDIO_EFFECTS.forEach((audio) => {
@@ -2445,6 +2448,7 @@ function renderLobbyDebugPanel() {
     `lastSyncAt: ${session.lastSyncAt || "-"}`,
     `lastError: ${session.lastError || "-"}`,
     `audioStatus: ${audioDiagnostics.status}`,
+    `audioOutput: ${audioDiagnostics.outputMode || "-"}`,
     `audioLastEvent: ${audioDiagnostics.lastEvent || "-"}`,
     `audioLastError: ${audioDiagnostics.lastError || "-"}`,
   ];
@@ -3743,6 +3747,19 @@ function getAudioContext() {
   return audioContext;
 }
 
+function getAudioMasterGain() {
+  const context = getAudioContext();
+  if (!context) {
+    return null;
+  }
+  if (!audioMasterGain) {
+    audioMasterGain = context.createGain();
+    audioMasterGain.gain.value = 1.65;
+    audioMasterGain.connect(context.destination);
+  }
+  return audioMasterGain;
+}
+
 async function loadAudioBuffer(path) {
   const context = getAudioContext();
   if (!context) {
@@ -3772,10 +3789,42 @@ async function playWebAudio(path, eventName = "sound") {
   const buffer = await loadAudioBuffer(path);
   const source = context.createBufferSource();
   source.buffer = buffer;
-  source.connect(context.destination);
+  source.connect(getAudioMasterGain() || context.destination);
   source.start(0);
   audioUnlocked = true;
+  audioDiagnostics.outputMode = "web";
+  audioDiagnostics.preferWebAudio = true;
   setAudioStatus("playing web", { ok: true, event: eventName });
+  return true;
+}
+
+async function playWebAudioTone(eventName = "tone-test") {
+  const context = getAudioContext();
+  if (!context) {
+    throw new Error("Web Audio API is not available.");
+  }
+  if (context.state !== "running") {
+    await context.resume();
+  }
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  const now = context.currentTime;
+  oscillator.type = "sine";
+  oscillator.frequency.setValueAtTime(880, now);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.34, now + 0.035);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
+  oscillator.connect(gain);
+  gain.connect(getAudioMasterGain() || context.destination);
+  oscillator.start(now);
+  oscillator.stop(now + 0.74);
+  audioUnlocked = true;
+  audioDiagnostics.outputMode = "web-tone";
+  audioDiagnostics.preferWebAudio = true;
+  setAudioStatus("tone playing", { ok: true, event: eventName });
+  await new Promise((resolve) => {
+    window.setTimeout(resolve, 760);
+  });
   return true;
 }
 
@@ -3785,6 +3834,14 @@ async function playAudioElement(audio, eventName = "sound") {
     return false;
   }
   const path = AUDIO_PATH_BY_ELEMENT.get(audio);
+  if (path && audioDiagnostics.preferWebAudio) {
+    try {
+      return await playWebAudio(path, `${eventName}:web-preferred`);
+    } catch (webAudioError) {
+      const webAudioMessage = webAudioError instanceof Error ? `${webAudioError.name}: ${webAudioError.message}` : String(webAudioError);
+      setAudioStatus("web blocked", { error: webAudioMessage, event: eventName });
+    }
+  }
   try {
     audio.pause();
     audio.currentTime = 0;
@@ -3793,7 +3850,8 @@ async function playAudioElement(audio, eventName = "sound") {
       await playback;
     }
     audioUnlocked = true;
-    setAudioStatus("playing", { ok: true, event: eventName });
+    audioDiagnostics.outputMode = "html";
+    setAudioStatus("playing html", { ok: true, event: eventName });
     return true;
   } catch (error) {
     const htmlAudioError = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
@@ -6879,6 +6937,7 @@ if (testSoundButton) {
     setAudioStatus("testing", { event: "manual-test" });
     let ok = false;
     try {
+      await playWebAudioTone("manual-test:tone");
       ok = await playWebAudio("../assets/sound/draw-card.wav", "manual-test:web-audio");
     } catch (webAudioError) {
       setAudioStatus("web blocked", {
