@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-12
 
+- `2026-05-12 13:28 America/Chicago` — PWA Phase 1 shell
+- Scope: `prototype/index.html`, `prototype/app.js`, `server.mjs`, `manifest.webmanifest`, `service-worker.js`, `assets/icons/`
+- Result: Added installable PWA metadata, app icons generated from `assets/navalWarLogo-Transparent.png`, a root service worker that caches the app shell, iOS home-screen tags, and manifest MIME/no-cache handling on the Node server. Removed visible `Prototype` naming from the app title/menu and migrated the local save key while preserving legacy saves.
+- Verification: `node --check prototype/app.js` (pass), `node --check service-worker.js` (pass), `node --check server.mjs` (pass), manifest JSON parse (pass), `npm run check` (pass), `npm run build` (pass), local HTTP smoke for `/prototype/index.html`, `/manifest.webmanifest`, `/service-worker.js`, and app icons (pass)
+
 - `2026-05-12 13:06 America/Chicago` — Minesweeper restores mine damage
 - Scope: `src/engine.ts`, `prototype/app.js`
 - Result: Corrected Minesweeper behavior so clearing minefield cards also removes/restores the damage caused by those minefields on afloat ships. Ships already sunk and moved to victory piles remain sunk.
