@@ -982,6 +982,21 @@ button {
   text-transform: uppercase;
 }
 
+.target-ship-card.is-sunk::after {
+  content: "Sunk";
+  position: absolute;
+  inset: auto 8px 8px auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(114, 31, 20, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--text);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .ship-card.is-sinking-transition::after {
   content: "";
 }

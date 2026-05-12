@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-11
 
+- `2026-05-11 20:42 America/Chicago` — Live multiplayer UI polish for sync, sunk ships, and dice feedback
+- Scope: `prototype/app.js`, `prototype/styles.css`
+- Result: Server views now skip redundant re-renders to reduce browser flicker during hosted multiplayer. Server-mapped sunk ships remain visible with the ship-card back and SUNK badge on the main board and target board. Server dice events now show the dice-resolution banner for air strikes, submarines, torpedo boats, and destroyer rolls. Added a brief Next Turn banner when server turn ownership advances.
+- Verification: `node --check prototype/app.js` (pass)
+
 - `2026-05-11 20:xx America/Chicago` — Online Air Strike targeting and server-event audio
 - Scope: `prototype/index.html`, `prototype/app.js`
 - Result: Live human test on lobby `Q89RRA` showed server-linked Air Strike could create virtual carrier cards but target selection was overwritten by server draw-phase refreshes. Server views now preserve local air-strike target-selection mode while `use_carrier_strike` is legal, carrier strike targets honor smoke and carrier screening, and synced server combat-log events now trigger sounds for salvos, sinking, dice rolls, mines, smoke, destroyers, repairs, draws, and air strikes. Added a top-bar Sound toggle to unlock/test browser audio.

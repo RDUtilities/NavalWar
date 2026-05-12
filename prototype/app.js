@@ -982,6 +982,7 @@ let autoEndTurnInFlight = false;
 let lastAutoEndTurnKey = null;
 let lastServerCommandKey = null;
 let lastServerCommandAt = 0;
+let lastServerViewSignature = null;
 let longPressTimer = null;
 let longPressTarget = null;
 let suppressClickUntil = 0;
@@ -1002,6 +1003,9 @@ appState.serverSession = {
   legalCommands: [],
   eventSoundLobbyId: null,
   eventSoundCount: 0,
+  diceEventLobbyId: null,
+  diceEventCount: 0,
+  lastAnnouncedTurnKey: null,
 };
 appState.setupMode = "solo";
 
@@ -1110,6 +1114,12 @@ function bindRealtimeHandlers() {
     if (payload?.joinCode) appState.serverSession.joinCode = payload.joinCode;
     if (payload?.lobbyId) appState.serverSession.lobbyId = payload.lobbyId;
     if (payload?.viewerPlayerId) appState.serverSession.viewerPlayerId = payload.viewerPlayerId;
+    if (!shouldApplyServerView(view)) {
+      appState.serverSession.lastSyncAt = new Date().toISOString();
+      appState.serverSession.lastError = null;
+      persistServerSessionSnapshot();
+      return;
+    }
     mapServerViewToLocalState(view);
     appState.serverSession.lastSyncAt = new Date().toISOString();
     appState.serverSession.lastError = null;
@@ -1254,6 +1264,10 @@ async function canUseServerApi() {
 }
 
 function setServerSessionCore({ connected, lobbyId, viewerPlayerId, joinCode, status, isHost, playerCount, sessionToken }) {
+  const isDifferentSession =
+    appState.serverSession.lobbyId !== lobbyId ||
+    appState.serverSession.viewerPlayerId !== viewerPlayerId ||
+    appState.serverSession.sessionToken !== (sessionToken ?? null);
   appState.serverSession.connected = connected;
   appState.serverSession.lobbyId = lobbyId;
   appState.serverSession.viewerPlayerId = viewerPlayerId;
@@ -1264,6 +1278,14 @@ function setServerSessionCore({ connected, lobbyId, viewerPlayerId, joinCode, st
   appState.serverSession.lastSyncAt = new Date().toISOString();
   appState.serverSession.lastError = null;
   appState.serverSession.localPlayerCount = playerCount;
+  if (isDifferentSession) {
+    lastServerViewSignature = null;
+    appState.serverSession.eventSoundLobbyId = null;
+    appState.serverSession.eventSoundCount = 0;
+    appState.serverSession.diceEventLobbyId = null;
+    appState.serverSession.diceEventCount = 0;
+    appState.serverSession.lastAnnouncedTurnKey = null;
+  }
   if (!connected) {
     appState.serverSession.lobbyInfo = null;
   }
@@ -1534,6 +1556,82 @@ async function restoreServerSessionFromStorage() {
   }
 }
 
+function getServerViewSignature(view) {
+  const gameState = view?.gameState;
+  if (!gameState) {
+    return "";
+  }
+
+  return JSON.stringify({
+    lobbyId: view.lobbyId,
+    status: view.status,
+    viewerPlayerId: view.viewerPlayerId,
+    legalCommands: view.legalCommands || [],
+    phase: gameState.phase,
+    turnNumber: gameState.turnNumber,
+    roundNumber: gameState.roundNumber,
+    currentPlayerId: gameState.currentPlayerId,
+    hasDrawnThisTurn: gameState.hasDrawnThisTurn,
+    hasPerformedActionThisTurn: gameState.hasPerformedActionThisTurn,
+    hasUsedCarrierStrikeThisTurn: gameState.hasUsedCarrierStrikeThisTurn,
+    playDeckCount: gameState.playDeckCount,
+    discardPileCount: gameState.discardPileCount,
+    shipDeckCount: gameState.shipDeckCount,
+    eventCount: (gameState.events || []).length,
+    winnerIds: gameState.winnerIds || [],
+    players: (gameState.players || []).map((player) => ({
+      id: player.id,
+      handCount: player.handCount,
+      hand: (player.hand || []).map((card) => card.id),
+      fleetEffects: (player.fleetEffects || []).map((effect) => `${effect.kind}:${effect.card?.id}:${effect.hits || ""}`),
+      ships: (player.ships || []).map((ship) => ({
+        id: ship.card.id,
+        sunk: Boolean(ship.sunk),
+        damage: (ship.damage || []).map((entry) => `${entry.type}:${entry.cardId}:${entry.ownerId}:${entry.hits}`),
+        attachments: (ship.attachments || []).map((attachment) => attachment.card?.id),
+      })),
+    })),
+    destroyerSquadrons: (gameState.destroyerSquadrons || []).map(
+      (squadron) => `${squadron.id}:${squadron.ownerId}:${squadron.hitsTaken || 0}`
+    ),
+    pendingDestroyerAttack: gameState.pendingDestroyerAttack || null,
+  });
+}
+
+function shouldApplyServerView(view, force = false) {
+  if (force) {
+    lastServerViewSignature = getServerViewSignature(view);
+    return true;
+  }
+  const nextSignature = getServerViewSignature(view);
+  if (nextSignature && nextSignature === lastServerViewSignature) {
+    return false;
+  }
+  lastServerViewSignature = nextSignature;
+  return true;
+}
+
+function announceServerTurnChange(gameState, playersBySide) {
+  if (!appState.serverSession?.connected || gameState.phase === "round_complete") {
+    return;
+  }
+  const currentPlayer = Object.values(playersBySide).find((player) => player?.id === gameState.currentPlayerId);
+  if (!currentPlayer) {
+    return;
+  }
+  const turnKey = `${gameState.roundNumber || 1}:${gameState.turnNumber}:${gameState.currentPlayerId}`;
+  if (!appState.serverSession.lastAnnouncedTurnKey) {
+    appState.serverSession.lastAnnouncedTurnKey = turnKey;
+    return;
+  }
+  if (appState.serverSession.lastAnnouncedTurnKey === turnKey) {
+    return;
+  }
+  appState.serverSession.lastAnnouncedTurnKey = turnKey;
+  const phaseLabel = gameState.hasDrawnThisTurn || gameState.hasUsedCarrierStrikeThisTurn ? "play phase" : "draw phase";
+  showTurnBanner(currentPlayer.name, phaseLabel);
+}
+
 function mapServerViewToLocalState(view) {
   const gameState = view?.gameState;
   if (!gameState) {
@@ -1596,6 +1694,8 @@ function mapServerViewToLocalState(view) {
     appState.effectsByFleet[side] = sideEffects;
     const ships = player.ships.map((ship) => {
       const template = SHIP_CARD_BY_NAME.get(ship.card.name);
+      const originalImage = template?.image || SHIP_CARD_BACK;
+      const isSunk = Boolean(ship.sunk);
       const damageTotal = ship.damage.reduce((sum, entry) => sum + Number(entry.hits || 0), 0);
       const remaining = Math.max(ship.card.hitNumber - damageTotal, 0);
       const salvos = (ship.attachments || []).map((attachment) => {
@@ -1608,8 +1708,10 @@ function mapServerViewToLocalState(view) {
       return {
         ship: ship.card.name,
         shipId: ship.card.id,
-        image: template?.image || SHIP_CARD_BACK,
+        image: isSunk ? SHIP_CARD_BACK : originalImage,
+        originalImage,
         damage: `${remaining} / ${ship.card.hitNumber}`,
+        sunk: isSunk,
         isCarrier: Boolean(ship.card.isCarrier),
         gunSize: ship.card.gunCaliber,
         salvos,
@@ -1682,6 +1784,7 @@ function mapServerViewToLocalState(view) {
   if (!hasPendingServerAirStrikeSelection && !gameState.hasUsedCarrierStrikeThisTurn) {
     appState.turnState.usedCarrierIndices = [];
   }
+  announceServerTurnChange(gameState, playersBySide);
   appState.match.isRoundOver = gameState.phase === "round_complete";
   appState.match.roundEndReason = gameState.roundEndReason || null;
   appState.match.winnerZone =
@@ -1766,6 +1869,13 @@ async function refreshServerViewAndRender() {
     const view = await serverGet(viewPath);
     if (view?.viewerPlayerId) {
       appState.serverSession.viewerPlayerId = view.viewerPlayerId;
+    }
+    if (!shouldApplyServerView(view)) {
+      appState.serverSession.status = view.status || appState.serverSession.status;
+      appState.serverSession.lastSyncAt = new Date().toISOString();
+      appState.serverSession.lastError = null;
+      persistServerSessionSnapshot();
+      return;
     }
     mapServerViewToLocalState(view);
     appState.serverSession.status = view.status || appState.serverSession.status;
@@ -3351,11 +3461,11 @@ async function animateDrawToTray(imageSrc) {
   document.body.classList.remove("is-animating");
 }
 
-function showSpecialBanner(title, subtitle = "Special card resolved") {
+function showStatusBanner(labelText, title, subtitle = "", duration = 1400) {
   window.clearTimeout(specialBannerTimer);
   const label = document.createElement("p");
   label.className = "special-card-banner-label";
-  label.textContent = "Special Card";
+  label.textContent = labelText;
   const heading = document.createElement("h2");
   heading.textContent = title;
   const copy = document.createElement("span");
@@ -3366,7 +3476,15 @@ function showSpecialBanner(title, subtitle = "Special card resolved") {
   specialBanner.classList.add("is-visible");
   specialBannerTimer = window.setTimeout(() => {
     specialBanner.classList.remove("is-visible");
-  }, 1400);
+  }, duration);
+}
+
+function showSpecialBanner(title, subtitle = "Special card resolved") {
+  showStatusBanner("Special Card", title, subtitle, 1400);
+}
+
+function showTurnBanner(playerName, phaseLabel = "turn") {
+  showStatusBanner("Next Turn", `${playerName}'s Turn`, `Ready for ${phaseLabel}.`, 1800);
 }
 
 function showWinnerBanner(title, subtitle, actions = []) {
@@ -3474,6 +3592,49 @@ function playSalvoSoundFromDetail(detail) {
   playGameAudio(gunSize === '11"' || gunSize === '12.6"' ? smallSalvoAudio : bigSalvoAudio);
 }
 
+function getRollFromEventDetail(detail) {
+  const match = String(detail || "").match(/\brolled\s+([1-6])\b/i);
+  return match ? Number(match[1]) : null;
+}
+
+function showDiceResolutionForServerEvent(event) {
+  const roll = getRollFromEventDetail(event?.detail);
+  if (typeof roll !== "number") {
+    return;
+  }
+
+  let title = "Dice roll";
+  let outcome = "Roll resolved.";
+  switch (event.type) {
+    case "submarine_roll":
+      title = "Submarine attack roll";
+      outcome = roll >= 5 ? "Hit confirmed on a 5 or 6." : "Attack missed.";
+      break;
+    case "torpedo_boat_roll":
+      title = "Torpedo boat attack roll";
+      outcome = roll === 6 ? "Hit confirmed on a 6." : "Attack missed.";
+      break;
+    case "carrier_roll":
+      title = "Air strike roll";
+      outcome = roll === 1 ? "Hit confirmed on a 1." : "Air strike missed.";
+      break;
+    case "destroyer_squadron_roll":
+      title = "Destroyer attack roll";
+      outcome = `${roll} ship${roll === 1 ? "" : "s"} selected for sinking.`;
+      break;
+  }
+
+  appState.diceState = {
+    face: roll,
+    title,
+    subtitle: event.detail || "Die rolled.",
+    outcome,
+  };
+  setTurnSummary(title, event.detail || "Die rolled.", outcome);
+  pendingDiceAdvanceDelay = Math.max(pendingDiceAdvanceDelay, 4200);
+  showDiceBanner(appState.diceState);
+}
+
 function playSoundForServerEvent(event) {
   switch (event?.type) {
     case "salvo_fired":
@@ -3494,6 +3655,9 @@ function playSoundForServerEvent(event) {
       break;
     case "carrier_roll":
       playAirStrikeSound();
+      playDiceSound();
+      break;
+    case "destroyer_squadron_roll":
       playDiceSound();
       break;
     case "minefield_deployed":
@@ -3536,7 +3700,10 @@ function playSoundsForServerEvents(events) {
     return;
   }
   const previousCount = Math.min(appState.serverSession.eventSoundCount || 0, events.length);
-  events.slice(previousCount).forEach(playSoundForServerEvent);
+  events.slice(previousCount).forEach((event) => {
+    playSoundForServerEvent(event);
+    showDiceResolutionForServerEvent(event);
+  });
   appState.serverSession.eventSoundCount = events.length;
 }
 
