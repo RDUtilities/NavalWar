@@ -186,6 +186,22 @@ function toSeatReservations(players: MultiplayerPlayerRecord[]): SeatReservation
   }));
 }
 
+function seatRecordsForViewer(lobby: MultiplayerLobby, viewerPlayerId: PlayerId): ServerSeatRecord[] {
+  return lobby.seats.map((seat) => {
+    if (!seat.assignment) {
+      return seat;
+    }
+
+    return {
+      ...seat,
+      assignment: {
+        ...seat.assignment,
+        isLocalPlayer: seat.assignment.playerId === viewerPlayerId
+      }
+    };
+  });
+}
+
 function seatIdForPlayer(lobby: MultiplayerLobby, playerId: PlayerId): SeatId | null {
   const seat = lobby.seats.find((entry) => entry.assignment?.playerId === playerId);
   return seat?.seatId ?? null;
@@ -455,7 +471,7 @@ export class InMemoryMultiplayerService {
     const resolvedViewerId = this.resolveViewerId(lobby, viewerPlayerId, sessionToken);
 
     const viewerSeatId = seatIdForPlayer(lobby, resolvedViewerId);
-    const seatLayout = buildClientSeatLayout(lobby.seats, viewerSeatId);
+    const seatLayout = buildClientSeatLayout(seatRecordsForViewer(lobby, resolvedViewerId), viewerSeatId);
 
     return {
       lobbyId: lobby.lobbyId,

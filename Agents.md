@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-11
 
+- `2026-05-11 13:xx America/Chicago` — Live Render multiplayer follow-up fixes
+- Scope: `src/engine.ts`, `src/session.ts`, `server.mjs`
+- Result: Fixed live-test findings from 2-human + 1-bot Render matches: `play_salvo` no longer appears unless the player has a matching afloat gun caliber, per-view seat layouts now mark the viewer as `isLocalPlayer`, and API rule rejections now return HTTP 400 `Request rejected` instead of looking like server crashes.
+- Verification: live Render API tests reached 75 + 75 command steps locally and 70 command steps in a subagent with no sync mismatch; `node --check prototype/app.js` (pass), `node --check server.mjs` (pass), `npm run check` (pass), `npm run build` (pass), local API smoke confirmed guest bottom seat is local and nonmatching salvos only expose discard (pass)
+
 - `2026-05-11 12:xx America/Chicago` — Server turn-order and bot targeting stabilization
 - Scope: `src/engine.ts`, `src/session.ts`
 - Result: Server legal commands now enforce the normal turn sequence: draw or carrier strike first, then exactly one play/discard action before end turn. Normal play actions can no longer appear before draw, draw cannot happen after a play action, and end turn cannot appear before the required action. Ready Destroyer Squadrons now block draw/airstrike/hand plays and must resolve on the owner's next turn. Bot targeting now respects smoke protection and carrier screening so bot continuation cannot crash a valid human command.

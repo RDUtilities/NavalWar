@@ -341,7 +341,14 @@ const httpServer = createServer(async (req, res) => {
     const pathname = url.pathname;
 
     if (pathname.startsWith("/api/")) {
-      await handleApi(req, res, pathname, url.searchParams);
+      try {
+        await handleApi(req, res, pathname, url.searchParams);
+      } catch (error) {
+        sendJson(res, 400, {
+          error: "Request rejected",
+          detail: error instanceof Error ? error.message : "Unknown API request failure."
+        });
+      }
       return;
     }
 

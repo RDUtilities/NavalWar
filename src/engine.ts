@@ -489,6 +489,16 @@ function hasAdditionalDamageTargetForActor(state: GameState, actor: PlayerState)
   });
 }
 
+function hasPlayableSalvoForActor(actor: PlayerState): boolean {
+  const gunCalibers = new Set(
+    livingShips(actor)
+      .map((ship) => ship.card.gunCaliber)
+      .filter(Boolean)
+  );
+
+  return actor.hand.some((card) => card.kind === "salvo" && gunCalibers.has(card.gunCaliber));
+}
+
 function hasEnemyShipTargetForActor(state: GameState, actor: PlayerState, allowSmoke: boolean): boolean {
   return state.players.some((targetPlayer) => {
     const sameTeam = actor.teamId && targetPlayer.teamId && actor.teamId === targetPlayer.teamId;
@@ -669,8 +679,8 @@ export function listLegalCommands(state: GameState, actorId: PlayerId): string[]
   const mustResolveSpecialsOnly = openingTurnPending || mandatorySpecialInHand;
   const mustResolveReadyDestroyer = !mustResolveSpecialsOnly && readyDestroyerSquadron;
 
-  if (canTakePlayAction && !mustResolveReadyDestroyer && (!mustResolveSpecialsOnly || player.hand.some((card) => card.kind === "salvo")) && hasStartedNormalTurnAction) {
-    if (player.hand.some((card) => card.kind === "salvo")) legal.push("play_salvo");
+  if (canTakePlayAction && !mustResolveReadyDestroyer && (!mustResolveSpecialsOnly || hasPlayableSalvoForActor(player)) && hasStartedNormalTurnAction) {
+    if (hasPlayableSalvoForActor(player)) legal.push("play_salvo");
   }
   if (canTakePlayAction && !mustResolveReadyDestroyer && hasStartedNormalTurnAction && player.hand.some((card) => card.kind === "additional_damage") && hasAdditionalDamageTargetForActor(state, player)) legal.push("play_additional_damage");
   if (canTakePlayAction && !mustResolveReadyDestroyer && (!mustResolveSpecialsOnly || player.hand.some((card) => card.kind === "smoke")) && hasStartedNormalTurnAction) {
@@ -714,7 +724,7 @@ export function listLegalCommands(state: GameState, actorId: PlayerId): string[]
     !mustResolveReadyDestroyer &&
     !mustResolveSpecialsOnly &&
     hasStartedNormalTurnAction &&
-    player.hand.some((card) => card.kind === "salvo") &&
+    hasPlayableSalvoForActor(player) &&
     state.destroyerSquadrons.some((entry) => entry.ownerId !== actorId)
   ) {
     legal.push("attack_destroyer_squadron");
