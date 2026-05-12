@@ -114,6 +114,36 @@ const IMMEDIATE_PLAY_KINDS = new Set([
   "additional_damage",
   "additional_ship",
 ]);
+const USE_OPTIMIZED_CARD_ART = true;
+
+function getOptimizedCardArtPath(src, tier = "table") {
+  if (!USE_OPTIMIZED_CARD_ART || !src) {
+    return src;
+  }
+
+  const urlMatch = String(src).match(/^(https?:\/\/[^/]+)(\/assets\/.+)$/);
+  const origin = urlMatch ? urlMatch[1] : "";
+  const assetPath = urlMatch ? urlMatch[2] : String(src).replace(/^(\.\.\/)+/, "/");
+  const optimizedMatch = assetPath.match(/^\/assets\/optimized\/cards\/(play|ships)\/(?:table|zoom)\/(.+)\.webp$/i);
+  const sourceMatch = assetPath.match(/^\/assets\/cards\/(play|ships)\/Modern\/(.+)\.png$/i);
+  const match = optimizedMatch || sourceMatch;
+
+  if (!match) {
+    return src;
+  }
+
+  const prefix = origin || (String(src).startsWith("/") ? "" : "..");
+  return `${prefix}/assets/optimized/cards/${match[1]}/${tier}/${match[2]}.webp`;
+}
+
+function getTableCardArt(src) {
+  return getOptimizedCardArtPath(src, "table");
+}
+
+function getZoomCardArt(src) {
+  return getOptimizedCardArtPath(src, "zoom");
+}
+
 const SHIP_CARD_BACK = "../assets/cards/ships/Modern/Cardback-Ship.png";
 const SHIP_GUN_SIZE_BY_NAME = {
   "Yamato": '18"',
@@ -3295,7 +3325,7 @@ function setCompactDragPreview(event, sourceCard, card = null) {
     dragPreviewGhost.classList.add("drag-preview-ghost-airstrike");
   }
   const image = document.createElement("img");
-  image.src = card?.image || sourceCard.querySelector("img")?.src || "";
+  image.src = getTableCardArt(card?.image || sourceCard.querySelector("img")?.src || "");
   image.alt = card?.label || sourceCard.dataset.zoomLabel || "Drag preview";
   dragPreviewGhost.appendChild(image);
   document.body.appendChild(dragPreviewGhost);
@@ -5411,7 +5441,7 @@ function clearMinefieldDamageFromFleet(zone, minefields) {
 function createShipCard(ship, zone, index) {
   const wrapper = document.createElement("article");
   wrapper.className = "ship-card";
-  wrapper.dataset.zoomSrc = ship.sunk ? ship.originalImage || ship.image : ship.image;
+  wrapper.dataset.zoomSrc = getZoomCardArt(ship.sunk ? ship.originalImage || ship.image : ship.image);
   wrapper.dataset.zoomLabel = `${ship.ship} • Damage ${ship.damage}${ship.sunk ? " • Sunk" : ""}`;
   wrapper.dataset.zone = zone;
   wrapper.dataset.shipIndex = String(index);
@@ -5430,7 +5460,7 @@ function createShipCard(ship, zone, index) {
   }
 
   const image = document.createElement("img");
-  image.src = ship.image;
+  image.src = getTableCardArt(ship.image);
   image.alt = ship.ship;
   wrapper.appendChild(image);
 
@@ -5460,7 +5490,7 @@ function createShipCard(ship, zone, index) {
       chip.style.setProperty("--salvo-tilt", `${(index - 1) * 5}deg`);
 
       const image = document.createElement("img");
-      image.src = salvo.image;
+      image.src = getTableCardArt(salvo.image);
       image.alt = salvo.label;
       chip.appendChild(image);
       salvoStack.appendChild(chip);
@@ -5482,7 +5512,7 @@ function createShipCard(ship, zone, index) {
 function createPlayCard(card, index) {
   const wrapper = document.createElement("article");
   wrapper.className = "play-card";
-  wrapper.dataset.zoomSrc = card.image;
+  wrapper.dataset.zoomSrc = getZoomCardArt(card.image);
   wrapper.dataset.zoomLabel = card.label;
   wrapper.dataset.cardId = card.id;
   wrapper.dataset.dragType = "hand_card";
@@ -5504,7 +5534,7 @@ function createPlayCard(card, index) {
     wrapper.classList.add("is-touch-selected");
   }
   const image = document.createElement("img");
-  image.src = card.image;
+  image.src = getTableCardArt(card.image);
   image.alt = card.label;
   wrapper.appendChild(image);
   return wrapper;
@@ -5513,11 +5543,11 @@ function createPlayCard(card, index) {
 function createLabeledPlayCard(src, label) {
   const wrapper = document.createElement("article");
   wrapper.className = "play-card";
-  wrapper.dataset.zoomSrc = src;
+  wrapper.dataset.zoomSrc = getZoomCardArt(src);
   wrapper.dataset.zoomLabel = label;
 
   const image = document.createElement("img");
-  image.src = src;
+  image.src = getTableCardArt(src);
   image.alt = label;
   wrapper.appendChild(image);
   return wrapper;
@@ -5526,14 +5556,14 @@ function createLabeledPlayCard(src, label) {
 function createDeckReferenceCard({ image, label, count, detail, cssClass = "" }) {
   const wrapper = document.createElement("article");
   wrapper.className = `deck-reference-card ${cssClass}`.trim();
-  wrapper.dataset.zoomSrc = image;
+  wrapper.dataset.zoomSrc = getZoomCardArt(image);
   wrapper.dataset.zoomLabel = label;
 
   const imageShell = document.createElement("div");
   imageShell.className = "deck-reference-image";
 
   const cardImage = document.createElement("img");
-  cardImage.src = image;
+  cardImage.src = getTableCardArt(image);
   cardImage.alt = label;
   imageShell.appendChild(cardImage);
 
@@ -5563,7 +5593,7 @@ function createEffectCard(effect, zone) {
 
   const card = document.createElement("article");
   card.className = "effect-card";
-  card.dataset.zoomSrc = effect.image;
+  card.dataset.zoomSrc = getZoomCardArt(effect.image);
   card.dataset.zoomLabel = effect.label;
   card.dataset.zone = zone;
   if (effect.kind === "minefield" || effect.kind === "smoke") {
@@ -5580,7 +5610,7 @@ function createEffectCard(effect, zone) {
   }
 
   const image = document.createElement("img");
-  image.src = effect.image;
+  image.src = getTableCardArt(effect.image);
   image.alt = effect.label;
   card.appendChild(image);
 
@@ -5598,7 +5628,7 @@ function createDeckPile(pile) {
 
   const card = document.createElement("div");
   card.className = "deck-pile-card";
-  card.dataset.zoomSrc = pile.image;
+  card.dataset.zoomSrc = getZoomCardArt(pile.image);
   card.dataset.zoomLabel = pile.topCardLabel || `${pile.label} • ${pile.count} left`;
 
   if (pile.label === "Discard Pile") {
@@ -5612,7 +5642,7 @@ function createDeckPile(pile) {
   }
 
   const image = document.createElement("img");
-  image.src = pile.image;
+  image.src = getTableCardArt(pile.image);
   image.alt = pile.label;
   card.appendChild(image);
 
@@ -5632,11 +5662,11 @@ function createDeckPile(pile) {
 function createVictoryCard(ship) {
   const wrapper = document.createElement("article");
   wrapper.className = "ship-card";
-  wrapper.dataset.zoomSrc = ship.image;
+  wrapper.dataset.zoomSrc = getZoomCardArt(ship.image);
   wrapper.dataset.zoomLabel = ship.ship;
 
   const image = document.createElement("img");
-  image.src = ship.image;
+  image.src = getTableCardArt(ship.image);
   image.alt = ship.ship;
   wrapper.appendChild(image);
 
@@ -5654,7 +5684,7 @@ function createVictoryCard(ship) {
 function createTargetShipCard(ship, zone, index) {
   const wrapper = document.createElement("article");
   wrapper.className = "target-ship-card";
-  wrapper.dataset.zoomSrc = ship.sunk ? ship.originalImage || ship.image : ship.image;
+  wrapper.dataset.zoomSrc = getZoomCardArt(ship.sunk ? ship.originalImage || ship.image : ship.image);
   wrapper.dataset.zoomLabel = `${ship.ship} • Damage ${ship.damage}${ship.sunk ? " • Sunk" : ""}`;
   wrapper.dataset.zone = zone;
   wrapper.dataset.shipIndex = String(index);
@@ -5664,7 +5694,7 @@ function createTargetShipCard(ship, zone, index) {
   }
 
   const image = document.createElement("img");
-  image.src = ship.image;
+  image.src = getTableCardArt(ship.image);
   image.alt = ship.ship;
   wrapper.appendChild(image);
 
@@ -5694,7 +5724,7 @@ function createTargetShipCard(ship, zone, index) {
       chip.style.setProperty("--target-salvo-tilt", `${(salvoIndex - 1) * 6}deg`);
 
       const salvoImage = document.createElement("img");
-      salvoImage.src = salvo.image;
+      salvoImage.src = getTableCardArt(salvo.image);
       salvoImage.alt = salvo.label;
       chip.appendChild(salvoImage);
       salvoStack.appendChild(chip);
@@ -5728,7 +5758,7 @@ function createTargetEffectsRow(zone) {
   effects.forEach((effect) => {
     const chip = document.createElement("div");
     chip.className = "target-effect-chip";
-    chip.dataset.zoomSrc = effect.image;
+    chip.dataset.zoomSrc = getZoomCardArt(effect.image);
     chip.dataset.zoomLabel = effect.label;
     chip.dataset.zone = zone;
     if (effect.kind === "destroyer_squadron") {
@@ -5738,7 +5768,7 @@ function createTargetEffectsRow(zone) {
     }
 
     const image = document.createElement("img");
-    image.src = effect.image;
+    image.src = getTableCardArt(effect.image);
     image.alt = effect.label;
 
     const label = document.createElement("span");
@@ -5898,7 +5928,7 @@ function renderPrototype() {
 }
 
 function openZoom(src, label) {
-  zoomImage.src = src;
+  zoomImage.src = getZoomCardArt(src);
   zoomImage.alt = label;
   zoomCaption.textContent = label;
   zoomOverlay.hidden = false;

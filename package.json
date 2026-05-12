@@ -9,6 +9,7 @@
     "serve:local": "node server.mjs",
     "build": "npm run build:pwa-assets && tsc -p tsconfig.json",
     "build:pwa-assets": "node scripts/build_pwa_assets.mjs",
+    "optimize:assets": "node scripts/optimize_card_assets.mjs && npm run build:pwa-assets",
     "check": "tsc -p tsconfig.json --noEmit",
     "simulate": "npm run build && node dist/simulation.js",
     "simulate:quick": "npm run build && node dist/simulation.js --games=20 --players=4 --mode=skirmish --seed=20260508 --max-steps=5000"

@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-12
 
+- `2026-05-12 14:xx America/Chicago` — PWA Phase 3 optimized card runtime assets
+- Scope: `scripts/optimize_card_assets.mjs`, `scripts/build_pwa_assets.mjs`, `assets/optimized/cards/`, `prototype/app.js`, `service-worker.js`, `package.json`, `pwa-assets.json`
+- Result: Added a WebP card optimization pipeline that keeps original PNG card art as masters while generating table-size and zoom-size runtime assets. The browser now uses optimized table WebPs during gameplay and optimized zoom WebPs for card detail views. The service worker pre-caches the lightweight table tier and sound effects, while zoom/rules art cache on demand. Runtime card masters were reduced from 274.7 MB of PNGs to 43.8 MB of WebPs, with the gameplay table tier only 6.4 MB.
+- Verification: `npm run optimize:assets` (pass), `node --check prototype/app.js` (pass), `node --check service-worker.js` (pass), `node --check scripts/optimize_card_assets.mjs` (pass), `node --check scripts/build_pwa_assets.mjs` (pass), `npm run check` (pass), `npm run build` (pass), PWA manifest filesystem check found 197 assets, 0 missing, and 0 source-card PNGs (pass), local browser smoke via `http://localhost:3000/prototype/index.html` rendered setup and war table cards (pass)
+
 - `2026-05-12 14:28 America/Chicago` — PWA Phase 2 asset-aware runtime caching
 - Scope: `service-worker.js`, `scripts/build_pwa_assets.mjs`, `pwa-assets.json`, `package.json`
 - Result: Added a generated PWA runtime asset manifest covering Modern play cards, Modern ship cards, sound effects, and rules artwork. The service worker now pre-caches the app shell plus lightweight audio/rules support assets, while caching heavyweight card/rules art on demand to avoid forcing a 328 MB install download before image optimization.

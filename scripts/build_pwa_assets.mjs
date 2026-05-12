@@ -5,8 +5,7 @@ const rootDir = process.cwd();
 const outputPath = path.join(rootDir, "pwa-assets.json");
 
 const assetRoots = [
-  "assets/cards/play/Modern",
-  "assets/cards/ships/Modern",
+  "assets/optimized/cards",
   "assets/sound",
   "prototype/rules-art"
 ];
@@ -69,7 +68,63 @@ async function walk(relativeDir, assets) {
   }
 }
 
+async function listSourceCardPngs(relativeDir) {
+  const absoluteDir = path.join(rootDir, relativeDir);
+  const entries = await readdir(absoluteDir, { withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".png"))
+    .map((entry) => entry.name)
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function optimizedCardPath(kind, tier, sourceFileName) {
+  return path.join(
+    rootDir,
+    "assets",
+    "optimized",
+    "cards",
+    kind,
+    tier,
+    `${path.basename(sourceFileName, path.extname(sourceFileName))}.webp`
+  );
+}
+
+async function validateOptimizedCards() {
+  const missing = [];
+  const sourceSets = [
+    { kind: "play", dir: "assets/cards/play/Modern" },
+    { kind: "ships", dir: "assets/cards/ships/Modern" }
+  ];
+
+  for (const sourceSet of sourceSets) {
+    const sourceFiles = await listSourceCardPngs(sourceSet.dir);
+    for (const sourceFile of sourceFiles) {
+      for (const tier of ["table", "zoom"]) {
+        try {
+          await stat(optimizedCardPath(sourceSet.kind, tier, sourceFile));
+        } catch (error) {
+          if (error.code === "ENOENT") {
+            missing.push(`${sourceSet.kind}/${tier}/${sourceFile}`);
+            continue;
+          }
+          throw error;
+        }
+      }
+    }
+  }
+
+  if (missing.length) {
+    throw new Error(
+      `Missing optimized card assets. Run npm run optimize:assets. Missing: ${missing.slice(0, 12).join(", ")}${
+        missing.length > 12 ? `, and ${missing.length - 12} more` : ""
+      }`
+    );
+  }
+}
+
 const assets = [];
+
+await validateOptimizedCards();
 
 for (const assetRoot of assetRoots) {
   await walk(assetRoot, assets);

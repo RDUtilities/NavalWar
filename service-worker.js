@@ -14,7 +14,11 @@ const SHELL_ASSETS = [
   "/assets/War-Table.png"
 ];
 const INSTALL_ASSET_MAX_BYTES = 2_000_000;
-const INSTALL_ASSET_PREFIXES = ["/assets/sound/"];
+const INSTALL_ASSET_PREFIXES = [
+  "/assets/sound/",
+  "/assets/optimized/cards/play/table/",
+  "/assets/optimized/cards/ships/table/"
+];
 const INSTALL_ASSET_URLS = [
   "/prototype/rules-art/pages/PlayDeckCardback.png",
   "/prototype/rules-art/pages/ShipExampleCard.png"

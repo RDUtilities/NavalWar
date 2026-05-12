@@ -1,0 +1,1211 @@
+{
+  "generatedAt": "2026-05-12T20:43:43.639Z",
+  "sourceFormat": "png",
+  "runtimeFormat": "webp",
+  "tiers": {
+    "table": {
+      "width": 768,
+      "height": 512,
+      "quality": 82
+    },
+    "zoom": {
+      "width": 1536,
+      "height": 1024,
+      "quality": 88
+    }
+  },
+  "sets": {
+    "play": {
+      "cardCount": 29,
+      "originalBytes": 89157455,
+      "runtimeBytes": 12747756,
+      "savingsRatio": 0.857,
+      "cards": [
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Additional-Damnage-1pt.png",
+            "bytes": 3144140
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Additional-Damnage-1pt.webp",
+            "bytes": 75996
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Additional-Damnage-1pt.webp",
+            "bytes": 415952
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Additional-Damnage-2pt.png",
+            "bytes": 3009718
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Additional-Damnage-2pt.webp",
+            "bytes": 73276
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Additional-Damnage-2pt.webp",
+            "bytes": 376554
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Additional-Ship.png",
+            "bytes": 3148965
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Additional-Ship.webp",
+            "bytes": 66812
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Additional-Ship.webp",
+            "bytes": 400954
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/cardback-Play.png",
+            "bytes": 3196711
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/cardback-Play.webp",
+            "bytes": 83348
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/cardback-Play.webp",
+            "bytes": 443560
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Destroyer-4hits.png",
+            "bytes": 3128877
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Destroyer-4hits.webp",
+            "bytes": 67488
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Destroyer-4hits.webp",
+            "bytes": 398488
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Minefield-1hit.png",
+            "bytes": 3097671
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Minefield-1hit.webp",
+            "bytes": 72558
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Minefield-1hit.webp",
+            "bytes": 389432
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Minefield-2hits.png",
+            "bytes": 3235727
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Minefield-2hits.webp",
+            "bytes": 71564
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Minefield-2hits.webp",
+            "bytes": 411822
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/MineSweeper.png",
+            "bytes": 3017915
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/MineSweeper.webp",
+            "bytes": 62300
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/MineSweeper.webp",
+            "bytes": 376690
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Repair-card.png",
+            "bytes": 2994457
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Repair-card.webp",
+            "bytes": 58898
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Repair-card.webp",
+            "bytes": 359810
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-11-1pts.png",
+            "bytes": 3250835
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-11-1pts.webp",
+            "bytes": 53368
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-11-1pts.webp",
+            "bytes": 409616
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-11-2pts.png",
+            "bytes": 2755509
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-11-2pts.webp",
+            "bytes": 40062
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-11-2pts.webp",
+            "bytes": 275870
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-12_6-1pt.png",
+            "bytes": 3423763
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-12_6-1pt.webp",
+            "bytes": 73092
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-12_6-1pt.webp",
+            "bytes": 463170
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-12_6-2pts.png",
+            "bytes": 3252992
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-12_6-2pts.webp",
+            "bytes": 63424
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-12_6-2pts.webp",
+            "bytes": 414166
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-14-1pts.png",
+            "bytes": 3225242
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-14-1pts.webp",
+            "bytes": 62912
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-14-1pts.webp",
+            "bytes": 416404
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-14-2pts.png",
+            "bytes": 2620959
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-14-2pts.webp",
+            "bytes": 43630
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-14-2pts.webp",
+            "bytes": 261470
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-14-3pts.png",
+            "bytes": 2867117
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-14-3pts.webp",
+            "bytes": 56348
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-14-3pts.webp",
+            "bytes": 335924
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-15-1pt.png",
+            "bytes": 3182557
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-15-1pt.webp",
+            "bytes": 56056
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-15-1pt.webp",
+            "bytes": 408892
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-15-2pts.png",
+            "bytes": 3265167
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-15-2pts.webp",
+            "bytes": 60490
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-15-2pts.webp",
+            "bytes": 419022
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-15-3pts.png",
+            "bytes": 2383663
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-15-3pts.webp",
+            "bytes": 41014
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-15-3pts.webp",
+            "bytes": 206186
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-16-1pts.png",
+            "bytes": 3189174
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-16-1pts.webp",
+            "bytes": 60672
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-16-1pts.webp",
+            "bytes": 390664
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-16-2pts.png",
+            "bytes": 2960086
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-16-2pts.webp",
+            "bytes": 58254
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-16-2pts.webp",
+            "bytes": 367266
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-16-3pts.png",
+            "bytes": 2970990
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-16-3pts.webp",
+            "bytes": 51322
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-16-3pts.webp",
+            "bytes": 348498
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-16-4pts.png",
+            "bytes": 2889415
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-16-4pts.webp",
+            "bytes": 55882
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-16-4pts.webp",
+            "bytes": 339260
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-18-2pts.png",
+            "bytes": 3009979
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-18-2pts.webp",
+            "bytes": 53152
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-18-2pts.webp",
+            "bytes": 360064
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-18-3pts.png",
+            "bytes": 3379992
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-18-3pts.webp",
+            "bytes": 72034
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-18-3pts.webp",
+            "bytes": 455368
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Salvo-18-4pts.png",
+            "bytes": 3062184
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Salvo-18-4pts.webp",
+            "bytes": 60518
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Salvo-18-4pts.webp",
+            "bytes": 373304
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/smoke-card.png",
+            "bytes": 3181657
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/smoke-card.webp",
+            "bytes": 57952
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/smoke-card.webp",
+            "bytes": 395980
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Submarine.png",
+            "bytes": 3185195
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Submarine.webp",
+            "bytes": 47816
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Submarine.webp",
+            "bytes": 376390
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/play/Modern/Torpedo-boat.png",
+            "bytes": 3126798
+          },
+          "table": {
+            "url": "/assets/optimized/cards/play/table/Torpedo-boat.webp",
+            "bytes": 62756
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/play/zoom/Torpedo-boat.webp",
+            "bytes": 393986
+          }
+        }
+      ]
+    },
+    "ships": {
+      "cardCount": 55,
+      "originalBytes": 185534818,
+      "runtimeBytes": 31035072,
+      "savingsRatio": 0.8327,
+      "cards": [
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Akagi-Japan-3.png",
+            "bytes": 3241728
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Akagi-Japan-3.webp",
+            "bytes": 80750
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Akagi-Japan-3.webp",
+            "bytes": 435356
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Andrea Doria-Italy-4.png",
+            "bytes": 3328857
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Andrea Doria-Italy-4.webp",
+            "bytes": 78442
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Andrea Doria-Italy-4.webp",
+            "bytes": 443812
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Ark Royal-GB-3.png",
+            "bytes": 3506727
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Ark Royal-GB-3.webp",
+            "bytes": 90886
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Ark Royal-GB-3.webp",
+            "bytes": 498142
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Bismarck-Germany-8.png",
+            "bytes": 3507734
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Bismarck-Germany-8.webp",
+            "bytes": 87214
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Bismarck-Germany-8.webp",
+            "bytes": 502708
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Caio Duilio-Italy-4.png",
+            "bytes": 3056055
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Caio Duilio-Italy-4.webp",
+            "bytes": 74168
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Caio Duilio-Italy-4.webp",
+            "bytes": 408082
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/California-US-5.png",
+            "bytes": 3675402
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/California-US-5.webp",
+            "bytes": 93770
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/California-US-5.webp",
+            "bytes": 546226
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Cardback-Ship.png",
+            "bytes": 3018428
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Cardback-Ship.webp",
+            "bytes": 76142
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Cardback-Ship.webp",
+            "bytes": 398054
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Conte di Cavour-Italy-4.png",
+            "bytes": 3634722
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Conte di Cavour-Italy-4.webp",
+            "bytes": 102196
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Conte di Cavour-Italy-4.webp",
+            "bytes": 545444
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/DukeofYork-GB-9.png",
+            "bytes": 3509377
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/DukeofYork-GB-9.webp",
+            "bytes": 95808
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/DukeofYork-GB-9.webp",
+            "bytes": 528630
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Enterprise-US-3.png",
+            "bytes": 3273963
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Enterprise-US-3.webp",
+            "bytes": 78952
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Enterprise-US-3.webp",
+            "bytes": 428744
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Fuso-Japan-5.png",
+            "bytes": 3534911
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Fuso-Japan-5.webp",
+            "bytes": 90022
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Fuso-Japan-5.webp",
+            "bytes": 534198
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Giulio Cesare-Italy-4.png",
+            "bytes": 3547529
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Giulio Cesare-Italy-4.webp",
+            "bytes": 88660
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Giulio Cesare-Italy-4.webp",
+            "bytes": 529078
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Gneisenau-Germany-5.png",
+            "bytes": 2900113
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Gneisenau-Germany-5.webp",
+            "bytes": 73172
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Gneisenau-Germany-5.webp",
+            "bytes": 363302
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Graf Spee-Germany-3.png",
+            "bytes": 3461961
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Graf Spee-Germany-3.webp",
+            "bytes": 94342
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Graf Spee-Germany-3.webp",
+            "bytes": 527238
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Haruna-Japan-5.png",
+            "bytes": 3639214
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Haruna-Japan-5.webp",
+            "bytes": 89422
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Haruna-Japan-5.webp",
+            "bytes": 534122
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Hiei-Japan-5.png",
+            "bytes": 3088097
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Hiei-Japan-5.webp",
+            "bytes": 81516
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Hiei-Japan-5.webp",
+            "bytes": 435474
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Hood-GB-5.png",
+            "bytes": 3547362
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Hood-GB-5.webp",
+            "bytes": 89858
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Hood-GB-5.webp",
+            "bytes": 526410
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Hyuga-Japan-5.png",
+            "bytes": 3396209
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Hyuga-Japan-5.webp",
+            "bytes": 83564
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Hyuga-Japan-5.webp",
+            "bytes": 490542
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Iowa-US-7.png",
+            "bytes": 3627116
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Iowa-US-7.webp",
+            "bytes": 92160
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Iowa-US-7.webp",
+            "bytes": 544258
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Ise-Japan-5.png",
+            "bytes": 3452944
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Ise-Japan-5.webp",
+            "bytes": 84060
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Ise-Japan-5.webp",
+            "bytes": 499576
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/King GeorgeV-GB-9.png",
+            "bytes": 2482761
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/King GeorgeV-GB-9.webp",
+            "bytes": 51196
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/King GeorgeV-GB-9.webp",
+            "bytes": 252516
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Kirishima-Japan-5.png",
+            "bytes": 3338995
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Kirishima-Japan-5.webp",
+            "bytes": 84908
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Kirishima-Japan-5.webp",
+            "bytes": 461320
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Kongo-Japan-5.png",
+            "bytes": 3158778
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Kongo-Japan-5.webp",
+            "bytes": 70694
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Kongo-Japan-5.webp",
+            "bytes": 419462
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Littorio-Italy-9.png",
+            "bytes": 3445970
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Littorio-Italy-9.webp",
+            "bytes": 84362
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Littorio-Italy-9.webp",
+            "bytes": 498716
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Lutzow-Germany-3.png",
+            "bytes": 3546614
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Lutzow-Germany-3.webp",
+            "bytes": 97660
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Lutzow-Germany-3.webp",
+            "bytes": 542362
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Maryland-US-5.png",
+            "bytes": 3485542
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Maryland-US-5.webp",
+            "bytes": 81450
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Maryland-US-5.webp",
+            "bytes": 489390
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Mississippi-US-5.png",
+            "bytes": 3704584
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Mississippi-US-5.webp",
+            "bytes": 106566
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Mississippi-US-5.webp",
+            "bytes": 559464
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Missouri-US-7.png",
+            "bytes": 3690099
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Missouri-US-7.webp",
+            "bytes": 100482
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Missouri-US-7.webp",
+            "bytes": 559302
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Musashi-Japan-9.png",
+            "bytes": 3478815
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Musashi-Japan-9.webp",
+            "bytes": 90002
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Musashi-Japan-9.webp",
+            "bytes": 518300
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Mutsu-Japan-9.png",
+            "bytes": 2306371
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Mutsu-Japan-9.webp",
+            "bytes": 42630
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Mutsu-Japan-9.webp",
+            "bytes": 190230
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Nagato-Japan-9.png",
+            "bytes": 3499004
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Nagato-Japan-9.webp",
+            "bytes": 87532
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Nagato-Japan-9.webp",
+            "bytes": 513646
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Nelson-GB-9.png",
+            "bytes": 2944605
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Nelson-GB-9.webp",
+            "bytes": 63110
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Nelson-GB-9.webp",
+            "bytes": 381936
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Nevada-US-5.png",
+            "bytes": 3622991
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Nevada-US-5.webp",
+            "bytes": 105942
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Nevada-US-5.webp",
+            "bytes": 551850
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/New Jersey-US-7.png",
+            "bytes": 3318897
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/New Jersey-US-7.webp",
+            "bytes": 77904
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/New Jersey-US-7.webp",
+            "bytes": 464014
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/NorthCarolina-US-9.png",
+            "bytes": 2721703
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/NorthCarolina-US-9.webp",
+            "bytes": 61408
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/NorthCarolina-US-9.webp",
+            "bytes": 310700
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Pennsylvania-US-5.png",
+            "bytes": 3593929
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Pennsylvania-US-5.webp",
+            "bytes": 100132
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Pennsylvania-US-5.webp",
+            "bytes": 544636
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/PrinceOfWales-GB-9.png",
+            "bytes": 3686257
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/PrinceOfWales-GB-9.webp",
+            "bytes": 86596
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/PrinceOfWales-GB-9.webp",
+            "bytes": 524224
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Ramillies-GB-4.png",
+            "bytes": 3554587
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Ramillies-GB-4.webp",
+            "bytes": 100830
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Ramillies-GB-4.webp",
+            "bytes": 545564
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Renown-GB-4.png",
+            "bytes": 2924021
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Renown-GB-4.webp",
+            "bytes": 66124
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Renown-GB-4.webp",
+            "bytes": 350964
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Repulse-GB-4.png",
+            "bytes": 3582690
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Repulse-GB-4.webp",
+            "bytes": 102312
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Repulse-GB-4.webp",
+            "bytes": 545016
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Revenge-GB-4.png",
+            "bytes": 3602028
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Revenge-GB-4.webp",
+            "bytes": 88048
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Revenge-GB-4.webp",
+            "bytes": 543048
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Rodney-GB-9.png",
+            "bytes": 3559952
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Rodney-GB-9.webp",
+            "bytes": 92296
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Rodney-GB-9.webp",
+            "bytes": 532398
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Roma-Italy-6.png",
+            "bytes": 3704185
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Roma-Italy-6.webp",
+            "bytes": 92006
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Roma-Italy-6.webp",
+            "bytes": 547610
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Scharnhorst-Germany-5.png",
+            "bytes": 3599532
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Scharnhorst-Germany-5.webp",
+            "bytes": 89932
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Scharnhorst-Germany-5.webp",
+            "bytes": 530938
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Scheer-Germany-3.png",
+            "bytes": 3495088
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Scheer-Germany-3.webp",
+            "bytes": 98094
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Scheer-Germany-3.webp",
+            "bytes": 538358
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Shokaku-Japan-AirCraftCarrier-3.png",
+            "bytes": 3493663
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Shokaku-Japan-AirCraftCarrier-3.webp",
+            "bytes": 85974
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Shokaku-Japan-AirCraftCarrier-3.webp",
+            "bytes": 481116
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/SouthDakota-US-9.png",
+            "bytes": 3262655
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/SouthDakota-US-9.webp",
+            "bytes": 76890
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/SouthDakota-US-9.webp",
+            "bytes": 463552
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Texas-US-4.png",
+            "bytes": 3535154
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Texas-US-4.webp",
+            "bytes": 105676
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Texas-US-4.webp",
+            "bytes": 547786
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Tirpitz-Germany-8.png",
+            "bytes": 3582273
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Tirpitz-Germany-8.webp",
+            "bytes": 92634
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Tirpitz-Germany-8.webp",
+            "bytes": 539376
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Valiant-GB-5.png",
+            "bytes": 2514366
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Valiant-GB-5.webp",
+            "bytes": 48562
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Valiant-GB-5.webp",
+            "bytes": 257146
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/VittorioVento-Italy-9.png",
+            "bytes": 3393039
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/VittorioVento-Italy-9.webp",
+            "bytes": 77888
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/VittorioVento-Italy-9.webp",
+            "bytes": 482732
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Warspite-GB-5.png",
+            "bytes": 3285565
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Warspite-GB-5.webp",
+            "bytes": 73924
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Warspite-GB-5.webp",
+            "bytes": 460468
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Washington-US-9.png",
+            "bytes": 3248285
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Washington-US-9.webp",
+            "bytes": 78340
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Washington-US-9.webp",
+            "bytes": 435200
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/WestVirginia-US-5.png",
+            "bytes": 3670631
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/WestVirginia-US-5.webp",
+            "bytes": 97150
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/WestVirginia-US-5.webp",
+            "bytes": 522660
+          }
+        },
+        {
+          "source": {
+            "url": "/assets/cards/ships/Modern/Yamato-Japan-9.png",
+            "bytes": 3552740
+          },
+          "table": {
+            "url": "/assets/optimized/cards/ships/table/Yamato-Japan-9.webp",
+            "bytes": 92450
+          },
+          "zoom": {
+            "url": "/assets/optimized/cards/ships/zoom/Yamato-Japan-9.webp",
+            "bytes": 532868
+          }
+        }
+      ]
+    }
+  }
+}
