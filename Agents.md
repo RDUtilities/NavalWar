@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-12
 
+- `2026-05-12 11:54 America/Chicago` — Cleaned up temporary iPad audio diagnostics
+- Scope: `prototype/index.html`, `prototype/app.js`, `prototype/styles.css`
+- Result: Removed the temporary `Audio` output selector, native media probe, and tone diagnostic after iPad reboot confirmed all audio paths worked. Kept the production-safe `Test Sound` unlock/status flow and WebAudio fallback behavior.
+- Verification: `node --check prototype/app.js` (pass), `npm run check` (pass), `npm run build` (pass)
+
 - `2026-05-12 10:29 America/Chicago` — iPad media audio output selector
 - Scope: `prototype/index.html`, `prototype/app.js`, `prototype/styles.css`
 - Result: Added an `Audio` output selector with `Auto`, `WebAudio`, and `Media` modes. iPadOS defaults to `Media`, exposes a small native audio control during testing, and routes game effects through that mode when selected so Safari's silent WebAudio path can be bypassed.

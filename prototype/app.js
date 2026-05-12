@@ -59,13 +59,7 @@ const targetBoardToggle = document.getElementById("target-board-toggle");
 const dragModeToggle = document.getElementById("drag-mode-toggle");
 const soundToggle = document.getElementById("sound-toggle");
 const testSoundButton = document.getElementById("test-sound-button");
-const audioOutputSelect = document.getElementById("audio-output-select");
 const audioStatusPill = document.getElementById("audio-status-pill");
-const audioProbePlayer = document.getElementById("audio-probe-player");
-const IS_IPAD_DEVICE =
-  /iPad/i.test(navigator.userAgent || "") ||
-  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-const AUDIO_OUTPUT_MODE_KEY = "naval-war-audio-output-mode-v1";
 const targetBoardSection = document.getElementById("target-board-section");
 const bottomBattleZone = document.getElementById("bottom-battle-zone");
 const quitGameButton = document.getElementById("quit-game-button");
@@ -548,13 +542,6 @@ const audioDiagnostics = {
   outputMode: "html",
   preferWebAudio: false,
 };
-let audioOutputMode =
-  localStorage.getItem(AUDIO_OUTPUT_MODE_KEY) ||
-  (IS_IPAD_DEVICE ? "media" : "auto");
-
-if (audioOutputSelect) {
-  audioOutputSelect.value = audioOutputMode;
-}
 
 GAME_AUDIO_EFFECTS.forEach((audio) => {
   audio.preload = "auto";
@@ -2460,7 +2447,6 @@ function renderLobbyDebugPanel() {
     `sessionToken: ${session.sessionToken || "-"}`,
     `lastSyncAt: ${session.lastSyncAt || "-"}`,
     `lastError: ${session.lastError || "-"}`,
-    `audioMode: ${getAudioOutputMode()}`,
     `audioStatus: ${audioDiagnostics.status}`,
     `audioOutput: ${audioDiagnostics.outputMode || "-"}`,
     `audioLastEvent: ${audioDiagnostics.lastEvent || "-"}`,
@@ -3761,10 +3747,6 @@ function getAudioContext() {
   return audioContext;
 }
 
-function getAudioOutputMode() {
-  return audioOutputSelect?.value || audioOutputMode || "auto";
-}
-
 function getAudioMasterGain() {
   const context = getAudioContext();
   if (!context) {
@@ -3816,77 +3798,13 @@ async function playWebAudio(path, eventName = "sound") {
   return true;
 }
 
-async function playWebAudioTone(eventName = "tone-test") {
-  const context = getAudioContext();
-  if (!context) {
-    throw new Error("Web Audio API is not available.");
-  }
-  if (context.state !== "running") {
-    await context.resume();
-  }
-  const oscillator = context.createOscillator();
-  const gain = context.createGain();
-  const now = context.currentTime;
-  oscillator.type = "sine";
-  oscillator.frequency.setValueAtTime(880, now);
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(0.34, now + 0.035);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
-  oscillator.connect(gain);
-  gain.connect(getAudioMasterGain() || context.destination);
-  oscillator.start(now);
-  oscillator.stop(now + 0.74);
-  audioUnlocked = true;
-  audioDiagnostics.outputMode = "web-tone";
-  audioDiagnostics.preferWebAudio = true;
-  setAudioStatus("tone playing", { ok: true, event: eventName });
-  await new Promise((resolve) => {
-    window.setTimeout(resolve, 760);
-  });
-  return true;
-}
-
-async function playMediaAudio(path, eventName = "sound") {
-  if (!path) {
-    throw new Error("No media audio path was provided.");
-  }
-  const player = audioProbePlayer || new Audio();
-  player.hidden = false;
-  player.setAttribute("playsinline", "true");
-  player.controls = Boolean(audioProbePlayer);
-  player.muted = false;
-  player.volume = 1;
-  if (!player.src || !player.src.endsWith(path.replace(/^\.\.\//, ""))) {
-    player.src = path;
-  }
-  player.pause();
-  player.currentTime = 0;
-  const playback = player.play();
-  if (playback?.then) {
-    await playback;
-  }
-  audioUnlocked = true;
-  audioDiagnostics.outputMode = "media";
-  setAudioStatus("playing media", { ok: true, event: eventName });
-  return true;
-}
-
 async function playAudioElement(audio, eventName = "sound") {
   if (!audioEnabled) {
     setAudioStatus("off", { event: eventName });
     return false;
   }
   const path = AUDIO_PATH_BY_ELEMENT.get(audio);
-  const outputMode = getAudioOutputMode();
-  if (path && outputMode === "media") {
-    try {
-      return await playMediaAudio(path, `${eventName}:media`);
-    } catch (mediaError) {
-      const mediaMessage = mediaError instanceof Error ? `${mediaError.name}: ${mediaError.message}` : String(mediaError);
-      setAudioStatus("media blocked", { error: mediaMessage, event: eventName });
-    }
-  }
-  if (path && (outputMode === "web" || audioDiagnostics.preferWebAudio)) {
+  if (path && audioDiagnostics.preferWebAudio) {
     try {
       return await playWebAudio(path, `${eventName}:web-preferred`);
     } catch (webAudioError) {
@@ -6979,16 +6897,6 @@ if (soundToggle) {
   });
 }
 
-if (audioOutputSelect) {
-  audioOutputSelect.addEventListener("change", () => {
-    audioOutputMode = getAudioOutputMode();
-    localStorage.setItem(AUDIO_OUTPUT_MODE_KEY, audioOutputMode);
-    audioDiagnostics.preferWebAudio = audioOutputMode === "web";
-    setAudioStatus(`mode ${audioOutputMode}`, { event: "audio-mode" });
-    renderPrototype();
-  });
-}
-
 if (testSoundButton) {
   testSoundButton.addEventListener("click", async () => {
     audioEnabled = true;
@@ -6998,24 +6906,14 @@ if (testSoundButton) {
     audioDiagnostics.lastTestAt = new Date().toISOString();
     setAudioStatus("testing", { event: "manual-test" });
     let ok = false;
-    const outputMode = getAudioOutputMode();
     try {
-      if (outputMode === "media") {
-        ok = await playMediaAudio("../assets/sound/draw-card.wav", "manual-test:media");
-      } else {
-        await playWebAudioTone("manual-test:tone");
-        ok = await playWebAudio("../assets/sound/draw-card.wav", "manual-test:web-audio");
-      }
+      ok = await playWebAudio("../assets/sound/draw-card.wav", "manual-test:web-audio");
     } catch (audioError) {
-      setAudioStatus(`${outputMode} blocked`, {
+      setAudioStatus("web blocked", {
         error: audioError instanceof Error ? `${audioError.name}: ${audioError.message}` : String(audioError),
-        event: `manual-test:${outputMode}`,
+        event: "manual-test:web-audio",
       });
-      try {
-        ok = await playMediaAudio("../assets/sound/draw-card.wav", "manual-test:media-fallback");
-      } catch {
-        ok = await playAudioElement(drawCardAudio, "manual-test:draw-card.wav");
-      }
+      ok = await playAudioElement(drawCardAudio, "manual-test:draw-card.wav");
     }
     if (ok) {
       appendLog("Audio test succeeded.");
