@@ -98,6 +98,11 @@ const saveGameButton = document.getElementById("save-game-button");
 const saveGameButtonMobile = document.getElementById("save-game-button-mobile");
 const loadGameButton = document.getElementById("load-game-button");
 const saveStatusCopy = document.getElementById("save-status-copy");
+const saveManagerOverlay = document.getElementById("save-manager-overlay");
+const saveManagerClose = document.getElementById("save-manager-close");
+const saveSlotNewButton = document.getElementById("save-slot-new-button");
+const saveSlotList = document.getElementById("save-slot-list");
+const saveManagerCopy = document.getElementById("save-manager-copy");
 const menuLobbyDebug = document.getElementById("menu-lobby-debug");
 const tableLobbyDebug = document.getElementById("table-lobby-debug");
 const warTable = document.querySelector(".war-table");
@@ -1025,6 +1030,8 @@ const ACTIVE_ZONE_LAYOUTS = {
 const BOT_TURN_DELAY_MS = 900;
 const LOCAL_SAVE_KEY = "naval-war-save-v1";
 const LEGACY_LOCAL_SAVE_KEY = "naval-war-prototype-save-v1";
+const SAVE_SLOTS_KEY = "naval-war-save-slots-v1";
+const AUTOSAVE_SLOT_ID = "autosave";
 const MULTIPLAYER_CLIENT_ID_KEY = "naval-war-client-id-v1";
 const MULTIPLAYER_SESSION_KEY = "naval-war-session-v1";
 const SERVER_API_BASE = `${window.location.origin}`;
@@ -2526,6 +2533,92 @@ function safelyReadLocalSave() {
   }
 }
 
+function createSaveSlotId() {
+  return `save_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function readSaveSlots() {
+  let slots = [];
+  try {
+    const raw = window.localStorage.getItem(SAVE_SLOTS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(parsed)) {
+      slots = parsed.filter((slot) => slot?.id && slot?.payload?.state);
+    }
+  } catch (_) {
+    slots = [];
+  }
+
+  const legacySave = safelyReadLocalSave();
+  if (legacySave?.state && !slots.some((slot) => slot.id === "legacy-single-save")) {
+    if (legacySave.version !== 2 || slots.length === 0) {
+      slots.push({
+        id: "legacy-single-save",
+        name: "Previous Single Save",
+        savedAt: legacySave.savedAt || null,
+        mode: legacySave.mode || legacySave.state?.match?.mode || "skirmish",
+        setupMode: legacySave.state?.setupMode || "solo",
+        joinCode: legacySave.state?.serverSession?.joinCode || null,
+        playerCount: legacySave.state?.tableConfig?.playerCount || null,
+        payload: legacySave,
+        legacy: true,
+      });
+    }
+  }
+
+  return slots.sort((a, b) => {
+    if (a.id === AUTOSAVE_SLOT_ID) return 1;
+    if (b.id === AUTOSAVE_SLOT_ID) return -1;
+    return new Date(b.savedAt || 0).getTime() - new Date(a.savedAt || 0).getTime();
+  });
+}
+
+function writeSaveSlots(slots) {
+  const serializableSlots = slots.filter((slot) => !slot.legacy);
+  window.localStorage.setItem(SAVE_SLOTS_KEY, JSON.stringify(serializableSlots));
+}
+
+function getSaveSlotSummary(payload) {
+  const state = payload?.state || {};
+  const serverSession = state.serverSession || {};
+  return {
+    mode: payload?.mode || state.match?.mode || "skirmish",
+    setupMode: state.setupMode || "solo",
+    joinCode: serverSession.joinCode || null,
+    playerCount: state.tableConfig?.playerCount || null,
+    currentPlayer: state.turnState?.currentZone ? PLAYER_NAMES[state.turnState.currentZone] : null,
+  };
+}
+
+function buildSaveSlot(name, payload, slotId = createSaveSlotId()) {
+  const summary = getSaveSlotSummary(payload);
+  return {
+    id: slotId,
+    name: String(name || "Untitled Naval War Save").trim() || "Untitled Naval War Save",
+    savedAt: payload.savedAt,
+    mode: summary.mode,
+    setupMode: summary.setupMode,
+    joinCode: summary.joinCode,
+    playerCount: summary.playerCount,
+    payload,
+  };
+}
+
+function getDefaultSaveName() {
+  const mode = appState.match?.mode === "campaign" ? "Campaign" : "Skirmish";
+  const playerName = getPlayerName("bottom") || "Admiral";
+  const date = new Date();
+  return `${playerName} ${mode} ${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+}
+
+function promptForSaveName(defaultName) {
+  const name = window.prompt("Name this saved game:", defaultName);
+  if (name === null) {
+    return null;
+  }
+  return name.trim();
+}
+
 function formatSavedAtLabel(savedAt) {
   if (!savedAt) {
     return "Unknown save time";
@@ -2538,15 +2631,17 @@ function formatSavedAtLabel(savedAt) {
 }
 
 function updateSaveControls() {
-  const saveData = safelyReadLocalSave();
+  const slots = readSaveSlots();
+  const latestManual = slots.find((slot) => slot.id !== AUTOSAVE_SLOT_ID) || slots[0] || null;
   if (loadGameButton) {
-    loadGameButton.disabled = !saveData;
+    loadGameButton.disabled = slots.length === 0;
   }
   if (saveStatusCopy) {
-    saveStatusCopy.textContent = saveData
-      ? `Saved game available • ${saveData.mode === "campaign" ? "Campaign" : "Skirmish"} • ${formatSavedAtLabel(saveData.savedAt)}`
+    saveStatusCopy.textContent = latestManual
+      ? `${slots.length} saved game${slots.length === 1 ? "" : "s"} available • Latest: ${latestManual.name} • ${formatSavedAtLabel(latestManual.savedAt)}`
       : "No saved game detected yet.";
   }
+  renderSaveSlotList();
 }
 
 function buildSavableState() {
@@ -2560,23 +2655,48 @@ function buildSavableState() {
   return snapshot;
 }
 
-function saveCurrentGame({ autosave = false } = {}) {
-  if (!hasLaunchedMatch) {
-    return false;
-  }
-  const payload = {
-    version: 1,
+function createSavePayload() {
+  return {
+    version: 2,
     savedAt: new Date().toISOString(),
     mode: appState.match.mode,
     playerNames: { ...PLAYER_NAMES },
     hasLaunchedMatch: true,
     state: buildSavableState(),
   };
+}
+
+function saveCurrentGame({ autosave = false, name = null, slotId = null } = {}) {
+  if (!hasLaunchedMatch) {
+    return false;
+  }
+  const payload = createSavePayload();
   try {
+    const slots = readSaveSlots().filter((slot) => !slot.legacy);
+    const resolvedSlotId = autosave ? AUTOSAVE_SLOT_ID : slotId || createSaveSlotId();
+    let resolvedName = autosave ? "Autosave" : name;
+    if (!autosave && !resolvedName) {
+      resolvedName = promptForSaveName(getDefaultSaveName());
+      if (!resolvedName) {
+        return false;
+      }
+    }
+
+    const existingByName = !autosave
+      ? slots.find((slot) => slot.name.toLowerCase() === String(resolvedName).toLowerCase() && slot.id !== resolvedSlotId)
+      : null;
+    const targetSlotId = existingByName ? existingByName.id : resolvedSlotId;
+    if (existingByName && !window.confirm(`Replace existing save "${existingByName.name}"?`)) {
+      return false;
+    }
+
+    const nextSlot = buildSaveSlot(resolvedName, payload, targetSlotId);
+    const nextSlots = [nextSlot, ...slots.filter((slot) => slot.id !== targetSlotId)];
+    writeSaveSlots(nextSlots);
     window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(payload));
     updateSaveControls();
     if (!autosave) {
-      appendLog(`Game saved locally at ${formatSavedAtLabel(payload.savedAt)}.`);
+      appendLog(`Game saved locally as "${nextSlot.name}" at ${formatSavedAtLabel(payload.savedAt)}.`);
       renderPrototype();
     }
     return true;
@@ -2625,10 +2745,13 @@ function resetTransientUiState() {
   closeCombatLog();
   closeScoreCard();
   closeDeckBrowser();
+  closeSaveManager();
 }
 
-function loadSavedGame() {
-  const saveData = safelyReadLocalSave();
+async function loadSavedGame(slotId = null) {
+  const slots = readSaveSlots();
+  const selectedSlot = slotId ? slots.find((slot) => slot.id === slotId) : slots[0];
+  const saveData = selectedSlot?.payload || safelyReadLocalSave();
   if (!saveData?.state) {
     updateSaveControls();
     return false;
@@ -2659,8 +2782,107 @@ function loadSavedGame() {
   syncLobbySeatPreview();
   showScreen("table");
   renderPrototype();
-  scheduleBotTurnIfNeeded();
+  if (appState.serverSession?.connected) {
+    persistServerSessionSnapshot();
+    ensureRealtimeConnection();
+    startServerPolling();
+    await refreshServerViewAndRender();
+  } else {
+    scheduleBotTurnIfNeeded();
+  }
   return true;
+}
+
+function getSaveSlotMeta(slot) {
+  const mode = slot.mode === "campaign" ? "Campaign" : "Skirmish";
+  const playStyle = slot.setupMode === "multiplayer" ? "Multiplayer" : "Solo";
+  const players = slot.playerCount ? `${slot.playerCount} player${Number(slot.playerCount) === 1 ? "" : "s"}` : "Players unknown";
+  const joinCode = slot.joinCode ? `Code ${slot.joinCode}` : null;
+  return [mode, playStyle, players, joinCode, formatSavedAtLabel(slot.savedAt)].filter(Boolean);
+}
+
+function renderSaveSlotList() {
+  if (!saveSlotList) {
+    return;
+  }
+  const slots = readSaveSlots();
+  saveSlotList.innerHTML = "";
+  if (saveManagerCopy) {
+    saveManagerCopy.textContent = slots.length
+      ? `${slots.length} saved game${slots.length === 1 ? "" : "s"} stored in this browser.`
+      : "No saved games yet. Start or resume a game, then save it with a name.";
+  }
+  if (!slots.length) {
+    const empty = document.createElement("div");
+    empty.className = "save-slot-empty";
+    empty.textContent = "No saved games yet. Named saves will appear here.";
+    saveSlotList.appendChild(empty);
+    return;
+  }
+
+  slots.forEach((slot) => {
+    const card = document.createElement("article");
+    card.className = "save-slot-card";
+    const copy = document.createElement("div");
+    const title = document.createElement("h3");
+    title.textContent = slot.name;
+    const meta = document.createElement("div");
+    meta.className = "save-slot-meta";
+    getSaveSlotMeta(slot).forEach((part) => {
+      const item = document.createElement("span");
+      item.textContent = part;
+      meta.appendChild(item);
+    });
+    copy.append(title, meta);
+
+    const actions = document.createElement("div");
+    actions.className = "save-slot-actions";
+    const loadButton = document.createElement("button");
+    loadButton.className = "secondary-button";
+    loadButton.type = "button";
+    loadButton.dataset.saveLoad = slot.id;
+    loadButton.textContent = "Load";
+    actions.appendChild(loadButton);
+
+    if (!slot.legacy) {
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "secondary-button";
+      deleteButton.type = "button";
+      deleteButton.dataset.saveDelete = slot.id;
+      deleteButton.textContent = "Delete";
+      actions.appendChild(deleteButton);
+    }
+
+    card.append(copy, actions);
+    saveSlotList.appendChild(card);
+  });
+}
+
+function openSaveManager() {
+  if (!saveManagerOverlay) {
+    return;
+  }
+  renderSaveSlotList();
+  saveManagerOverlay.hidden = false;
+}
+
+function closeSaveManager() {
+  if (saveManagerOverlay) {
+    saveManagerOverlay.hidden = true;
+  }
+}
+
+function deleteSaveSlot(slotId) {
+  const slots = readSaveSlots();
+  const slot = slots.find((entry) => entry.id === slotId);
+  if (!slot || slot.legacy) {
+    return;
+  }
+  if (!window.confirm(`Delete saved game "${slot.name}"?`)) {
+    return;
+  }
+  writeSaveSlots(slots.filter((entry) => !entry.legacy && entry.id !== slotId));
+  updateSaveControls();
 }
 
 function setMatchMode(mode) {
@@ -7118,7 +7340,43 @@ if (saveGameButtonMobile) {
 
 if (loadGameButton) {
   loadGameButton.addEventListener("click", () => {
-    loadSavedGame();
+    openSaveManager();
+  });
+}
+
+if (saveSlotNewButton) {
+  saveSlotNewButton.addEventListener("click", () => {
+    saveCurrentGame();
+    renderSaveSlotList();
+  });
+}
+
+if (saveManagerClose) {
+  saveManagerClose.addEventListener("click", () => {
+    closeSaveManager();
+  });
+}
+
+if (saveManagerOverlay) {
+  saveManagerOverlay.addEventListener("click", (event) => {
+    if (event.target === saveManagerOverlay) {
+      closeSaveManager();
+    }
+  });
+}
+
+if (saveSlotList) {
+  saveSlotList.addEventListener("click", async (event) => {
+    const loadButton = event.target.closest("[data-save-load]");
+    if (loadButton) {
+      closeSaveManager();
+      await loadSavedGame(loadButton.dataset.saveLoad);
+      return;
+    }
+    const deleteButton = event.target.closest("[data-save-delete]");
+    if (deleteButton) {
+      deleteSaveSlot(deleteButton.dataset.saveDelete);
+    }
   });
 }
 
@@ -7279,6 +7537,11 @@ document.addEventListener("keydown", (event) => {
 
   if (event.key === "Escape" && !deckOverlay.hidden) {
     closeDeckBrowser();
+    return;
+  }
+
+  if (event.key === "Escape" && saveManagerOverlay && !saveManagerOverlay.hidden) {
+    closeSaveManager();
   }
 });
 

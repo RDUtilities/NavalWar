@@ -2180,6 +2180,80 @@ body.is-dragging-hand-card .play-card[draggable="true"]:active {
   overflow: auto;
 }
 
+.save-manager-dialog {
+  height: auto;
+  max-height: min(88vh, 820px);
+  grid-template-rows: auto 1fr;
+}
+
+.save-manager-body {
+  display: grid;
+  gap: 18px;
+  min-height: 260px;
+}
+
+.save-manager-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.save-slot-list {
+  display: grid;
+  gap: 12px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.save-slot-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(4, 11, 15, 0.58);
+  border: 1px solid rgba(233, 213, 162, 0.18);
+}
+
+.save-slot-card h3,
+.save-slot-card p {
+  margin: 0;
+}
+
+.save-slot-card h3 {
+  font-size: 1rem;
+}
+
+.save-slot-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.save-slot-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.save-slot-empty {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: var(--muted);
+  border: 1px dashed rgba(233, 213, 162, 0.24);
+  border-radius: 18px;
+  padding: 18px;
+}
+
 .combat-log ul {
   margin: 10px 0 0;
   padding-left: 18px;

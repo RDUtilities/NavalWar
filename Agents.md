@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-13
 
+- `2026-05-13 10:42 CDT` — Named multi-slot save/load manager
+- Scope: `prototype/index.html`, `prototype/app.js`, `prototype/styles.css`, `service-worker.js`
+- Result: Expanded the browser save system from one local save into named save slots stored in `naval-war-save-slots-v1`. Players can save multiple solo or multiplayer games with unique names, open a Save & Load manager from the setup screen, load/delete individual slots, and retain the previous single-save as a legacy load option. Multiplayer saves preserve the session identity so a still-live hosted match can reconnect and refresh from the server view. Autosave now uses its own slot. Bumped the service-worker cache to `naval-war-assets-v8`.
+- Verification: `node --check prototype/app.js` (pass), `node --check service-worker.js` (pass), `node --check server.mjs` (pass), `npm run check` (pass), `npm run build` (pass), static save-slot UI smoke for required HTML/JS/CSS hooks (pass)
+
 - `2026-05-13 10:09 CDT` — Salvo discard glow and special draw sound
 - Scope: `prototype/styles.css`, `prototype/app.js`, `service-worker.js`
 - Result: Discard piles now visibly glow as legal drop/select targets when a Salvo is selected, whether the Salvo has valid ship targets or must be discarded because no matching gun is afloat. Server-synced `special_card_drawn` events now play the draw-card sound, covering Additional Damage draws in multiplayer. Bumped the service-worker cache to `naval-war-assets-v7`.

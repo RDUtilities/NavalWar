@@ -327,6 +327,25 @@
       </div>
     </div>
 
+    <div class="rules-overlay save-manager-overlay" id="save-manager-overlay" hidden>
+      <div class="rules-dialog save-manager-dialog" role="dialog" aria-modal="true" aria-labelledby="save-manager-title">
+        <header class="rules-header">
+          <div>
+            <p class="battle-label">Saved Operations</p>
+            <h2 id="save-manager-title">Save & Load Games</h2>
+          </div>
+          <button class="card-zoom-close" id="save-manager-close" aria-label="Close save manager">Close</button>
+        </header>
+        <div class="save-manager-body">
+          <div class="save-manager-actions">
+            <button class="primary-button" id="save-slot-new-button">Save Current Game</button>
+            <p class="menu-copy" id="save-manager-copy">Named saves are stored in this browser.</p>
+          </div>
+          <div class="save-slot-list" id="save-slot-list"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="rules-overlay" id="rules-overlay" hidden>
       <button class="card-zoom-close" id="rules-close" aria-label="Close rules view">Close</button>
       <div class="rules-dialog" role="dialog" aria-modal="true" aria-labelledby="rules-title">
