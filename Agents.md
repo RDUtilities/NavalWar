@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-13
 
+- `2026-05-13 09:29 CDT` — Client cache sync and Repair targeting follow-up
+- Scope: `service-worker.js`, `server.mjs`, `prototype/app.js`
+- Result: Fixed a live multiplayer mismatch where a non-incognito host could keep using stale cached UI code while an incognito guest saw the newest fixes. The service worker cache was bumped to `naval-war-assets-v5`, app-shell files now use a network-first service-worker strategy, and the Node server marks HTML/JS/CSS/PWA shell files as `no-cache`. Repair targeting was also tightened so Repair only highlights own ships with actual attached salvo/additional-damage cards, not ships showing minefield artifacts.
+- Verification: `node --check prototype/app.js` (pass), `node --check service-worker.js` (pass), `node --check server.mjs` (pass), `npm run check` (pass), `npm run build` (pass)
+
 - `2026-05-13 08:58 CDT` — Live multiplayer playtest bug batch
 - Scope: `src/types.ts`, `src/engine.ts`, `src/session.ts`, `prototype/app.js`, `prototype/styles.css`
 - Result: Addressed the first real multiplayer game findings: unplayable salvos now highlight discard instead of illegal targets, smoke-blocked ready Destroyer Squadrons can be discarded, multiplayer views receive Victory Pile cards and discard-pile top card data from the server, Turn Summary updates from recent server events, lobby debug panels are hidden from the normal UI, Minesweeper removes minefield ship-card artifacts, multiplayer round winners show the green victory banner and play the winner sound, and turn banners use the yellow styling.
