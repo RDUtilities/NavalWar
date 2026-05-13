@@ -61,7 +61,12 @@ function safeResolve(urlPath) {
 
 function getStaticCacheControl(filePath) {
   const ext = extname(filePath).toLowerCase();
-  return filePath.endsWith("service-worker.js") || ext === ".webmanifest"
+  return filePath.endsWith("service-worker.js") ||
+    ext === ".webmanifest" ||
+    ext === ".html" ||
+    ext === ".js" ||
+    ext === ".css" ||
+    filePath.endsWith("pwa-assets.json")
     ? "no-cache"
     : "public, max-age=300";
 }

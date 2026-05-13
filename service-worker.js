@@ -1,4 +1,4 @@
-const CACHE_VERSION = "naval-war-assets-v4";
+const CACHE_VERSION = "naval-war-assets-v5";
 const SHELL_ASSETS = [
   "/",
   "/prototype/index.html",
@@ -23,6 +23,7 @@ const INSTALL_ASSET_URLS = [
   "/prototype/rules-art/pages/PlayDeckCardback.png",
   "/prototype/rules-art/pages/ShipExampleCard.png"
 ];
+const NETWORK_FIRST_ASSETS = new Set(SHELL_ASSETS);
 
 async function cacheAsset(cache, assetUrl) {
   try {
@@ -104,7 +105,30 @@ self.addEventListener("fetch", (event) => {
 
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() => caches.match("/prototype/index.html"))
+      fetch(request).then((response) => {
+        if (response && response.status === 200 && response.type === "basic") {
+          const responseCopy = response.clone();
+          caches.open(CACHE_VERSION).then((cache) => {
+            cache.put("/prototype/index.html", responseCopy);
+          });
+        }
+        return response;
+      }).catch(() => caches.match("/prototype/index.html"))
+    );
+    return;
+  }
+
+  if (NETWORK_FIRST_ASSETS.has(url.pathname)) {
+    event.respondWith(
+      fetch(new Request(request, { cache: "reload" })).then((response) => {
+        if (response && response.status === 200 && response.type === "basic") {
+          const responseCopy = response.clone();
+          caches.open(CACHE_VERSION).then((cache) => {
+            cache.put(request, responseCopy);
+          });
+        }
+        return response;
+      }).catch(() => caches.match(request))
     );
     return;
   }

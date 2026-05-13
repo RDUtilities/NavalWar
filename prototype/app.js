@@ -4588,6 +4588,11 @@ function canAdditionalDamageTargetShip(zone, targetIndex) {
   return Boolean(ship && !ship.sunk && Array.isArray(ship.salvos) && ship.salvos.length > 0);
 }
 
+function canRepairOwnShip(targetIndex) {
+  const ship = appState.fleets.bottom?.[targetIndex];
+  return Boolean(ship && !ship.sunk && Array.isArray(ship.salvos) && ship.salvos.length > 0);
+}
+
 function canDiscardCardAsAction(card) {
   if (!card) {
     return false;
@@ -4685,6 +4690,9 @@ function canHandCardDropOnTarget(card, dropTarget) {
   }
 
   if (card.dropMode === "own_ship" && dropTarget.dataset.dropType === "own_ship") {
+    if (card.kind === "repair") {
+      return canRepairOwnShip(Number(dropTarget.dataset.shipIndex));
+    }
     return true;
   }
 
@@ -7505,9 +7513,12 @@ document.addEventListener("click", (event) => {
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("../service-worker.js").catch(() => {
-      // PWA support is optional; gameplay still works if registration is unavailable.
-    });
+    navigator.serviceWorker
+      .register("../service-worker.js")
+      .then((registration) => registration.update().catch(() => {}))
+      .catch(() => {
+        // PWA support is optional; gameplay still works if registration is unavailable.
+      });
   });
 }
 
