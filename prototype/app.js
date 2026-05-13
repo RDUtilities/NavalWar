@@ -3959,6 +3959,7 @@ function playSoundForServerEvent(event) {
       playRepairSound();
       break;
     case "card_drawn":
+    case "special_card_drawn":
     case "additional_ship_drawn":
     case "ship_added":
       playDrawCardSound();

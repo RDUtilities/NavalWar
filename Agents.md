@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-13
 
+- `2026-05-13 10:09 CDT` — Salvo discard glow and special draw sound
+- Scope: `prototype/styles.css`, `prototype/app.js`, `service-worker.js`
+- Result: Discard piles now visibly glow as legal drop/select targets when a Salvo is selected, whether the Salvo has valid ship targets or must be discarded because no matching gun is afloat. Server-synced `special_card_drawn` events now play the draw-card sound, covering Additional Damage draws in multiplayer. Bumped the service-worker cache to `naval-war-assets-v7`.
+- Verification: `node --check prototype/app.js` (pass), `node --check service-worker.js` (pass), `node --check server.mjs` (pass), `npm run check` (pass), `npm run build` (pass)
+
 - `2026-05-13 09:29 CDT` — Client cache sync and Repair targeting follow-up
 - Scope: `service-worker.js`, `server.mjs`, `prototype/app.js`
 - Result: Fixed a live multiplayer mismatch where a non-incognito host could keep using stale cached UI code while an incognito guest saw the newest fixes. The service worker cache was bumped to `naval-war-assets-v6`, app-shell files now use a network-first service-worker strategy, active game tabs refresh once when a new service worker activates, and the Node server marks HTML/JS/CSS/PWA shell files as `no-cache`. Repair targeting was also tightened so Repair only highlights own ships with actual attached salvo/additional-damage cards, not ships showing minefield artifacts.
