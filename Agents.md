@@ -223,10 +223,10 @@ Entry format:
 
 ### 2026-05-13
 
-- `2026-05-13 14:45 CDT` — Solo Destroyer activation and Repair HP restore fixes
-- Scope: `prototype/app.js`, `service-worker.js`
-- Result: Fixed solo games where a player-deployed Destroyer Squadron would stay in the battle zone but never create the activation card on the player's next play phase. Local Destroyer Squadrons now track their deployed turn and surface the virtual activation card once ready, with discard available when every target is smoke-blocked. Local Repair now restores the hit points from the one attached salvo/additional-damage card it removes, for both human and bot repairs. Bumped the service-worker cache to `naval-war-assets-v9`.
-- Verification: `node --check prototype/app.js` (pass), `node --check service-worker.js` (pass), `node --check server.mjs` (pass), `npm run check` (pass), `npm run build` (pass), static solo Destroyer/Repair hook smoke test (pass)
+- `2026-05-13 14:45 CDT` — Solo and multiplayer Destroyer/Repair parity fixes
+- Scope: `prototype/app.js`, `src/engine.ts`, `src/session.ts`, `service-worker.js`
+- Result: Fixed solo games where a player-deployed Destroyer Squadron would stay in the battle zone but never create the activation card on the player's next play phase. Local Destroyer Squadrons now track their deployed turn and surface the virtual activation card once ready, with discard available when every target is smoke-blocked. Local Repair now restores the hit points from the one attached salvo/additional-damage card it removes, for both human and bot repairs. Confirmed the existing multiplayer engine already enforces the same behavior: ready Destroyers expose resolve/discard and block draw, while server Repair removes one salvo/additional-damage attachment and the matching damage source. Bumped the service-worker cache to `naval-war-assets-v9`.
+- Verification: `node --check prototype/app.js` (pass), `node --check service-worker.js` (pass), `node --check server.mjs` (pass), `npm run check` (pass), `npm run build` (pass), static solo Destroyer/Repair hook smoke test (pass), targeted multiplayer engine regression for Destroyer resolve/discard and Repair damage-source removal (pass)
 
 - `2026-05-13 10:42 CDT` — Named multi-slot save/load manager
 - Scope: `prototype/index.html`, `prototype/app.js`, `prototype/styles.css`, `service-worker.js`
