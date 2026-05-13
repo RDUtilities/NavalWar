@@ -1,4 +1,4 @@
-const CACHE_VERSION = "naval-war-assets-v5";
+const CACHE_VERSION = "naval-war-assets-v6";
 const SHELL_ASSETS = [
   "/",
   "/prototype/index.html",
@@ -90,9 +90,20 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
       Promise.all(keys.filter((key) => key !== CACHE_VERSION).map((key) => caches.delete(key)))
-    )
+    ).then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: "window", includeUncontrolled: true }))
+      .then((clients) =>
+        Promise.all(
+          clients.map((client) => {
+            const url = new URL(client.url);
+            if (url.origin === self.location.origin && (url.pathname === "/" || url.pathname.startsWith("/prototype/"))) {
+              return client.navigate(client.url).catch(() => undefined);
+            }
+            return undefined;
+          })
+        )
+      )
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
