@@ -2964,12 +2964,17 @@ function getAirStrikeHandCards() {
 
 function getReadyDestroyerActivationCards() {
   const legal = Array.isArray(appState.serverSession?.legalCommands) ? appState.serverSession.legalCommands : [];
-  if (!isHumanTurn() || !(legal.includes("resolve_destroyer_squadron_roll") || legal.includes("discard_destroyer_squadron"))) {
+  if (!isHumanTurn()) {
+    return [];
+  }
+  const hasServerDestroyerAction = legal.includes("resolve_destroyer_squadron_roll") || legal.includes("discard_destroyer_squadron");
+  const hasLocalReadyDestroyer = !appState.serverSession?.connected && appState.turnState.phase === "play";
+  if (!hasServerDestroyerAction && !hasLocalReadyDestroyer) {
     return [];
   }
 
   return (appState.effectsByFleet.bottom || [])
-    .filter((effect) => effect.kind === "destroyer_squadron")
+    .filter((effect) => effect.kind === "destroyer_squadron" && isDestroyerEffectReady(effect))
     .map((effect) => ({
       id: `destroyer-activation-${effect.id}`,
       kind: "destroyer_activation",
@@ -4298,6 +4303,10 @@ function getDestroyerEffect(zone, effectId) {
   );
 }
 
+function isDestroyerEffectReady(effect) {
+  return Number(effect?.deployedTurn || 0) < Number(appState.turnState.turnNumber || 0);
+}
+
 function getDestroyerTargets(ownerZone) {
   return getActiveZones()
     .filter((zone) => zone !== ownerZone)
@@ -4832,6 +4841,9 @@ function canDiscardCardAsAction(card) {
       return true;
     }
   }
+  if (card.kind === "destroyer_activation") {
+    return !getEnemyZones("bottom").some((zone) => canTargetFleetWithAction("destroyer_squadron", zone));
+  }
   return !IMMEDIATE_PLAY_KINDS.has(card.kind);
 }
 
@@ -4866,7 +4878,9 @@ function canHandCardDropOnTarget(card, dropTarget) {
 
   if (card.kind === "destroyer_activation") {
     const legal = Array.isArray(appState.serverSession?.legalCommands) ? appState.serverSession.legalCommands : [];
-    if (legal.includes("discard_destroyer_squadron") && !legal.includes("resolve_destroyer_squadron_roll")) {
+    const serverDiscardOnly = legal.includes("discard_destroyer_squadron") && !legal.includes("resolve_destroyer_squadron_roll");
+    const localHasTarget = !appState.serverSession?.connected && getEnemyZones("bottom").some((zone) => canTargetFleetWithAction("destroyer_squadron", zone));
+    if (serverDiscardOnly || (!appState.serverSession?.connected && !localHasTarget)) {
       return false;
     }
     const zone = dropTarget.dataset.zone;
@@ -5261,7 +5275,7 @@ function resolveDestroyerTargetDamage(card, targetZone, effectId) {
   removeHandCard(card.id);
   if (card.kind === "salvo") {
     effect.salvos = effect.salvos || [];
-    effect.salvos.push({ image: card.image, label: card.label });
+    effect.salvos.push({ image: card.image, label: card.label, hits: card.hits, kind: card.kind });
     playSalvoHitSound(card);
     damageDestroyerEffect(targetZone, effectId, card.hits, card.label);
   } else {
@@ -5297,7 +5311,7 @@ function resolveBotDamageCard(ownerZone, card, target) {
       return;
     }
     effect.salvos = effect.salvos || [];
-    effect.salvos.push({ image: card.image, label: card.label });
+    effect.salvos.push({ image: card.image, label: card.label, hits: card.hits, kind: card.kind });
     if (card.kind === "salvo") {
       playSalvoHitSound(card);
     }
@@ -5307,7 +5321,7 @@ function resolveBotDamageCard(ownerZone, card, target) {
 
   const ship = appState.fleets[target.zone][target.index];
   ship.salvos = ship.salvos || [];
-  ship.salvos.push({ image: card.image, label: card.label });
+  ship.salvos.push({ image: card.image, label: card.label, hits: card.hits, kind: card.kind });
   removeCardFromHandForZone(ownerZone, card);
   if (card.kind === "additional_damage") {
     showSpecialBanner("Additional Damage", `${getPlayerName(ownerZone)} reinforces damage on ${ship.ship}.`);
@@ -5426,6 +5440,7 @@ function resolveBotBattleZoneCard(ownerZone, card) {
     image: card.image,
     damage: card.kind === "destroyer_squadron" ? "4 / 4" : undefined,
     salvos: card.kind === "destroyer_squadron" ? [] : undefined,
+    deployedTurn: card.kind === "destroyer_squadron" ? appState.turnState.turnNumber : undefined,
     expiresOnTurn: undefined,
   });
   if (card.kind === "smoke") {
@@ -5439,7 +5454,7 @@ function resolveBotBattleZoneCard(ownerZone, card) {
 }
 
 function getBotReadyDestroyer(ownerZone) {
-  return (appState.effectsByFleet[ownerZone] || []).find((effect) => effect.kind === "destroyer_squadron");
+  return (appState.effectsByFleet[ownerZone] || []).find((effect) => effect.kind === "destroyer_squadron" && isDestroyerEffectReady(effect));
 }
 
 function resolveBotDestroyerSquadronStrike(ownerZone, effect) {
@@ -5473,6 +5488,7 @@ function resolveBotDestroyerSquadronStrike(ownerZone, effect) {
 function resolveBotRepair(ownerZone, card, targetIndex) {
   const ship = appState.fleets[ownerZone][targetIndex];
   const clearedSalvo = ship.salvos?.shift();
+  const restoredHits = restoreDamageFromClearedCard(ship, clearedSalvo);
   addToDiscardPile([
     ...(clearedSalvo ? [{ image: clearedSalvo.image, label: clearedSalvo.label }] : []),
     { image: card.image, label: card.label },
@@ -5480,7 +5496,7 @@ function resolveBotRepair(ownerZone, card, targetIndex) {
   removeCardFromHandForZone(ownerZone, card);
   showSpecialBanner("Repair", `${getPlayerName(ownerZone)} repairs ${ship.ship}.`);
   playRepairSound();
-  appendLog(`${getPlayerName(ownerZone)} repairs ${ship.ship} and removes one attached salvo.`);
+  appendLog(`${getPlayerName(ownerZone)} repairs ${ship.ship}, removes one attached salvo, and restores ${restoredHits} hit point${restoredHits === 1 ? "" : "s"}.`);
 }
 
 function resolveBotAdditionalShip(ownerZone, card) {
@@ -6295,6 +6311,29 @@ function formatDamage(remaining, total) {
   return `${Math.max(remaining, 0)} / ${total}`;
 }
 
+function inferDamageHits(source) {
+  if (typeof source?.hits === "number") {
+    return source.hits;
+  }
+  const text = `${source?.label || ""} ${source?.damage || ""}`;
+  const quotedMatch = text.match(/(?:^|\s)(\d+)\s*(?:hit|damage|pt|point)/i);
+  if (quotedMatch) {
+    return Number(quotedMatch[1]);
+  }
+  const dashMatch = text.match(/[-•]\s*(\d+)\b/);
+  return dashMatch ? Number(dashMatch[1]) : 0;
+}
+
+function restoreDamageFromClearedCard(ship, clearedCard) {
+  const hits = inferDamageHits(clearedCard);
+  if (!hits) {
+    return 0;
+  }
+  const { remaining, total } = parseDamage(ship.damage);
+  ship.damage = formatDamage(Math.min(remaining + hits, total), total);
+  return hits;
+}
+
 function getDiscardPile() {
   return appState.drawPiles.find((pile) => pile.label === "Discard Pile");
 }
@@ -6796,7 +6835,7 @@ async function attachCardToEnemyShip(card, targetZone, targetIndex, targetShipId
     return;
   }
   ship.salvos = ship.salvos || [];
-  ship.salvos.push({ image: card.image, label: card.label });
+  ship.salvos.push({ image: card.image, label: card.label, hits: card.hits, kind: card.kind });
   if (card.kind === "additional_damage") {
     showSpecialBanner("Additional Damage", `${ship.ship} takes extra damage from an existing salvo stack.`);
     playAdditionalDamageSound();
@@ -6882,6 +6921,7 @@ async function deployCenterCard(card) {
     image: card.image,
     damage: card.kind === "destroyer_squadron" ? "4 / 4" : undefined,
     salvos: card.kind === "destroyer_squadron" ? [] : undefined,
+    deployedTurn: card.kind === "destroyer_squadron" ? appState.turnState.turnNumber : undefined,
     expiresOnTurn: undefined,
   });
   if (card.kind === "smoke") {
@@ -7023,6 +7063,7 @@ async function repairOwnShip(card, targetIndex, targetShipIdOverride = null) {
     return;
   }
   const clearedSalvo = ship.salvos.shift();
+  const restoredHits = restoreDamageFromClearedCard(ship, clearedSalvo);
   addToDiscardPile([
     ...(clearedSalvo ? [{ image: clearedSalvo.image, label: clearedSalvo.label }] : []),
     { image: card.image, label: card.label },
@@ -7030,7 +7071,7 @@ async function repairOwnShip(card, targetIndex, targetShipIdOverride = null) {
   removeHandCard(card.id);
   showSpecialBanner("Repair", `${ship.ship} removes one attached salvo.`);
   playRepairSound();
-  appendLog(`${ship.ship} is repaired and one attached salvo is cleared.`);
+  appendLog(`${ship.ship} is repaired, one attached salvo is cleared, and ${restoredHits} hit point${restoredHits === 1 ? "" : "s"} restored.`);
   finalizeHumanTurn(`${getPlayerName("bottom")}'s turn ends after the repair.`);
 }
 

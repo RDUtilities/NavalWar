@@ -223,6 +223,11 @@ Entry format:
 
 ### 2026-05-13
 
+- `2026-05-13 14:45 CDT` — Solo Destroyer activation and Repair HP restore fixes
+- Scope: `prototype/app.js`, `service-worker.js`
+- Result: Fixed solo games where a player-deployed Destroyer Squadron would stay in the battle zone but never create the activation card on the player's next play phase. Local Destroyer Squadrons now track their deployed turn and surface the virtual activation card once ready, with discard available when every target is smoke-blocked. Local Repair now restores the hit points from the one attached salvo/additional-damage card it removes, for both human and bot repairs. Bumped the service-worker cache to `naval-war-assets-v9`.
+- Verification: `node --check prototype/app.js` (pass), `node --check service-worker.js` (pass), `node --check server.mjs` (pass), `npm run check` (pass), `npm run build` (pass), static solo Destroyer/Repair hook smoke test (pass)
+
 - `2026-05-13 10:42 CDT` — Named multi-slot save/load manager
 - Scope: `prototype/index.html`, `prototype/app.js`, `prototype/styles.css`, `service-worker.js`
 - Result: Expanded the browser save system from one local save into named save slots stored in `naval-war-save-slots-v1`. Players can save multiple solo or multiplayer games with unique names, open a Save & Load manager from the setup screen, load/delete individual slots, and retain the previous single-save as a legacy load option. Multiplayer saves preserve the session identity so a still-live hosted match can reconnect and refresh from the server view. Autosave now uses its own slot. Bumped the service-worker cache to `naval-war-assets-v8`.
