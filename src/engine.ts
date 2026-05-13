@@ -3,6 +3,7 @@ import type {
   AdditionalDamageCard,
   CardId,
   DamageSource,
+  DiscardDestroyerSquadronCommand,
   FleetAttachment,
   FleetEffect,
   GameCommand,
@@ -419,6 +420,9 @@ function clearMinefieldDamageFromAfloatShips(targetPlayer: PlayerState, minefiel
       }
     }
     ship.damage = keptDamage;
+    ship.attachments = ship.attachments.filter(
+      (attachment) => !(attachment.source.type === "minefield" && minefieldCardIds.has(attachment.source.cardId))
+    );
   }
   return clearedHits;
 }
@@ -649,14 +653,14 @@ export function listLegalCommands(state: GameState, actorId: PlayerId): string[]
   if (openingTurnPending && !mandatorySpecialInHand) {
     return ["end_turn"];
   }
-  const readyDestroyerSquadron = state.destroyerSquadrons.some(
+  const readyDestroyerSquadronExists = state.destroyerSquadrons.some(
     (entry) =>
       entry.ownerId === actorId &&
       entry.deployedTurn < state.turnNumber &&
       livingShips(player).length > 0 &&
-      hasDestroyerSquadronTargetForActor(state, player) &&
       !state.pendingDestroyerAttack
   );
+  const readyDestroyerSquadron = readyDestroyerSquadronExists && hasDestroyerSquadronTargetForActor(state, player);
   const allowTurnEnd = state.hasPerformedActionThisTurn;
   const canTakePlayAction = !state.hasPerformedActionThisTurn || openingTurnPending;
   const hasStartedNormalTurnAction = state.hasDrawnThisTurn || state.hasUsedCarrierStrikeThisTurn;
@@ -702,13 +706,13 @@ export function listLegalCommands(state: GameState, actorId: PlayerId): string[]
     !state.hasDrawnThisTurn &&
     !state.hasUsedCarrierStrikeThisTurn &&
     !state.hasPerformedActionThisTurn &&
-    !readyDestroyerSquadron
+    !readyDestroyerSquadronExists
   ) {
     legal.push("draw_card");
   }
 
   const mustResolveSpecialsOnly = openingTurnPending || mandatorySpecialInHand;
-  const mustResolveReadyDestroyer = !mustResolveSpecialsOnly && readyDestroyerSquadron;
+  const mustResolveReadyDestroyer = !mustResolveSpecialsOnly && readyDestroyerSquadronExists;
 
   if (canTakePlayAction && !mustResolveReadyDestroyer && (!mustResolveSpecialsOnly || hasPlayableSalvoForActor(player)) && hasStartedNormalTurnAction) {
     if (hasPlayableSalvoForActor(player)) legal.push("play_salvo");
@@ -767,6 +771,9 @@ export function listLegalCommands(state: GameState, actorId: PlayerId): string[]
   ) {
     legal.push("resolve_destroyer_squadron_roll");
   }
+  if (canTakePlayAction && !mustResolveSpecialsOnly && readyDestroyerSquadronExists && !readyDestroyerSquadron) {
+    legal.push("discard_destroyer_squadron");
+  }
   if (!mustResolveSpecialsOnly && state.pendingDestroyerAttack?.ownerId === actorId) {
     legal.push("select_destroyer_squadron_targets");
   }
@@ -776,7 +783,7 @@ export function listLegalCommands(state: GameState, actorId: PlayerId): string[]
     !state.hasDrawnThisTurn &&
     !state.hasUsedCarrierStrikeThisTurn &&
     !state.hasPerformedActionThisTurn &&
-    !readyDestroyerSquadron &&
+    !readyDestroyerSquadronExists &&
     livingShips(player).some((ship) => ship.card.isCarrier)
   ) {
     legal.push("use_carrier_strike");
@@ -1147,6 +1154,20 @@ export function applyCommand(state: GameState, command: GameCommand, rng: Random
         `${actor.name}'s destroyer squadron rolled ${shipsToSink} ship sink(s) against ${targetPlayer.name}.`
       );
       next.hasPerformedActionThisTurn = true;
+      maybeCompleteRound(next);
+      return next;
+    }
+
+    case "discard_destroyer_squadron": {
+      const typedCommand = command as DiscardDestroyerSquadronCommand;
+      const squadron = getDestroyerSquadron(next, typedCommand.destroyerId);
+      assert(squadron.ownerId === actor.id, "Only the owner may discard their destroyer squadron.");
+      assert(squadron.deployedTurn < next.turnNumber, "Destroyer Squadron is not ready to resolve yet.");
+      assert(livingShips(actor).length > 0, "Destroyer Squadron cannot resolve if its owner has no ships remaining.");
+      assert(!hasDestroyerSquadronTargetForActor(next, actor), "Destroyer Squadron still has a legal target.");
+      discardDestroyerSquadron(next, squadron.id);
+      next.hasPerformedActionThisTurn = true;
+      addEvent(next, actor.id, "destroyer_squadron_discarded", `${actor.name}'s destroyer squadron had no legal target and was discarded.`);
       maybeCompleteRound(next);
       return next;
     }

@@ -338,6 +338,12 @@ export interface ResolveDestroyerSquadronRollCommand {
   targetPlayerId: PlayerId;
 }
 
+export interface DiscardDestroyerSquadronCommand {
+  type: "discard_destroyer_squadron";
+  actorId: PlayerId;
+  destroyerId: CardId;
+}
+
 export interface SelectDestroyerSquadronTargetsCommand {
   type: "select_destroyer_squadron_targets";
   actorId: PlayerId;
@@ -380,6 +386,7 @@ export type GameCommand =
   | PlayDestroyerSquadronCommand
   | AttackDestroyerSquadronCommand
   | ResolveDestroyerSquadronRollCommand
+  | DiscardDestroyerSquadronCommand
   | SelectDestroyerSquadronTargetsCommand
   | UseCarrierStrikeCommand
   | DiscardPlayCardCommand

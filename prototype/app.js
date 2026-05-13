@@ -1651,6 +1651,7 @@ function getServerViewSignature(view) {
     hasUsedCarrierStrikeThisTurn: gameState.hasUsedCarrierStrikeThisTurn,
     playDeckCount: gameState.playDeckCount,
     discardPileCount: gameState.discardPileCount,
+    discardPileTopCard: gameState.discardPileTopCard?.id || null,
     shipDeckCount: gameState.shipDeckCount,
     eventCount: (gameState.events || []).length,
     winnerIds: gameState.winnerIds || [],
@@ -1658,6 +1659,7 @@ function getServerViewSignature(view) {
       id: player.id,
       handCount: player.handCount,
       hand: (player.hand || []).map((card) => card.id),
+      victoryPile: (player.victoryPile || []).map((ship) => ship.id || ship.name),
       fleetEffects: (player.fleetEffects || []).map((effect) => `${effect.kind}:${effect.card?.id}:${effect.hits || ""}`),
       ships: (player.ships || []).map((ship) => ({
         id: ship.card.id,
@@ -1707,11 +1709,13 @@ function announceServerTurnChange(gameState, playersBySide) {
   showTurnBanner(currentPlayer.name, phaseLabel);
 }
 
+function formatServerEventType(type) {
+  return String(type || "event")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function maybeRefreshServerTurnSummary(gameState, playersBySide) {
-  const staleLobbyTitles = new Set(["Lobby Hosted", "Lobby Joined", "Starting Match"]);
-  if (!staleLobbyTitles.has(appState.turnSummary?.title)) {
-    return;
-  }
   const currentPlayer = Object.values(playersBySide).find((player) => player?.id === gameState.currentPlayerId);
   const playerName = currentPlayer?.name || "Current player";
   const phaseLabel =
@@ -1720,11 +1724,42 @@ function maybeRefreshServerTurnSummary(gameState, playersBySide) {
       : gameState.hasDrawnThisTurn || gameState.hasUsedCarrierStrikeThisTurn
         ? "Play phase"
         : "Draw phase";
+  const latestEvent = Array.isArray(gameState.events) ? gameState.events.at(-1) : null;
+  const eventKey = latestEvent ? `${gameState.events.length}:${latestEvent.type}:${latestEvent.detail}` : "";
+  const summaryKey = `${gameState.phase}:${gameState.turnNumber}:${gameState.currentPlayerId}:${gameState.hasDrawnThisTurn}:${gameState.hasPerformedActionThisTurn}:${eventKey}`;
+  if (appState.serverSession.lastTurnSummaryKey === summaryKey) {
+    return;
+  }
+  appState.serverSession.lastTurnSummaryKey = summaryKey;
+  if (latestEvent) {
+    setTurnSummary(
+      formatServerEventType(latestEvent.type),
+      latestEvent.detail || `${playerName} is active.`,
+      `${playerName} • ${phaseLabel}`
+    );
+    return;
+  }
   setTurnSummary(
     `Turn ${gameState.turnNumber} • ${phaseLabel}`,
     `${playerName} is active.`,
     gameState.hasPerformedActionThisTurn ? "Waiting for turn completion." : "Choose the next legal action."
   );
+}
+
+function maybeShowServerWinnerBanner(gameState, playersBySide) {
+  if (gameState.phase !== "round_complete") {
+    return;
+  }
+  const winnerId = gameState.winnerIds?.[0] || gameState.matchWinnerIds?.[0] || null;
+  const winner = Object.values(playersBySide).find((player) => player?.id === winnerId);
+  const winnerName = winner?.name || "Round winner";
+  const roundKey = `${appState.serverSession?.lobbyId || "local"}:${gameState.roundNumber}:${(gameState.winnerIds || []).join(",")}:${gameState.roundEndReason || "round_complete"}`;
+  if (appState.serverSession.lastWinnerBannerKey === roundKey) {
+    return;
+  }
+  appState.serverSession.lastWinnerBannerKey = roundKey;
+  showWinnerBanner(`${winnerName} Wins`, gameState.roundEndReason === "play_deck_empty" ? "The play deck is empty. Winner determined by victory pile score." : "All opposing fleets have been eliminated.");
+  playWinnerSound();
 }
 
 function mapServerViewToLocalState(view) {
@@ -1770,6 +1805,7 @@ function mapServerViewToLocalState(view) {
   appState.tableConfig.playerCount = Math.min(4, Math.max(2, appState.serverSession.activeSides.length || gameState.players.length || appState.tableConfig.playerCount || 4));
 
   const sides = ["bottom", "left", "top", "right"];
+  appState.victoryPiles = { bottom: [], left: [], top: [], right: [] };
   sides.forEach((side) => {
     const player = playersBySide[side];
     if (!player) {
@@ -1791,19 +1827,28 @@ function mapServerViewToLocalState(view) {
       };
     });
     appState.effectsByFleet[side] = sideEffects;
+    appState.victoryPiles[side] = (player.victoryPile || []).map((ship) => {
+      const template = SHIP_CARD_BY_NAME.get(ship.name);
+      return {
+        ship: ship.name,
+        image: template?.image || SHIP_CARD_BACK,
+      };
+    });
     const ships = player.ships.map((ship) => {
       const template = SHIP_CARD_BY_NAME.get(ship.card.name);
       const originalImage = template?.image || SHIP_CARD_BACK;
       const isSunk = Boolean(ship.sunk);
       const damageTotal = ship.damage.reduce((sum, entry) => sum + Number(entry.hits || 0), 0);
       const remaining = Math.max(ship.card.hitNumber - damageTotal, 0);
-      const salvos = (ship.attachments || []).map((attachment) => {
-        const rendered = serverCardToClientCard(attachment.card);
-        return {
-          image: rendered.image,
-          label: rendered.label,
-        };
-      });
+      const salvos = (ship.attachments || [])
+        .filter((attachment) => attachment.source?.type !== "minefield")
+        .map((attachment) => {
+          const rendered = serverCardToClientCard(attachment.card);
+          return {
+            image: rendered.image,
+            label: rendered.label,
+          };
+        });
       return {
         ship: ship.card.name,
         shipId: ship.card.id,
@@ -1848,6 +1893,7 @@ function mapServerViewToLocalState(view) {
   const hasPlayAction = [...legalCommandSet].some(
     (command) =>
       command === "discard_play_card" ||
+      command === "discard_destroyer_squadron" ||
       command === "resolve_destroyer_squadron_roll" ||
       command === "select_destroyer_squadron_targets" ||
       command.startsWith("play_")
@@ -1909,7 +1955,10 @@ function mapServerViewToLocalState(view) {
 
   playSoundsForServerEvents(gameState.events || []);
   maybeRefreshServerTurnSummary(gameState, playersBySide);
+  maybeShowServerWinnerBanner(gameState, playersBySide);
   announceServerTurnChange(gameState, playersBySide);
+
+  const discardTopCard = gameState.discardPileTopCard ? serverCardToClientCard(gameState.discardPileTopCard) : null;
 
   appState.drawPiles = [
     {
@@ -1920,8 +1969,8 @@ function mapServerViewToLocalState(view) {
     {
       label: "Discard Pile",
       count: gameState.discardPileCount,
-      image: "../assets/cards/play/Modern/cardback-Play.png",
-      topCardLabel: gameState.discardPileCount > 0 ? "Top discard from server state" : "Discard pile is empty",
+      image: discardTopCard?.image || "../assets/cards/play/Modern/cardback-Play.png",
+      topCardLabel: discardTopCard ? `Top discard • ${discardTopCard.label}` : "Discard pile is empty",
     },
     {
       label: "Ship Deck",
@@ -2419,7 +2468,7 @@ function syncLobbySeatPreview() {
     menuLobbyPanel.hidden = appState.setupMode !== "multiplayer";
   }
   if (menuLobbyDebug) {
-    menuLobbyDebug.hidden = appState.setupMode !== "multiplayer";
+    menuLobbyDebug.hidden = true;
   }
   if (startMatchButton) {
     const allHumansReady = humans.length > 0 && readyHumans.length === humans.length;
@@ -2458,38 +2507,13 @@ function syncLobbySeatPreview() {
 }
 
 function renderLobbyDebugPanel() {
-  if (appState.setupMode !== "multiplayer") {
-    if (menuLobbyDebug) {
-      menuLobbyDebug.textContent = "";
-    }
-    if (tableLobbyDebug) {
-      tableLobbyDebug.textContent = "";
-    }
-    return;
-  }
-  const session = appState.serverSession || {};
-  const lines = [
-    "Lobby Debug",
-    `connected: ${Boolean(session.connected)}`,
-    `status: ${session.status || "offline"}`,
-    `isHost: ${Boolean(session.isHost)}`,
-    `joinCode: ${session.joinCode || "-"}`,
-    `lobbyId: ${session.lobbyId || "-"}`,
-    `viewerPlayerId: ${session.viewerPlayerId || "-"}`,
-    `sessionToken: ${session.sessionToken || "-"}`,
-    `lastSyncAt: ${session.lastSyncAt || "-"}`,
-    `lastError: ${session.lastError || "-"}`,
-    `audioStatus: ${audioDiagnostics.status}`,
-    `audioOutput: ${audioDiagnostics.outputMode || "-"}`,
-    `audioLastEvent: ${audioDiagnostics.lastEvent || "-"}`,
-    `audioLastError: ${audioDiagnostics.lastError || "-"}`,
-  ];
-  const text = lines.join("\n");
   if (menuLobbyDebug) {
-    menuLobbyDebug.textContent = text;
+    menuLobbyDebug.hidden = true;
+    menuLobbyDebug.textContent = "";
   }
   if (tableLobbyDebug) {
-    tableLobbyDebug.textContent = text;
+    tableLobbyDebug.hidden = true;
+    tableLobbyDebug.textContent = "";
   }
 }
 
@@ -2718,7 +2742,7 @@ function getAirStrikeHandCards() {
 
 function getReadyDestroyerActivationCards() {
   const legal = Array.isArray(appState.serverSession?.legalCommands) ? appState.serverSession.legalCommands : [];
-  if (!isHumanTurn() || !legal.includes("resolve_destroyer_squadron_roll")) {
+  if (!isHumanTurn() || !(legal.includes("resolve_destroyer_squadron_roll") || legal.includes("discard_destroyer_squadron"))) {
     return [];
   }
 
@@ -3402,6 +3426,10 @@ function resolveHandCardDrop(card, dropTarget) {
     resolveDestroyerSquadronStrike(card.effectId, dropTarget.dataset.zone);
     return true;
   }
+  if (card.kind === "destroyer_activation" && dropTarget.dataset.dropType === "discard_action") {
+    discardReadyDestroyerSquadron(card.effectId);
+    return true;
+  }
   if (card.dropMode === "enemy_ship" && dropTarget.dataset.dropType === "enemy_ship") {
     attachCardToEnemyShip(card, dropTarget.dataset.zone, Number(dropTarget.dataset.shipIndex), dropTarget.dataset.shipId || null);
     return true;
@@ -3637,7 +3665,7 @@ function showStatusBanner(labelText, title, subtitle = "", duration = 1400) {
   const copy = document.createElement("span");
   copy.textContent = subtitle;
   specialBanner.replaceChildren(label, heading, copy);
-  specialBanner.classList.remove("is-visible");
+  specialBanner.classList.remove("is-visible", "is-turn");
   void specialBanner.offsetWidth;
   specialBanner.classList.add("is-visible");
   specialBannerTimer = window.setTimeout(() => {
@@ -3651,6 +3679,7 @@ function showSpecialBanner(title, subtitle = "Special card resolved") {
 
 function showTurnBanner(playerName, phaseLabel = "turn") {
   showStatusBanner("Next Turn", `${playerName}'s Turn`, `Ready for ${phaseLabel}.`, 1800);
+  specialBanner.classList.add("is-turn");
 }
 
 function showWinnerBanner(title, subtitle, actions = []) {
@@ -3679,14 +3708,14 @@ function showWinnerBanner(title, subtitle, actions = []) {
     actionBar.appendChild(button);
   });
   specialBanner.replaceChildren(label, heading, copy, actionBar);
-  specialBanner.classList.remove("is-visible", "is-winner");
+  specialBanner.classList.remove("is-visible", "is-winner", "is-turn");
   void specialBanner.offsetWidth;
   specialBanner.classList.add("is-visible", "is-winner");
 }
 
 function closeWinnerBanner() {
   window.clearTimeout(specialBannerTimer);
-  specialBanner.classList.remove("is-visible", "is-winner");
+  specialBanner.classList.remove("is-visible", "is-winner", "is-turn");
 }
 
 function highlightDrawnCard(cardId) {
@@ -4521,7 +4550,7 @@ function isCardPlayableNow(card) {
 
   if (card.kind === "destroyer_activation") {
     const legal = Array.isArray(appState.serverSession?.legalCommands) ? appState.serverSession.legalCommands : [];
-    return legal.includes("resolve_destroyer_squadron_roll");
+    return legal.includes("resolve_destroyer_squadron_roll") || legal.includes("discard_destroyer_squadron");
   }
 
   if (appState.turnState.playedCard) {
@@ -4568,6 +4597,9 @@ function canDiscardCardAsAction(card) {
   }
   if (appState.serverSession?.connected) {
     const legal = Array.isArray(appState.serverSession.legalCommands) ? appState.serverSession.legalCommands : [];
+    if (card.kind === "destroyer_activation") {
+      return legal.includes("discard_destroyer_squadron");
+    }
     if (legal.includes("discard_play_card") && (card.kind === "additional_damage" || card.kind === "minefield")) {
       return true;
     }
@@ -4605,6 +4637,10 @@ function canHandCardDropOnTarget(card, dropTarget) {
   }
 
   if (card.kind === "destroyer_activation") {
+    const legal = Array.isArray(appState.serverSession?.legalCommands) ? appState.serverSession.legalCommands : [];
+    if (legal.includes("discard_destroyer_squadron") && !legal.includes("resolve_destroyer_squadron_roll")) {
+      return false;
+    }
     const zone = dropTarget.dataset.zone;
     return Boolean(
       (dropTarget.dataset.dropType === "fleet_target" || dropTarget.dataset.dropType === "enemy_ship") &&
@@ -4617,6 +4653,12 @@ function canHandCardDropOnTarget(card, dropTarget) {
   if (card.dropMode === "enemy_ship" && dropTarget.dataset.dropType === "enemy_ship") {
     const zone = dropTarget.dataset.zone;
     const targetIndex = Number(dropTarget.dataset.shipIndex);
+    if (card.kind === "salvo" && !hasMatchingGunForSalvo(card)) {
+      return false;
+    }
+    if (!canTargetFleetWithAction(card.kind, zone)) {
+      return false;
+    }
     if (card.kind === "salvo" && isCarrierScreened(zone, targetIndex)) {
       return false;
     }
@@ -6331,6 +6373,25 @@ function resolveDestroyerSquadronStrike(effectId, targetZone) {
   });
   maybeEndRound();
   finalizeHumanTurn(`${getPlayerName("bottom")}'s turn ends after the destroyer squadron attack.`);
+}
+
+async function discardReadyDestroyerSquadron(effectId) {
+  if (appState.serverSession?.connected) {
+    await submitServerCommand({
+      type: "discard_destroyer_squadron",
+      actorId: appState.serverSession.viewerPlayerId,
+      destroyerId: effectId,
+    });
+    return;
+  }
+  const effect = getDestroyerEffect("bottom", effectId);
+  if (!effect) {
+    renderPrototype();
+    return;
+  }
+  discardDestroyerEffect("bottom", effect);
+  appendLog("Destroyer Squadron has no legal target and is discarded.");
+  finalizeHumanTurn(`${getPlayerName("bottom")}'s turn ends after discarding Destroyer Squadron.`);
 }
 
 function moveBottomFleetShip(fromIndex, toIndex) {

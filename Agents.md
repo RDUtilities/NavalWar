@@ -1,6 +1,6 @@
 # Naval War Game Agent Guide
 
-Last updated: 2026-05-12
+Last updated: 2026-05-13
 
 This file is the working handoff map for agents contributing to the Naval War Game project. Keep it practical: update it when scope changes, when a workstream moves from planned to active, or when a future agent needs a reliable place to resume.
 
@@ -220,6 +220,13 @@ Entry format:
 - Scope: files/components touched
 - Result: user-visible behavior change
 - Verification: commands run and result
+
+### 2026-05-13
+
+- `2026-05-13 08:58 CDT` — Live multiplayer playtest bug batch
+- Scope: `src/types.ts`, `src/engine.ts`, `src/session.ts`, `prototype/app.js`, `prototype/styles.css`
+- Result: Addressed the first real multiplayer game findings: unplayable salvos now highlight discard instead of illegal targets, smoke-blocked ready Destroyer Squadrons can be discarded, multiplayer views receive Victory Pile cards and discard-pile top card data from the server, Turn Summary updates from recent server events, lobby debug panels are hidden from the normal UI, Minesweeper removes minefield ship-card artifacts, multiplayer round winners show the green victory banner and play the winner sound, and turn banners use the yellow styling.
+- Verification: `node --check prototype/app.js` (pass), `node --check service-worker.js` (pass), `npm run check` (pass), `npm run build` (pass), targeted Node engine check for ready Destroyer discard and Minesweeper minefield attachment clearing (pass)
 
 ### 2026-05-12
 

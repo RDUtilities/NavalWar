@@ -61,6 +61,14 @@ body.is-animating {
   animation: special-card-banner-flash 1.35s ease forwards;
 }
 
+.special-card-banner.is-turn {
+  background:
+    linear-gradient(135deg, rgba(107, 78, 26, 0.94), rgba(10, 25, 34, 0.94)),
+    radial-gradient(circle at top, rgba(255, 223, 142, 0.34), transparent 52%);
+  border-color: rgba(255, 223, 142, 0.72);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.46), 0 0 38px rgba(255, 223, 142, 0.26);
+}
+
 .special-card-banner.is-winner {
   top: 22%;
   padding: 30px 34px;

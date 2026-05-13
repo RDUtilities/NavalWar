@@ -91,6 +91,7 @@ export interface MultiplayerPlayerView {
     currentPlayerId: PlayerId;
     playDeckCount: number;
     discardPileCount: number;
+    discardPileTopCard: PlayCard | null;
     shipDeckCount: number;
     destroyerSquadrons: GameState["destroyerSquadrons"];
     pendingDestroyerAttack: GameState["pendingDestroyerAttack"];
@@ -492,6 +493,7 @@ export class InMemoryMultiplayerService {
             currentPlayerId: lobby.state.currentPlayerId,
             playDeckCount: lobby.state.playDeck.length,
             discardPileCount: lobby.state.discardPile.length,
+            discardPileTopCard: lobby.state.discardPile[lobby.state.discardPile.length - 1] ?? null,
             shipDeckCount: lobby.state.shipDeck.length,
             destroyerSquadrons: lobby.state.destroyerSquadrons.map((squadron) => ({ ...squadron })),
             pendingDestroyerAttack: lobby.state.pendingDestroyerAttack
@@ -817,6 +819,13 @@ function chooseBotCommand(state: GameState, actorId: PlayerId, rng: RandomSource
     const target = enemyPlayers.find((player) => !isFleetProtectedBySmoke(player) && player.ships.some((ship) => !ship.sunk));
     if (squadron && target) {
       return { type: "resolve_destroyer_squadron_roll", actorId, destroyerId: squadron.id, targetPlayerId: target.id };
+    }
+  }
+
+  if (inPriority("discard_destroyer_squadron")) {
+    const squadron = state.destroyerSquadrons.find((entry) => entry.ownerId === actorId && entry.deployedTurn < state.turnNumber);
+    if (squadron) {
+      return { type: "discard_destroyer_squadron", actorId, destroyerId: squadron.id };
     }
   }
 
