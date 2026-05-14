@@ -221,6 +221,13 @@ Entry format:
 - Result: user-visible behavior change
 - Verification: commands run and result
 
+### 2026-05-14
+
+- `2026-05-14 10:35 CDT` — Solo Destroyer turn gate stress verification
+- Scope: `prototype/app.js`, `service-worker.js`
+- Result: Tightened solo/prototype Destroyer Squadron behavior so a ready Destroyer interrupts the owner’s next turn before draw, appears as the required virtual activation card, and blocks draw until it is resolved or discarded when every opponent fleet is smoke-blocked. Bot turns now resolve or discard ready Destroyers before drawing. Confirmed Repair still removes exactly one attached salvo/additional-damage card and restores only that card’s damage source. Bumped the service-worker cache to `naval-war-assets-v10`.
+- Verification: `node --check prototype/app.js` (pass), `node --check service-worker.js` (pass), `node --check server.mjs` (pass), `npm run check` (pass), `npm run build` (pass), targeted multiplayer engine Repair/Destroyer regression (pass), solo subagent local prototype sweep across 220 actions (pass), multiplayer subagent server sweep across 260 commands (pass), `npm run simulate:quick` 20/20 games completed (pass)
+
 ### 2026-05-13
 
 - `2026-05-13 14:45 CDT` — Solo and multiplayer Destroyer/Repair parity fixes

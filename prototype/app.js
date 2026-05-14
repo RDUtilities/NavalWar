@@ -2968,7 +2968,10 @@ function getReadyDestroyerActivationCards() {
     return [];
   }
   const hasServerDestroyerAction = legal.includes("resolve_destroyer_squadron_roll") || legal.includes("discard_destroyer_squadron");
-  const hasLocalReadyDestroyer = !appState.serverSession?.connected && appState.turnState.phase === "play";
+  const hasLocalReadyDestroyer =
+    !appState.serverSession?.connected &&
+    appState.turnState.phase === "play" &&
+    Boolean(getReadyDestroyerForZone("bottom"));
   if (!hasServerDestroyerAction && !hasLocalReadyDestroyer) {
     return [];
   }
@@ -4741,8 +4744,11 @@ function startNextTurn() {
   appState.turnState.usedCarrierIndices = [];
   appState.turnState.playedCard = false;
   appState.turnState.forcedCardId = null;
-  setDiceResolution("—", "Awaiting action", `${getPlayerName(nextZone)} begins the turn.`, "One draw, one action, then the turn ends.");
-  showTurnBanner(getPlayerName(nextZone), "draw phase");
+  const hasReadyDestroyer = prepareReadyDestroyerTurn(nextZone);
+  if (!hasReadyDestroyer) {
+    setDiceResolution("—", "Awaiting action", `${getPlayerName(nextZone)} begins the turn.`, "One draw, one action, then the turn ends.");
+  }
+  showTurnBanner(getPlayerName(nextZone), hasReadyDestroyer ? "destroyer phase" : "draw phase");
   renderPrototype();
   scheduleBotTurnIfNeeded();
 }
@@ -4782,7 +4788,9 @@ function isCardPlayableNow(card) {
 
   if (card.kind === "destroyer_activation") {
     const legal = Array.isArray(appState.serverSession?.legalCommands) ? appState.serverSession.legalCommands : [];
-    return legal.includes("resolve_destroyer_squadron_roll") || legal.includes("discard_destroyer_squadron");
+    return appState.serverSession?.connected
+      ? legal.includes("resolve_destroyer_squadron_roll") || legal.includes("discard_destroyer_squadron")
+      : Boolean(getReadyDestroyerForZone("bottom"));
   }
 
   if (appState.turnState.playedCard) {
@@ -5026,6 +5034,13 @@ async function drawPlayCardForTurn() {
   }
   if (appState.turnState.phase !== "draw") {
     appendLog("You can only draw at the start of the turn.");
+    renderPrototype();
+    return;
+  }
+
+  if (!appState.serverSession?.connected && getReadyDestroyerForZone("bottom")) {
+    prepareReadyDestroyerTurn("bottom");
+    appendLog("A ready Destroyer Squadron must be resolved before drawing.");
     renderPrototype();
     return;
   }
@@ -5457,12 +5472,52 @@ function getBotReadyDestroyer(ownerZone) {
   return (appState.effectsByFleet[ownerZone] || []).find((effect) => effect.kind === "destroyer_squadron" && isDestroyerEffectReady(effect));
 }
 
+function getReadyDestroyerForZone(ownerZone) {
+  return (appState.effectsByFleet[ownerZone] || []).find(
+    (effect) => effect.kind === "destroyer_squadron" && isDestroyerEffectReady(effect)
+  );
+}
+
+function hasDestroyerFleetTarget(ownerZone) {
+  return getEnemyZones(ownerZone).some((zone) => canTargetFleetWithAction("destroyer_squadron", zone));
+}
+
+function prepareReadyDestroyerTurn(zone) {
+  const readyDestroyer = getReadyDestroyerForZone(zone);
+  if (!readyDestroyer) {
+    return false;
+  }
+
+  appState.turnState.phase = "play";
+  appState.turnState.playedCard = false;
+  appState.turnState.airStrikeMode = false;
+  appState.turnState.usedCarrierIndices = [];
+  appState.turnState.forcedCardId = null;
+  setDiceResolution(
+    "—",
+    "Destroyer Squadron ready",
+    `${getPlayerName(zone)} must activate or discard their ready Destroyer Squadron.`,
+    hasDestroyerFleetTarget(zone)
+      ? "Choose an opponent fleet that is not protected by smoke."
+      : "No smoke-free fleet is available, so the Destroyer Squadron may be discarded."
+  );
+  return true;
+}
+
 function resolveBotDestroyerSquadronStrike(ownerZone, effect) {
   const targetZone = getEnemyZones(ownerZone)
     .filter((zone) => !hasFleetSmoke(zone))
     .sort((a, b) => appState.fleets[b].filter((ship) => !ship.sunk).length - appState.fleets[a].filter((ship) => !ship.sunk).length)[0];
   if (!targetZone) {
-    return false;
+    discardDestroyerEffect(ownerZone, effect);
+    appendLog(`${getPlayerName(ownerZone)} discards Destroyer Squadron because every opponent fleet is screened by smoke.`);
+    setDiceResolution(
+      "—",
+      "Destroyer Squadron discarded",
+      `${getPlayerName(ownerZone)} has no legal smoke-free fleet to attack.`,
+      "Smoke blocks Destroyer Squadron attacks."
+    );
+    return true;
   }
 
   const roll = rollD6();
@@ -5596,11 +5651,33 @@ async function runBotTurn(zone) {
   }
 
   await new Promise((resolve) => window.setTimeout(resolve, BOT_TURN_DELAY_MS));
-  if (getCurrentZone() !== zone || appState.turnState.phase !== "draw") {
+  if (getCurrentZone() !== zone) {
     return;
   }
 
   const playerName = getPlayerName(zone);
+  const readyDestroyerBeforeDraw = getBotReadyDestroyer(zone);
+  if (readyDestroyerBeforeDraw) {
+    prepareReadyDestroyerTurn(zone);
+    renderPrototype();
+    await new Promise((resolve) => window.setTimeout(resolve, BOT_TURN_DELAY_MS));
+    if (resolveBotDestroyerSquadronStrike(zone, readyDestroyerBeforeDraw)) {
+      completeActionForTurn(`${playerName}'s turn ends after resolving Destroyer Squadron.`);
+      if (maybeEndRound()) {
+        renderPrototype();
+        return;
+      }
+      renderPrototype();
+      await new Promise((resolve) => window.setTimeout(resolve, consumeTurnAdvanceDelay(BOT_TURN_DELAY_MS)));
+      startNextTurn();
+    }
+    return;
+  }
+
+  if (getCurrentZone() !== zone || appState.turnState.phase !== "draw") {
+    return;
+  }
+
   const hand = getHandForZone(zone);
   const drawnCard = drawPlayCardFromDeck();
   if (!drawnCard) {
