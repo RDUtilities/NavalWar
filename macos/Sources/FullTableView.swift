@@ -85,7 +85,7 @@ struct WarTableView: View {
     }
     private func hand(_ view: GameView) -> some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text("YOUR HAND · Drag a card to a glowing target, or click card then target · Right-click to inspect").font(.caption).foregroundStyle(.secondary)
+            Text("YOUR HAND · Green outline = playable · Drag or click a card, then its target · Right-click to inspect").font(.caption).foregroundStyle(.secondary)
             ScrollView(.horizontal) {
                 HStack(spacing: 10) {
                     ForEach(view.human.hand) { card in
@@ -93,7 +93,9 @@ struct WarTableView: View {
                                 CardArt(key: Artwork.shared.key(card)).frame(width: 172, height: 115)
                                 Text(card.title).font(.caption.weight(.semibold)).lineLimit(1)
                             }.padding(5).background(game.selectedCard == card.id ? tableGold.opacity(0.28) : Color.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 9))
-                                .overlay(RoundedRectangle(cornerRadius: 9).stroke(game.selectedCard == card.id ? tableGold : .clear, lineWidth: 2))
+                                .overlay(RoundedRectangle(cornerRadius: 9).stroke(game.isPlayable(card) ? Color.green : .clear, lineWidth: 3))
+                                .overlay(RoundedRectangle(cornerRadius: 7).inset(by: 4).stroke(game.selectedCard == card.id ? tableGold : .clear, lineWidth: 2))
+                            .accessibilityValue(game.isPlayable(card) ? "Playable now" : "Not playable now")
                             .onTapGesture { if game.canInteract && !view.isBotTurn { game.choose(card) } }
                             .accessibilityAddTraits(.isButton)
                             .disabled(!game.canInteract || view.isBotTurn || !game.readySquadrons.isEmpty)

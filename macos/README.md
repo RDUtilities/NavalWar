@@ -105,3 +105,6 @@ Dice attacks now reveal an animated die, the actual face, the applicable rule, a
 
 
 Solo rounds end when your last ship sinks, even when several bots remain. The result appears immediately after the attack presentation. Multiplayer continues for the surviving players. Campaign records captures at the solo cutoff and allows the next round; Skirmish returns to the menu. Save replay supports both earlier bot-continuation histories and the new early endings. Run `node scripts/test_solo_elimination.mjs` after building TypeScript for focused coverage.
+
+
+Playable hand cards have a green outline during your turn, based on the engine's current legal play options. Cards that can only be discarded do not receive a green outline. Selection keeps a separate gold inset and background. Outlines clear while bots/dice are resolving, after your action, or while a ready Destroyer must be resolved.

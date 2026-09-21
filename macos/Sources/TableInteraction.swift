@@ -13,6 +13,15 @@ enum TableTarget: Hashable {
 }
 
 @MainActor extension GameModel {
+    func isPlayable(_ card: PlayCard) -> Bool {
+        guard canInteract, let view, !view.isBotTurn,
+              view.gameState.phase == "normal", view.gameState.currentPlayerId == view.humanPlayerId,
+              readySquadrons.isEmpty else { return false }
+        return view.actions.contains {
+            $0.command.actorId == view.humanPlayerId && $0.command.cardId == card.id && $0.command.type.hasPrefix("play_")
+        }
+    }
+
     func dragCard(_ card: PlayCard) -> String {
         choose(card)
         selectedCard = card.id

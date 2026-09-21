@@ -7,6 +7,16 @@ struct PresentationFixture: Decodable { let before: GameView; let after: GameVie
         let game = GameModel(); game.sound = false
         let mine = fixtures["mines"]!
         game.view = mine.before
+        let playableMine = mine.before.human.hand.first { $0.id == mine.command.cardId }!
+        precondition(game.isPlayable(playableMine), "Legal Minefield needs a green outline before selection")
+        for card in mine.before.human.hand where mine.before.actions.contains(where: { $0.command.cardId == card.id && $0.command.type == "discard_play_card" }) && !mine.before.actions.contains(where: { $0.command.cardId == card.id && $0.command.type.hasPrefix("play_") }) {
+            precondition(!game.isPlayable(card), "Discard-only cards must not look playable")
+        }
+        game.busy = true
+        precondition(!game.isPlayable(playableMine))
+        game.busy = false; game.presentingDice = true
+        precondition(!game.isPlayable(playableMine))
+        game.presentingDice = false
         game.selectedCard = mine.command.cardId
         let enemy = mine.before.gameState.players.first { $0.id == mine.command.targetPlayerId }!
         precondition(game.fleetAction(enemy)?.command.type == "play_minefield")
@@ -36,6 +46,7 @@ struct PresentationFixture: Decodable { let before: GameView; let after: GameVie
         precondition(game.combatEffects.isEmpty, "Loading a position must not replay old explosions")
         let destroyer = fixtures["destroyer"]!
         game.view = destroyer.before
+        precondition(destroyer.before.human.hand.allSatisfy { !game.isPlayable($0) }, "Ready Destroyer blocks normal hand plays")
         game.selectedCard = destroyer.before.human.hand.first?.id
         let fleet = destroyer.before.gameState.players.first { $0.id == destroyer.command.targetPlayerId }!
         precondition(game.fleetAction(fleet)?.command.type == "resolve_destroyer_squadron_roll", "Hand selection hid ready Destroyer")

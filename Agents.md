@@ -228,6 +228,12 @@ Include the user-visible result in the final response, not just the internal imp
 
 ## Changelog
 
+### 2026-09-21 — Green playable hand outlines
+
+- Scope: native hand styling and current legal-action classification.
+- Result: playable cards have green outlines during the human turn; selected cards retain a gold inset. Discard-only cards are excluded. Busy/dice presentation and ready Destroyer gates suppress green outlines.
+- Verification: native presentation regressions pass, including legal Minefield before selection, discard-only exclusion and busy/dice/Destroyer gates; browser syntax and TypeScript checks pass.
+
 ### 2026-09-21 — End solo rounds when the human is eliminated
 
 - Scope: offline session policy, shared score-finalization helper, native loss message, regression scripts.
