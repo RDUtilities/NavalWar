@@ -40,7 +40,7 @@ struct Player: Codable, Identifiable {
     let fleetEffects: [FleetEffect]
     var afloat: Int { ships.filter { !$0.sunk }.count }
 }
-struct GameEvent: Codable { let type: String; let detail: String }
+struct GameEvent: Codable { let type: String; let detail: String; var dieRoll: Int? = nil }
 struct Squadron: Codable, Identifiable { let id: String; let ownerId: String; let hitsTaken: Int; let deployedTurn: Int }
 struct PendingAttack: Codable { let destroyerId: String; let ownerId: String; let targetPlayerId: String; let shipsToSink: Int }
 struct Campaign: Codable { let totalScores: [String: Int]; let targetScore: Int }

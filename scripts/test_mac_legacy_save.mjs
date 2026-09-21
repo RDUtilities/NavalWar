@@ -7,8 +7,9 @@ const fixture = JSON.parse(await fs.readFile('macos/Tests/Fixtures/legacy-destro
 const context = vm.createContext({});
 vm.runInContext(await fs.readFile('macos/Resources/naval-engine.js', 'utf8'), context);
 const send = request => JSON.parse(context.NavalWar.dispatch(JSON.stringify(request)));
+// New public die-face metadata does not alter legacy gameplay or recorded actions.
 const canonical = value => Array.isArray(value) ? value.map(canonical)
-  : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
+  : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).filter(key => !(String(value.type).endsWith('_roll') && key === 'dieRoll')).sort().map(key => [key, canonical(value[key])])) : value;
 const hash = value => createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex');
 assert.equal(hash(send({ type: 'restore', save: fixture.save })), fixture.expected.pending, 'Legacy pending position changed');
 assert.deepEqual(send({ type: 'save' }).save, fixture.save, 'Loading inserted unrecorded actions');

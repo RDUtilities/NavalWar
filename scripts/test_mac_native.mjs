@@ -5,6 +5,7 @@ function run(command,args) { execFileSync(command,args,{stdio:'inherit',env}); }
 run('npm',['run','test:mac-engine']);
 run('node',['scripts/test_mac_legacy_save.mjs']);
 run('node',['scripts/test_mac_presentation.mjs']);
+run('node',['scripts/test_mac_dice.mjs']);
 run('node',['scripts/bundle_mac_engine.mjs','--tests']);
 run('node',['scripts/test_mac_rules.mjs']);
 run('xcrun',['swift','macos/Tests/EngineParity.swift','macos/Resources/naval-engine.js','macos/build/parity-fixture.json']);

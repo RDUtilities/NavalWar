@@ -193,6 +193,8 @@ export interface ClientSeatLayout {
 }
 
 export interface EventRecord {
+  /** Actual RNG face, before any limit on its gameplay effect. */
+  dieRoll?: number;
   type: string;
   actorId: PlayerId;
   detail: string;

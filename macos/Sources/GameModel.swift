@@ -15,6 +15,12 @@ import AppKit
     @Published var inMenu = true
     @Published var sound = true { didSet { if !sound { playingSounds.forEach { $0.stop() }; playingSounds = []; audioGeneration = UUID() } } }
     private var audioGeneration = UUID()
+    @Published var diceResult: DiceResolution?
+    @Published var diceRolling = false
+    @Published var presentingDice = false
+    @Published var recentRolls: [DiceResolution] = []
+    var diceRollDelay: UInt64 = 650_000_000
+    var diceResultDelay: UInt64 = 1_200_000_000
     @Published var combatEffects: [String: CombatEffect] = [:]
     private let engine: OfflineEngine = {
         let directory = ProcessInfo.processInfo.environment["NAVAL_WAR_TEST_SAVE_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
@@ -28,7 +34,7 @@ import AppKit
     private var sessionGeneration = UUID()
     private let identityStore = OnlineIdentityStore()
     var isOnline: Bool { online != nil }
-    var canInteract: Bool { !busy && (!isOnline || (onlineConnected && view?.gameState.currentPlayerId == view?.humanPlayerId)) }
+    var canInteract: Bool { !busy && !presentingDice && (!isOnline || (onlineConnected && view?.gameState.currentPlayerId == view?.humanPlayerId)) }
     private var playingSounds: [NSSound] = []
     var canResume: Bool { FileManager.default.fileExists(atPath: engine.saveURL.path) }
     var actions: [ActionOption] {
@@ -98,7 +104,7 @@ import AppKit
         Task {
             do {
                 let next = try await engine.send(request)
-                update(next); inMenu = false; saved = true; clearSelection()
+                await present(next); inMenu = false; saved = true; clearSelection()
                 try await pumpBots()
             } catch {
                 self.error = error.localizedDescription; playSounds(["invalidcard"])
@@ -112,11 +118,34 @@ import AppKit
         while view?.isBotTurn == true {
             guard steps < 2000 else { throw NavalError(message: "Bot play paused. Save your game and report this position.") }
             try await Task.sleep(nanoseconds: 450_000_000)
-            update(try await engine.send(["type": "bot_step"]))
+            await present(try await engine.send(["type": "bot_step"]))
             saved = true; steps += 1
         }
     }
-    func update(_ next: GameView) {
+    /// Hold the old board while revealing the authoritative rolls, then show their impact.
+    func present(_ next: GameView) async {
+        let oldCount = view?.gameState.events.count ?? 0
+        let sameRound = view?.gameState.roundNumber == next.gameState.roundNumber
+        let events = Array(next.gameState.events.dropFirst(sameRound ? oldCount : 0))
+        let rolls = view == nil ? [] : events.compactMap(DiceResolution.init)
+        let generation = sessionGeneration
+        presentingDice = !rolls.isEmpty
+        for roll in rolls {
+            guard !Task.isCancelled, generation == sessionGeneration else { presentingDice = false; return }
+            diceResult = roll; diceRolling = roll.face != nil
+            playSounds(["Dice"])
+            do {
+                try await Task.sleep(nanoseconds: diceRollDelay)
+                diceRolling = false
+                recentRolls = Array((recentRolls + [roll]).suffix(6))
+                try await Task.sleep(nanoseconds: diceResultDelay)
+            } catch { presentingDice = false; diceRolling = false; return }
+        }
+        guard !Task.isCancelled, generation == sessionGeneration else { presentingDice = false; return }
+        update(next, includeDiceSound: rolls.isEmpty)
+        presentingDice = false; diceRolling = false
+    }
+    func update(_ next: GameView, includeDiceSound: Bool = true) {
         let previousCount = view?.gameState.events.count ?? 0
         let sameRound = view?.gameState.roundNumber == next.gameState.roundNumber
         let events = Array(next.gameState.events.dropFirst(sameRound ? previousCount : 0))
@@ -140,7 +169,7 @@ import AppKit
         let hadPreviousView = view != nil
         view = next
         guard hadPreviousView, sound else { return }
-        playSounds(GameAudio.cues(events: events, completedRound: completedRound))
+        playSounds(GameAudio.cues(events: events, completedRound: completedRound).filter { includeDiceSound || $0 != "Dice" })
     }
     func playSounds(_ filenames: [String]) {
         guard sound else { return }
@@ -212,7 +241,7 @@ import AppKit
         return matches.count == 1 ? matches[0] : nil
     }
     func returnToMenu() {
-        guard !busy else { return }
+        guard !busy && !presentingDice else { return }
         pollTask?.cancel(); pollTask = nil
         audioGeneration = UUID(); playingSounds.forEach { $0.stop() }; playingSounds = []
         inMenu = true
@@ -221,6 +250,7 @@ import AppKit
         sessionGeneration = UUID(); pollTask?.cancel(); pollTask = nil
         online = nil; onlineSnapshot = nil; onlineConnected = false
         view = nil; combatEffects = [:]; audioGeneration = UUID()
+        diceResult = nil; recentRolls = []; presentingDice = false; diceRolling = false
         clearSelection()
     }
     func connectOnline(server: String, name: String, players: Int, mode: String, code: String? = nil) {
@@ -234,7 +264,7 @@ import AppKit
                 if let code { snapshot = try await connection.join(code: code, name: name) }
                 else { snapshot = try await connection.create(name: name, playerCount: players, mode: mode) }
                 if let credential = await connection.credentials() { try identityStore.save(credential); hasSavedOnline = true }
-                acceptOnline(snapshot); inMenu = false
+                await acceptOnline(snapshot); inMenu = false
             } catch {
                 // A lobby can have been created even if its following snapshot failed.
                 if let credential = await online?.credentials() {
@@ -254,7 +284,7 @@ import AppKit
                 let credential = try identityStore.load()
                 let connection = try OnlineSession(server: credential.server)
                 online = connection
-                acceptOnline(try await connection.resume(credential)); inMenu = false
+                await acceptOnline(try await connection.resume(credential)); inMenu = false
             } catch { self.error = error.localizedDescription; onlineConnected = false }
             busy = false
             if onlineConnected { startPolling() }
@@ -264,7 +294,7 @@ import AppKit
         guard !busy, let online else { return }
         busy = true; error = nil; pollTask?.cancel()
         Task {
-            do { acceptOnline(try await online.refresh()); inMenu = false }
+            do { await acceptOnline(try await online.refresh()); inMenu = false }
             catch { self.error = error.localizedDescription; onlineConnected = false }
             busy = false
             if onlineConnected { startPolling() }
@@ -281,18 +311,18 @@ import AppKit
         guard !busy, onlineConnected, let online else { return }
         busy = true; error = nil; pollTask?.cancel(); pollTask = nil
         Task {
-            do { acceptOnline(try await action(online)); clearSelection() }
+            do { await acceptOnline(try await action(online)); clearSelection() }
             catch { self.error = error.localizedDescription; onlineConnected = false; playSounds(["invalidcard"]) }
             busy = false
             if onlineConnected { startPolling() }
         }
     }
-    private func acceptOnline(_ snapshot: OnlineSnapshot) {
+    private func acceptOnline(_ snapshot: OnlineSnapshot) async {
         let previous = view?.gameState
         onlineSnapshot = snapshot; onlineConnected = true; saved = true
         if let next = snapshot.view {
             if previous?.turnNumber != next.gameState.turnNumber || previous?.roundNumber != next.gameState.roundNumber || previous?.events.count != next.gameState.events.count { clearSelection() }
-            update(next)
+            await present(next)
         } else { view = nil }
     }
     private func startPolling() {
@@ -306,7 +336,7 @@ import AppKit
                 do {
                     let snapshot = try await connection.refresh()
                     guard !Task.isCancelled, self.sessionGeneration == generation else { return }
-                    self.acceptOnline(snapshot)
+                    await self.acceptOnline(snapshot)
                 } catch {
                     guard !Task.isCancelled, self.sessionGeneration == generation else { return }
                     self.onlineConnected = false; self.error = error.localizedDescription

@@ -228,6 +228,13 @@ Include the user-visible result in the final response, not just the internal imp
 
 ## Changelog
 
+### 2026-09-21 — Native dice reveal and result history
+
+- Scope: engine event metadata, native dice presentation/pacing, command-panel Last Roll and regression tests.
+- Result: all four dice attack types show the roll and result before impact, including misses; sequential batch rolls and retained recent results. Destroyer actual die face is distinct from capped sink count. Rules and RNG consumption unchanged.
+- Verification: 24 face/type cases, native timing/history tests, 5,025-action Node parity, 622-request JavaScriptCore parity, legacy replay and local online regressions passed; actual native carrier hit UI checked. Run `npm run test:mac-dice`; also included in native suite.
+
+
 ### 2026-09-21 — Native sound parity and Destroyer activation
 
 - Scope: GameAudio/GameModel, battle-zone controls, native audio build conversion and regression checks.

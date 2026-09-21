@@ -136,6 +136,14 @@ struct WarTableView: View {
                 }
             }
         }
+        .overlay {
+            if game.presentingDice, let result = game.diceResult {
+                ZStack {
+                    Color.black.opacity(0.25)
+                    DiceRollPanel(result: result, rolling: game.diceRolling).frame(width: 460)
+                }.allowsHitTesting(true)
+            }
+        }
     }
     private var header: some View {
         HStack(spacing: 24) {
@@ -273,6 +281,13 @@ struct CommandPanel: View {
                         if game.selectedCard != nil || game.showAirStrikes { Button("Clear selection") { game.clearSelection() }.font(.caption) }
                     }
                     Divider()
+                    if let lastRoll = game.recentRolls.last {
+                        Text("LAST ROLL").font(.caption).tracking(2).foregroundStyle(gold)
+                        DiceRollPanel(result: lastRoll, compact: true)
+                        ForEach(game.recentRolls.dropLast().reversed()) { roll in
+                            Text("\(roll.title) · \(roll.face.map(String.init) ?? "—") · \(roll.outcome)").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
                     Text("CAPTAIN'S LOG").font(.caption).tracking(2).foregroundStyle(gold)
                     ForEach(Array(view.gameState.events.suffix(7).reversed().enumerated()), id: \.offset) { _, event in
                         Text(event.detail).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
