@@ -8,7 +8,6 @@ import AppKit
     @Published var selectedCard: String?
     @Published var activeTableDrag: String?
     @Published var tableDragPoint: CGPoint = .zero
-    var enemyViewportRect: CGRect = .zero
     var tableDropZones: [TableTarget: CGRect] = [:]
     @Published var selectedSquadron: String?
     @Published var selectedCarrier: String?
@@ -194,7 +193,7 @@ import AppKit
             }
         }
     }
-    func clearSelection() { selectedSquadron = nil; selectedCarrier = nil; selectedCard = nil; showAirStrikes = false; strikes = [:]; destroyerTargets = [] }
+    func clearSelection() { activeTableDrag = nil; selectedSquadron = nil; selectedCarrier = nil; selectedCard = nil; showAirStrikes = false; strikes = [:]; destroyerTargets = [] }
     func choose(_ card: PlayCard) {
         showAirStrikes = false; strikes = [:]
         if view?.legalCommands.contains("resolve_destroyer_squadron_roll") == true || view?.legalCommands.contains("discard_destroyer_squadron") == true { selectedCard = nil; return }

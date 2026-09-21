@@ -27,9 +27,6 @@ struct WarTableView: View {
                             }
                         }
                     }.frame(maxHeight: .infinity)
-                        .background(GeometryReader { geometry in
-                            Color.clear.preference(key: EnemyViewportPreference.self, value: geometry.frame(in: .named("warTable")))
-                        })
                     commandStrip(view)
                     TableFleet(player: view.human, columns: max(5, min(7, view.human.afloat)), own: true)
                     hand(view)
@@ -46,7 +43,6 @@ struct WarTableView: View {
                     .background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 20)).frame(maxWidth: 520)
             }
         }.coordinateSpace(name: "warTable").onPreferenceChange(TableZonePreference.self) { game.tableDropZones = $0 }
-            .onPreferenceChange(EnemyViewportPreference.self) { game.enemyViewportRect = $0 }
     }
     private func commandStrip(_ view: GameView) -> some View {
         VStack(alignment: .leading, spacing: 7) {
@@ -178,10 +174,6 @@ private struct TableFleet: View {
     }
 }
 
-private struct EnemyViewportPreference: PreferenceKey {
-    static var defaultValue: CGRect = .zero
-    static func reduce(value: inout CGRect, nextValue: () -> CGRect) { value = nextValue() }
-}
 private struct TableZonePreference: PreferenceKey {
     static var defaultValue: [TableTarget: CGRect] = [:]
     static func reduce(value: inout [TableTarget: CGRect], nextValue: () -> [TableTarget: CGRect]) {
@@ -198,8 +190,10 @@ private extension View {
 private struct TableDragSource: ViewModifier {
     @EnvironmentObject var game: GameModel
     let payload: () -> String
+    @GestureState private var dragging = false
     func body(content: Content) -> some View {
         content.highPriorityGesture(DragGesture(minimumDistance: 8, coordinateSpace: .named("warTable"))
+            .updating($dragging) { _, state, _ in state = true }
             .onChanged { value in
                 guard game.canInteract, game.view?.isBotTurn == false else { return }
                 if game.activeTableDrag == nil { game.activeTableDrag = payload() }
@@ -208,17 +202,11 @@ private struct TableDragSource: ViewModifier {
                 defer { game.activeTableDrag = nil }
                 guard let payload = game.activeTableDrag else { return }
                 // Smaller ship/squadron targets win over their enclosing fleet box.
-                let zones = game.tableDropZones.filter { target, rect in
-                    guard rect.contains(value.location) else { return false }
-                    let owner: String?
-                    switch target {
-                    case .fleet(let id), .ship(let id, _), .squadron(let id, _): owner = id
-                    case .discard: owner = nil
-                    }
-                    return owner == nil || owner == game.view?.humanPlayerId || game.enemyViewportRect.contains(value.location)
-                }
+                let zones = game.tableDropZones.filter { $0.value.contains(value.location) }
                     .sorted { $0.value.width * $0.value.height < $1.value.width * $1.value.height }
                 if let target = zones.first?.key { game.drop([payload], onto: target) }
-            })
+            }).onChange(of: dragging) { _, active in
+                if !active { game.activeTableDrag = nil }
+            }
     }
 }
