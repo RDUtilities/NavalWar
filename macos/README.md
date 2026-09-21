@@ -96,3 +96,7 @@ Destroyer Squadron attacks use the same automatic first-afloat victim order offl
 The toolbar card-size slider adjusts hand, fleet, and discard art. Select a fleet-wide card such as Minefield, then click the labeled fleet button or any highlighted afloat ship. Salvos highlight individual legal ships. Attached damage cards appear on ships; right-click and inspect a ship to read its full attachment list. The hand stays visible while the table scrolls. Combat effects follow confirmed damage/sinking and honor the Mac Reduce Motion preference.
 
 `npm run test:mac-presentation` verifies native targeting and combat presentation against actual engine positions; it is also included in `test:mac-native`.
+
+Native builds require `ffmpeg` on PATH. The build converts sound assets to standard 16-bit PCM WAV for macOS; originals remain unchanged (some `.wav` source files actually contain QuickTime audio). `node scripts/test_mac_audio_assets.mjs 'macos/build/Naval War Preview.app/Contents/Resources'` compares decoded samples for all 16 web sounds and verifies native decoding/playback. The regular native test suite runs the same check against its regular app build.
+
+Ready Destroyers take priority over hand-card selection. Click **Attack [opponent] with Destroyers** on the highlighted fleet, or any highlighted afloat ship. **Aim Destroyers** in the battle zone returns to targeting. Newly deployed squadrons wait until the next turn; if every fleet is smoke-blocked, use the offered discard action.

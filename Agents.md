@@ -228,6 +228,13 @@ Include the user-visible result in the final response, not just the internal imp
 
 ## Changelog
 
+### 2026-09-21 — Native sound parity and Destroyer activation
+
+- Scope: GameAudio/GameModel, battle-zone controls, native audio build conversion and regression checks.
+- Result: restored salvo sounds and wired all 16 browser sound effects, keeping attack plus sinking cues. PCM WAV conversion fixes mislabeled QuickTime Dice/Winner files. Ready Destroyers retain legal fleet targets despite hand selection or multiple ready squadrons; deployment timing and smoke-blocked discard are explicit.
+- Verification: all 16 decoded audio samples match source and start native playback; native targeting/audio regressions, preview build and required syntax/type/build checks passed; isolated native UI Destroyer fleet attack resolved successfully. Source assets and user saves unchanged.
+
+
 ### 2026-09-21 — Native presentation playtest fixes
 
 - Scope: native fleet targeting, ship attachment decoding/rendering, card scaling, combat effects, isolated preview build/package, presentation regression tests.

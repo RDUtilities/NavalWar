@@ -11,5 +11,6 @@ run('xcrun',['swift','macos/Tests/EngineParity.swift','macos/Resources/naval-eng
 run('xcrun',['swift','macos/Tests/EngineParity.swift','macos/build/naval-engine-tests.js','macos/build/rules-fixture.json','--rules']);
 run('node',['scripts/test_shared_bots.mjs']);
 run('node',['scripts/build_mac_app.mjs']);
+run('node',['scripts/test_mac_audio_assets.mjs']);
 run('xcrun',['swiftc','-swift-version','5','-parse-as-library','macos/Sources/Models.swift','macos/Sources/OfflineEngine.swift','macos/Tests/OfflineAppTests.swift','-framework','JavaScriptCore','-framework','AppKit','-o','macos/build/OfflineAppTests']);
 run('/usr/bin/sandbox-exec',['-p','(version 1) (allow default) (deny network*)','macos/build/OfflineAppTests','macos/build/Naval War.app/Contents/Resources','macos/build/parity-fixture.json','macos/build/native-verification.json']);

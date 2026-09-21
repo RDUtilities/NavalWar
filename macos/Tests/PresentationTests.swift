@@ -34,6 +34,41 @@ struct PresentationFixture: Decodable { let before: GameView; let after: GameVie
         }
         game.view = nil; game.update(fixtures["sinking"]!.after)
         precondition(game.combatEffects.isEmpty, "Loading a position must not replay old explosions")
+        let destroyer = fixtures["destroyer"]!
+        game.view = destroyer.before
+        game.selectedCard = destroyer.before.human.hand.first?.id
+        let fleet = destroyer.before.gameState.players.first { $0.id == destroyer.command.targetPlayerId }!
+        precondition(game.fleetAction(fleet)?.command.type == "resolve_destroyer_squadron_roll", "Hand selection hid ready Destroyer")
+        precondition(fleet.ships.filter { !$0.sunk }.allSatisfy { game.isTarget($0, player: fleet) })
+        if let card = destroyer.before.human.hand.first { game.choose(card); precondition(game.selectedCard == nil) }
+        // Two ready squadrons offer two valid commands for the same fleet.
+        var raw = try JSONSerialization.jsonObject(with: JSONEncoder().encode(destroyer.before)) as! [String: Any]
+        var options = raw["actions"] as! [[String: Any]]
+        var second = options.first { ($0["command"] as? [String: Any])?["type"] as? String == "resolve_destroyer_squadron_roll" && ($0["command"] as? [String: Any])?["targetPlayerId"] as? String == fleet.id }!
+        var command = second["command"] as! [String: Any]; command["destroyerId"] = "second-ready-squadron"; second["command"] = command; second["id"] = "second-ready-command"; options.append(second); raw["actions"] = options
+        game.view = try JSONDecoder().decode(GameView.self, from: JSONSerialization.data(withJSONObject: raw))
+        precondition(game.fleetAction(fleet) != nil, "Multiple ready squadrons removed fleet target")
+        game.view = fixtures["deployment"]!.after
+        precondition(!game.actions.contains { $0.command.type == "resolve_destroyer_squadron_roll" }, "New Destroyers must wait until the next turn")
+        let cases: [(String, [String])] = [
+            ("submarine_roll", ["submarine", "Dice"]), ("torpedo_boat_roll", ["TorpedoBoat", "Dice"]),
+            ("carrier_roll", ["AirStrike", "Dice"]), ("destroyer_squadron_roll", ["Dice"]),
+            ("minefield_deployed", ["mines"]), ("minefield_cleared", ["minesweeper"]),
+            ("smoke_deployed", ["smoke"]), ("destroyer_squadron_deployed", ["Destroyers"]),
+            ("additional_damage_played", ["AdditionalDamnage"]), ("ship_repaired", ["repairCard"]),
+            ("card_drawn", ["draw-card"]), ("special_card_drawn", ["draw-card"]),
+            ("additional_ship_drawn", ["draw-card"]), ("ship_added", ["draw-card"]),
+            ("ship_sunk", ["shipsink"]), ("destroyer_squadron_sunk", ["shipsink"]), ("campaign_won", ["WinnerSound"])
+        ]
+        for (type, expected) in cases { precondition(GameAudio.cues(for: GameEvent(type:type, detail:"")) == expected) }
+        for caliber in ["11", "12.6", "14", "15", "16", "18"] {
+            for (type, verb) in [("salvo_fired", "attached"), ("destroyer_squadron_hit", "fired")] {
+                precondition(GameAudio.cues(for: GameEvent(type: type, detail: "Admiral \(verb) \(caliber)\" for 2 hit(s)")) == (["11", "12.6"].contains(caliber) ? ["Salvo-small"] : ["Salvo-big"]))
+            }
+        }
+        let batch = [GameEvent(type:"ship_sunk", detail:""), GameEvent(type:"salvo_fired", detail:"Admiral attached 16\" for 4 hit(s)")]
+        precondition(GameAudio.cues(events:batch, completedRound:true) == ["Salvo-big", "shipsink", "WinnerSound"])
+        print("PASS: all web sound routes, salvo caliber variants, attack/sink/winner batch, ready and multiple Destroyer targeting, deployment timing.")
         print("PASS: native mine fleet targets, salvo attachments, hit/sinking effects with sound off, and no duplicate/reconnect animations.")
     }
 }

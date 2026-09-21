@@ -10,6 +10,7 @@ const preview = process.argv.includes('--preview');
 const appName = preview ? 'Naval War Preview' : 'Naval War';
 const app = path.join(build, `${appName}.app`);
 const stage = path.join(build, `${appName}.staging.app`);
+execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' });
 // Preflight before changing the last successful application bundle.
 execFileSync('xcrun', ['swift', '--version'], { stdio: 'inherit', env: toolchain });
 execFileSync('node', ['scripts/bundle_mac_engine.mjs'], { cwd: root, stdio: 'inherit' });
@@ -46,7 +47,7 @@ for (const [key, file] of [['logo', 'navalWarLogo-Transparent.png'], ['table', '
 }
 await fs.writeFile(path.join(resources, 'artwork.json'), JSON.stringify(map, null, 2));
 for (const file of await fs.readdir(path.join(root, 'assets/sound'))) if (file.endsWith('.wav'))
-    await fs.copyFile(path.join(root, 'assets/sound', file), path.join(resources, 'Audio', file));
+    execFileSync('ffmpeg', ['-nostdin', '-v', 'error', '-y', '-i', path.join(root, 'assets/sound', file), '-vn', '-c:a', 'pcm_s16le', path.join(resources, 'Audio', file)], { stdio: 'inherit' });
 await fs.copyFile(path.join(root, 'macos/Resources/naval-engine.js'), path.join(resources, 'naval-engine.js'));
 const iconset = path.join(build, 'NavalWar.iconset');
 await fs.mkdir(iconset, { recursive: true });

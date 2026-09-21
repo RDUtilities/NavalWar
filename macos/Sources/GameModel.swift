@@ -13,7 +13,8 @@ import AppKit
     @Published var inspectedShip: Ship?
     @Published var saved = false
     @Published var inMenu = true
-    @Published var sound = true
+    @Published var sound = true { didSet { if !sound { playingSounds.forEach { $0.stop() }; playingSounds = []; audioGeneration = UUID() } } }
+    private var audioGeneration = UUID()
     @Published var combatEffects: [String: CombatEffect] = [:]
     private let engine: OfflineEngine = {
         let directory = ProcessInfo.processInfo.environment["NAVAL_WAR_TEST_SAVE_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
@@ -32,6 +33,8 @@ import AppKit
     var canResume: Bool { FileManager.default.fileExists(atPath: engine.saveURL.path) }
     var actions: [ActionOption] {
         guard let view, !isOnline || onlineConnected else { return [] }
+        let ready = view.actions.filter { ["resolve_destroyer_squadron_roll", "discard_destroyer_squadron"].contains($0.command.type) }
+        if !ready.isEmpty { return ready }
         if showAirStrikes { return view.actions.filter { $0.command.type == "use_carrier_strike" } }
         if let selectedCard { return view.actions.filter { $0.command.cardId == selectedCard } }
         return view.actions.filter { ["resolve_destroyer_squadron_roll", "discard_destroyer_squadron"].contains($0.command.type) }
@@ -49,6 +52,11 @@ import AppKit
         if busy || view.isBotTurn { return "\(view.gameState.players.first { $0.id == view.gameState.currentPlayerId }?.name ?? "Opponent") is taking a turn…" }
         if let pending = view.gameState.pendingDestroyerAttack { return "Choose \(pending.shipsToSink) enemy ships for your Destroyer Squadron." }
         if showAirStrikes { return "Assign targets, then launch your air strikes." }
+        if view.legalCommands.contains("resolve_destroyer_squadron_roll") { return "Destroyers ready: click a highlighted enemy fleet to attack before drawing." }
+        if view.legalCommands.contains("discard_destroyer_squadron") { return "Smoke blocks every enemy fleet. Discard the blocked Destroyer Squadron to continue." }
+        if let card = view.human.hand.first(where: { $0.id == selectedCard }), card.kind == "destroyer_squadron" {
+            return "Play Destroyer Squadron below to deploy it into the battle zone. It attacks on your next turn."
+        }
         if selectedCard != nil {
             if actions.contains(where: { $0.command.targetPlayerId != nil && $0.command.targetShipId == nil }) { return "Click the highlighted enemy fleet button or any afloat ship in that fleet." }
             return "Choose a highlighted ship or an action below."
@@ -93,7 +101,7 @@ import AppKit
                 update(next); inMenu = false; saved = true; clearSelection()
                 try await pumpBots()
             } catch {
-                self.error = error.localizedDescription
+                self.error = error.localizedDescription; playSounds(["invalidcard"])
                 if let current = try? await engine.send(["type": "view"], persist: false) { view = current }
             }
             busy = false
@@ -128,16 +136,35 @@ import AppKit
                 }
             }
         } else { combatEffects = [:] }
+        let completedRound = view != nil && view?.gameState.phase != "round_complete" && next.gameState.phase == "round_complete"
+        let hadPreviousView = view != nil
         view = next
+        guard hadPreviousView, sound else { return }
+        playSounds(GameAudio.cues(events: events, completedRound: completedRound))
+    }
+    func playSounds(_ filenames: [String]) {
         guard sound else { return }
-        let mapping = ["card_drawn": "draw-card", "special_card_drawn": "draw-card", "salvo_hit": "Salvo-big", "ship_sunk": "shipsink", "smoke_deployed": "smoke", "ship_repaired": "repairCard", "round_completed": "WinnerSound", "carrier_roll": "AirStrike", "destroyer_squadron_roll": "Destroyers"]
-        let filename = events.reversed().compactMap { mapping[$0.type] }.first
-        if let filename, let url = Bundle.main.resourceURL?.appendingPathComponent("Audio/\(filename).wav"), let audio = NSSound(contentsOf: url, byReference: true) {
-            playingSounds.removeAll { !$0.isPlaying }; playingSounds.append(audio); audio.play()
+        let generation = audioGeneration
+        Task { [weak self] in
+            for (index, filename) in filenames.enumerated() {
+                if index > 0 { try? await Task.sleep(nanoseconds: 180_000_000) }
+                guard let self, self.sound, self.audioGeneration == generation else { return }
+                guard let url = Bundle.main.resourceURL?.appendingPathComponent("Audio/\(filename).wav"), let audio = NSSound(contentsOf: url, byReference: false) else {
+                    self.error = "Could not load sound: \(filename)"; continue
+                }
+                self.playingSounds.removeAll { !$0.isPlaying }
+                self.playingSounds.append(audio)
+                if !audio.play() { self.error = "Could not play sound: \(filename)" }
+            }
         }
     }
     func clearSelection() { selectedCard = nil; showAirStrikes = false; strikes = [:]; destroyerTargets = [] }
-    func choose(_ card: PlayCard) { showAirStrikes = false; strikes = [:]; selectedCard = selectedCard == card.id ? nil : card.id }
+    func choose(_ card: PlayCard) {
+        showAirStrikes = false; strikes = [:]
+        if view?.legalCommands.contains("resolve_destroyer_squadron_roll") == true || view?.legalCommands.contains("discard_destroyer_squadron") == true { selectedCard = nil; return }
+        selectedCard = selectedCard == card.id ? nil : card.id
+        if selectedCard != nil && actions.isEmpty { playSounds(["invalidcard"]) }
+    }
     func perform(_ option: ActionOption) {
         if let strike = option.command.strikes?.first { strikes[strike.carrierShipId] = strike; return }
         send(option.command)
@@ -173,22 +200,27 @@ import AppKit
         return actions.contains { $0.command.targetShipId == ship.id && ($0.command.targetPlayerId == nil || $0.command.targetPlayerId == player.id) }
     }
     func fleetTargetLabel(_ player: Player) -> String {
+        if actions.contains(where: { $0.command.type == "resolve_destroyer_squadron_roll" }) { return "Attack \(player.name) with Destroyers" }
         if let card = view?.human.hand.first(where: { $0.id == selectedCard }) { return "Play \(card.title) on \(player.name)" }
         return "Attack \(player.name)'s fleet"
     }
     func fleetAction(_ player: Player) -> ActionOption? {
         guard canInteract else { return nil }
         let matches = actions.filter { $0.command.targetPlayerId == player.id && $0.command.targetShipId == nil && $0.command.strikes == nil }
+        // Multiple ready squadrons can legally attack the same fleet; resolve one at a time.
+        if let ready = matches.first(where: { $0.command.type == "resolve_destroyer_squadron_roll" }) { return ready }
         return matches.count == 1 ? matches[0] : nil
     }
     func returnToMenu() {
         guard !busy else { return }
         pollTask?.cancel(); pollTask = nil
+        audioGeneration = UUID(); playingSounds.forEach { $0.stop() }; playingSounds = []
         inMenu = true
     }
     private func detachOnline() {
         sessionGeneration = UUID(); pollTask?.cancel(); pollTask = nil
         online = nil; onlineSnapshot = nil; onlineConnected = false
+        view = nil; combatEffects = [:]; audioGeneration = UUID()
         clearSelection()
     }
     func connectOnline(server: String, name: String, players: Int, mode: String, code: String? = nil) {
@@ -250,7 +282,7 @@ import AppKit
         busy = true; error = nil; pollTask?.cancel(); pollTask = nil
         Task {
             do { acceptOnline(try await action(online)); clearSelection() }
-            catch { self.error = error.localizedDescription; onlineConnected = false }
+            catch { self.error = error.localizedDescription; onlineConnected = false; playSounds(["invalidcard"]) }
             busy = false
             if onlineConnected { startPolling() }
         }

@@ -159,7 +159,14 @@ struct WarTableView: View {
             Spacer()
             Text("\(view.gameState.playDeckCount) play cards · \(view.gameState.shipDeckCount) reserve ships").font(.caption).foregroundStyle(.secondary)
             ForEach(view.gameState.destroyerSquadrons) { squadron in
-                Label("Destroyers · \(4 - squadron.hitsTaken) HP", systemImage: "shield.lefthalf.filled").font(.caption)
+                VStack(alignment: .leading, spacing: 3) {
+                    Label("Destroyers · \(4 - squadron.hitsTaken) HP", systemImage: "shield.lefthalf.filled")
+                    if squadron.ownerId == view.humanPlayerId {
+                        if view.actions.contains(where: { $0.command.destroyerId == squadron.id }) {
+                            Button("Aim Destroyers") { game.clearSelection() }.disabled(!game.canInteract)
+                        } else { Text("Attacks on your next turn").foregroundStyle(.secondary) }
+                    } else { Text(view.gameState.players.first { $0.id == squadron.ownerId }?.name ?? "Opponent").foregroundStyle(.secondary) }
+                }.font(.caption)
             }
             if let discarded = view.gameState.discardPile.last {
                 Button { game.inspectedCard = discarded } label: {

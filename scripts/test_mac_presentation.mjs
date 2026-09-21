@@ -14,6 +14,8 @@ for (const {request} of transcript) {
   const next = send(request).view;
   if (previous && previous.gameState.roundNumber === next.gameState.roundNumber) {
     const kind = request.command?.type;
+    if (kind === 'resolve_destroyer_squadron_roll' && !fixtures.destroyer) fixtures.destroyer = {before:previous, after:next, command:request.command, save};
+    if (kind === 'play_destroyer_squadron' && !fixtures.deployment) fixtures.deployment = {before:previous, after:next, command:request.command, save};
     if (kind === 'play_minefield' && !fixtures.mines) fixtures.mines = {before:previous, after:next, command:request.command, save};
     if (kind === 'play_salvo') {
       const ship = next.gameState.players.flatMap(p=>p.ships).find(s=>s.card.id===request.command.targetShipId);
@@ -22,9 +24,9 @@ for (const {request} of transcript) {
     }
   }
   previous = next;
-  if (Object.keys(fixtures).length === 3) break;
+  if (Object.keys(fixtures).length === 5) break;
 }
-assert.equal(Object.keys(fixtures).length,3,'Need actual legal mine, salvo and sinking positions');
+assert.equal(Object.keys(fixtures).length,5,'Need actual legal mine, salvo, sinking and Destroyer positions');
 await fs.writeFile('macos/build/presentation-fixtures.json',JSON.stringify(fixtures));
 for (const [key, fixture] of Object.entries(fixtures)) {
   await fs.mkdir(`macos/build/presentation-${key}`,{recursive:true});
