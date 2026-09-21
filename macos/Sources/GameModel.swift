@@ -6,6 +6,13 @@ import AppKit
     @Published var busy = false
     @Published var error: String?
     @Published var selectedCard: String?
+    @Published var activeTableDrag: String?
+    @Published var tableDragPoint: CGPoint = .zero
+    var enemyViewportRect: CGRect = .zero
+    var tableDropZones: [TableTarget: CGRect] = [:]
+    @Published var selectedSquadron: String?
+    @Published var selectedCarrier: String?
+    let tableDragSession = UUID()
     @Published var showAirStrikes = false
     @Published var strikes: [String: Strike] = [:]
     @Published var destroyerTargets: Set<String> = []
@@ -40,7 +47,7 @@ import AppKit
     var actions: [ActionOption] {
         guard let view, !isOnline || onlineConnected else { return [] }
         let ready = view.actions.filter { ["resolve_destroyer_squadron_roll", "discard_destroyer_squadron"].contains($0.command.type) }
-        if !ready.isEmpty { return ready }
+        if !ready.isEmpty { return selectedSquadron.map { id in ready.filter { $0.command.destroyerId == id } } ?? ready }
         if showAirStrikes { return view.actions.filter { $0.command.type == "use_carrier_strike" } }
         if let selectedCard { return view.actions.filter { $0.command.cardId == selectedCard } }
         return view.actions.filter { ["resolve_destroyer_squadron_roll", "discard_destroyer_squadron"].contains($0.command.type) }
@@ -61,11 +68,11 @@ import AppKit
         if view.legalCommands.contains("resolve_destroyer_squadron_roll") { return "Destroyers ready: click a highlighted enemy fleet to attack before drawing." }
         if view.legalCommands.contains("discard_destroyer_squadron") { return "Smoke blocks every enemy fleet. Discard the blocked Destroyer Squadron to continue." }
         if let card = view.human.hand.first(where: { $0.id == selectedCard }), card.kind == "destroyer_squadron" {
-            return "Play Destroyer Squadron below to deploy it into the battle zone. It attacks on your next turn."
+            return "Drag Destroyer Squadron onto your fleet to deploy it. It attacks on your next turn."
         }
         if selectedCard != nil {
-            if actions.contains(where: { $0.command.targetPlayerId != nil && $0.command.targetShipId == nil }) { return "Click the highlighted enemy fleet button or any afloat ship in that fleet." }
-            return "Choose a highlighted ship or an action below."
+            if actions.contains(where: { $0.command.targetPlayerId != nil && $0.command.targetShipId == nil }) { return "Drag onto the highlighted enemy fleet, or click any ship in that fleet." }
+            return "Drag onto a highlighted target, or click it. Discard is on the right."
         }
         if view.gameState.openingTurnPendingPlayerIds.contains(view.humanPlayerId) { return "Opening orders: resolve special cards, then end your turn." }
         if view.legalCommands.contains("resolve_destroyer_squadron_roll") || view.legalCommands.contains("discard_destroyer_squadron") { return "Your Destroyer Squadron is ready. Resolve it before drawing." }
@@ -187,7 +194,7 @@ import AppKit
             }
         }
     }
-    func clearSelection() { selectedCard = nil; showAirStrikes = false; strikes = [:]; destroyerTargets = [] }
+    func clearSelection() { selectedSquadron = nil; selectedCarrier = nil; selectedCard = nil; showAirStrikes = false; strikes = [:]; destroyerTargets = [] }
     func choose(_ card: PlayCard) {
         showAirStrikes = false; strikes = [:]
         if view?.legalCommands.contains("resolve_destroyer_squadron_roll") == true || view?.legalCommands.contains("discard_destroyer_squadron") == true { selectedCard = nil; return }
@@ -219,14 +226,13 @@ import AppKit
             return
         }
         if !ship.sunk, let option = fleetAction(player) { perform(option); return }
-        let options = actions.filter { $0.command.targetShipId == ship.id && ($0.command.targetPlayerId == nil || $0.command.targetPlayerId == player.id) }
-        if options.count == 1 { perform(options[0]) } else { inspectedShip = ship }
+        if let option = shipAction(ship, player: player) { perform(option) } else { inspectedShip = ship }
     }
     func isTarget(_ ship: Ship, player: Player) -> Bool {
         guard canInteract else { return false }
         if let pending = view?.gameState.pendingDestroyerAttack { return player.id == pending.targetPlayerId && !ship.sunk }
         if !ship.sunk && fleetAction(player) != nil { return true }
-        return actions.contains { $0.command.targetShipId == ship.id && ($0.command.targetPlayerId == nil || $0.command.targetPlayerId == player.id) }
+        return shipAction(ship, player: player) != nil
     }
     func fleetTargetLabel(_ player: Player) -> String {
         if actions.contains(where: { $0.command.type == "resolve_destroyer_squadron_roll" }) { return "Attack \(player.name) with Destroyers" }
@@ -235,10 +241,7 @@ import AppKit
     }
     func fleetAction(_ player: Player) -> ActionOption? {
         guard canInteract else { return nil }
-        let matches = actions.filter { $0.command.targetPlayerId == player.id && $0.command.targetShipId == nil && $0.command.strikes == nil }
-        // Multiple ready squadrons can legally attack the same fleet; resolve one at a time.
-        if let ready = matches.first(where: { $0.command.type == "resolve_destroyer_squadron_roll" }) { return ready }
-        return matches.count == 1 ? matches[0] : nil
+        return tableOption(actions, target: .fleet(player.id))
     }
     func returnToMenu() {
         guard !busy && !presentingDice else { return }

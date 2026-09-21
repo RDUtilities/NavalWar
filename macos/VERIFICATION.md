@@ -122,3 +122,12 @@ The online transport and native online UI are implemented and checked locally. T
 - Node/bundle parity: 12 matches, 24 rounds, 5,025 actions. Native JavaScriptCore parity: 622 requests. Legacy replay, presentation regressions, browser/server/native online transport/reconnect/lost-response checks and required syntax/type/build checks passed.
 - Isolated native UI with disposable saves: Ark Royal rolled 1 against Yamato; Last Roll displayed die face 1, winning threshold and HIT / Ship sunk; the table then showed sinking impact. Screenshot: `build/dice-airstrike-result.png`. User's running game and save were not used.
 - Native miss check: Ark Royal rolled 6 against Kongo; Last Roll showed face 6 and MISS / Ship unharmed, with Kongo still afloat. Screenshot: `build/dice-airstrike-miss.png`. Isolated QA process closed; preview ZIP extraction/signature/executable checks passed.
+
+
+## Full-table layout preview — 2026-09-21
+
+- Built the all-opponents-visible native layout. A four-player UI check displayed 5, 7 and 6 enemy ships simultaneously plus the player's 5 ships and hand.
+- Actual isolated GUI drags: Minefield to empty enemy fleet space passed; Minefield over an enemy ship passed; Minefield onto own fleet rejected without consuming the card. Click-to-play also applied the same minefield correctly.
+- Native regressions cover legal fleet/ship/Destroyer distinctions, stale/foreign source rejection, ownership and busy-state gates. Waiting Destroyer targeting uses the engine's `targetDestroyerId`; ready activation uses `destroyerId` plus target fleet.
+- Hand and own fleet remain pinned. Oversized enemy fleets share vertical scrolling; oversized hands scroll horizontally. Orders & Log retains full commands, dice history and results.
+- These checks do not constitute a new hosted multiplayer playtest or public-release notarization.

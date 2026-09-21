@@ -50,6 +50,44 @@ struct PresentationFixture: Decodable { let before: GameView; let after: GameVie
         precondition(game.fleetAction(fleet) != nil, "Multiple ready squadrons removed fleet target")
         game.view = fixtures["deployment"]!.after
         precondition(!game.actions.contains { $0.command.type == "resolve_destroyer_squadron_roll" }, "New Destroyers must wait until the next turn")
+        // Drops use the current legal options and validate ownership and source identity.
+        game.view = mine.before; game.clearSelection()
+        let minePayload = game.dragPayload(kind: "card", id: mine.command.cardId!)
+        precondition(game.dropOption(minePayload, onto: .fleet(enemy.id))?.command.type == "play_minefield")
+        for ship in enemy.ships.filter({ !$0.sunk }) {
+            precondition(game.dropOption(minePayload, onto: .ship(player: enemy.id, ship: ship.id))?.command.type == "play_minefield")
+        }
+        precondition(game.dropOption(minePayload, onto: .fleet(mine.before.humanPlayerId)) == nil)
+        precondition(game.dropOption("untrusted text", onto: .fleet(enemy.id)) == nil)
+        let foreign = String(decoding: try JSONEncoder().encode(TableDrag(session: UUID(), kind: "card", id: mine.command.cardId!)), as: UTF8.self)
+        precondition(game.dropOption(foreign, onto: .fleet(enemy.id)) == nil)
+        game.busy = true
+        precondition(game.dropOption(minePayload, onto: .fleet(enemy.id)) == nil)
+        game.busy = false
+        let salvo = fixtures["salvo"]!
+        game.view = salvo.before
+        let salvoPayload = game.dragPayload(kind: "card", id: salvo.command.cardId!)
+        precondition(game.dropOption(salvoPayload, onto: .fleet(salvo.command.targetPlayerId!)) == nil)
+        precondition(game.dropOption(salvoPayload, onto: .ship(player: salvo.command.targetPlayerId!, ship: salvo.command.targetShipId!))?.command.type == "play_salvo")
+        precondition(game.dropOption(salvoPayload, onto: .ship(player: salvo.before.humanPlayerId, ship: salvo.command.targetShipId!)) == nil)
+        precondition(game.dropOption(minePayload, onto: .fleet(enemy.id)) == nil, "A stale drag must not play a different card")
+        var squadronRaw = try JSONSerialization.jsonObject(with: JSONEncoder().encode(salvo.before)) as! [String: Any]
+        var squadronState = squadronRaw["gameState"] as! [String: Any]
+        squadronState["destroyerSquadrons"] = [["id": "waiting-destroyer", "ownerId": salvo.command.targetPlayerId!, "hitsTaken": 1, "deployedTurn": 1]]
+        squadronRaw["gameState"] = squadronState
+        var squadronCommand = salvo.command
+        squadronCommand.targetShipId = nil; squadronCommand.targetDestroyerId = "waiting-destroyer"
+        squadronRaw["actions"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode([ActionOption(id: "salvo-destroyer", label: "Attack Destroyer", command: squadronCommand)]))
+        game.view = try JSONDecoder().decode(GameView.self, from: JSONSerialization.data(withJSONObject: squadronRaw))
+        precondition(game.dropOption(salvoPayload, onto: .squadron(player: salvo.command.targetPlayerId!, squadron: "waiting-destroyer"))?.command.targetDestroyerId == "waiting-destroyer")
+        precondition(game.dropOption(salvoPayload, onto: .fleet(salvo.command.targetPlayerId!)) == nil)
+        precondition(game.dropOption(salvoPayload, onto: .squadron(player: salvo.before.humanPlayerId, squadron: "waiting-destroyer")) == nil)
+
+        game.view = destroyer.before
+        let destroyerPayload = game.dragPayload(kind: "destroyer", id: destroyer.command.destroyerId!)
+        precondition(game.dropOption(destroyerPayload, onto: .fleet(fleet.id))?.command.destroyerId == destroyer.command.destroyerId)
+        precondition(game.dropOption(destroyerPayload, onto: .ship(player: fleet.id, ship: fleet.ships.first { !$0.sunk }!.id))?.command.type == "resolve_destroyer_squadron_roll")
+        print("PASS: fleet and ship drops, ready Destroyer drops, invalid ownership, foreign/stale payloads and busy-state rejection.")
         let cases: [(String, [String])] = [
             ("submarine_roll", ["submarine", "Dice"]), ("torpedo_boat_roll", ["TorpedoBoat", "Dice"]),
             ("carrier_roll", ["AirStrike", "Dice"]), ("destroyer_squadron_roll", ["Dice"]),

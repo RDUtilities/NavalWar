@@ -228,6 +228,14 @@ Include the user-visible result in the final response, not just the internal imp
 
 ## Changelog
 
+### 2026-09-21 — Native full-table layout
+
+- Scope: `FullTableView.swift`, `TableInteraction.swift`, `CommandPanel.swift`, GameModel and native presentation tests.
+- Result: every opponent fleet stays visible side by side; own fleet/hand stay pinned. Fleet cards drag onto the whole fleet box or its ships; Salvos use individual ships or waiting Destroyer cards. Ready Destroyers drag onto enemy fleets. Click targeting remains available. Sunk ships collapse after their animation; Orders & Log is optional.
+- Interaction: native table-coordinate drag gestures resolve against the current authoritative legal options. Invalid, stale and foreign payloads do not consume actions. Ship/squadron targets take precedence over the containing fleet.
+- Verification: preview built; four-player layout visually checked with 5/7/6 enemy ships; actual Minefield drags to empty enemy-box space and an enemy ship succeeded, own-fleet drop rejected. Native targeting/presentation tests cover ship/fleet/Destroyer drop distinctions and preserved combat/audio routes. Dice and legacy-save regressions remain required. Oversized fleets share vertical scrolling; large hands scroll horizontally.
+
+
 ### 2026-09-21 — Native dice reveal and result history
 
 - Scope: engine event metadata, native dice presentation/pacing, command-panel Last Roll and regression tests.
