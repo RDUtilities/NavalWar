@@ -93,3 +93,14 @@ The online transport and native online UI are implemented and checked locally. T
 - `macos/Tests/Fixtures/legacy-destroyer-save.json` is a disposable native playtest save captured from the previous build. Golden hashes cover exact visible state before manual selection, after the recorded chosen victims, and after the following End Turn. `scripts/test_mac_legacy_save.mjs` passed and is included in the full native runner.
 - Online checks after the shared helper change passed: mixed socket/HTTP 77 commands; native Campaign 55 actions/one reconnect; HTTP match 232 commands; dropped-response recovery passed.
 - An actual user game was found running in the app. No UI clicks, quit, relaunch or save changes were performed on that match. New automatic behavior is verified through the packaged native engine and transport checks; no new GUI playtest is claimed for this change.
+
+## 2026-09-21 — Native card targeting and combat presentation
+
+- Fleet-wide commands now highlight the fleet with an explicit Play Minefield button and accept clicks on any afloat ship in the legal target fleet. Salvos remain ship-specific.
+- Native Ship decoding includes authoritative attachments. Damage cards appear over the ship and in its inspection sheet; repair/sinking follows the next authoritative attachment list.
+- Cards default to 210 points (previously 146/150), adjustable 180–260; discard scales too. The table scrolls vertically and fleet/hand rows horizontally; the hand stays visible.
+- Confirmed damage changes trigger card arrival, fireball/sparks, shake and sinking tilt/fade. Effects work with sound off, respect Reduce Motion, and do not replay on unchanged snapshots or initial load.
+- `node scripts/test_mac_presentation.mjs`: passed actual engine fixtures for mine targeting, own-fleet rejection, ship-specific salvos, attachment decoding, hit/sinking effects and duplicate/initial-load suppression. Fixtures generated from `test:mac-engine` transcript; `npm run test:mac-presentation` runs both.
+- Native UI: isolated Preview bundle and disposable saves. Clicked Minefield then an enemy ship; confirmed fleet damage and end-turn. Selected Salvo and clicked Nelson; captured explosion plus persistent attachment (`build/salvo-presentation.png`). Separate lethal-salvo fixture showed tilted ship and SHIP SUNK effect (`build/sinking-presentation.png`). Size slider verified at 210 and 260.
+- `node --check prototype/app.js`, `npm run check`, `npm run build`: passed. Packaged Preview under network denial: 622 requests, 4 rounds, 14 exact save restores, 170 artwork entries passed.
+- Built separately with `node scripts/build_mac_app.mjs --preview`; existing running app and its autosave were not modified. Preview test process closed after verification. Preview ZIP is a separate development package; hosted cross-play remains pending.

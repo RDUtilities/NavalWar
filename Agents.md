@@ -228,6 +228,13 @@ Include the user-visible result in the final response, not just the internal imp
 
 ## Changelog
 
+### 2026-09-21 — Native presentation playtest fixes
+
+- Scope: native fleet targeting, ship attachment decoding/rendering, card scaling, combat effects, isolated preview build/package, presentation regression tests.
+- Result: mines have an explicit fleet target and accept afloat ship clicks; salvo/damage cards remain on ships; cards default to roughly 40% larger with a toolbar size slider; hits explode and sunk ships tilt/fade. The table scrolls with the hand pinned. Regular running app preserved; updated build is `macos/build/Naval War Preview.app`.
+- Verification: preview build passed; actual native UI mine/salvo/sinking and slider checks passed with disposable saves; native presentation regressions and packaged network-denied 622-request/4-round checks passed; required syntax/type/build checks passed. See `macos/VERIFICATION.md`.
+
+
 Use this as the shared branch/workflow sync log. Add newest entries at the top.
 
 Entry format:

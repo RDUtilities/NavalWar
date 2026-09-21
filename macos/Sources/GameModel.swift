@@ -14,6 +14,7 @@ import AppKit
     @Published var saved = false
     @Published var inMenu = true
     @Published var sound = true
+    @Published var combatEffects: [String: CombatEffect] = [:]
     private let engine: OfflineEngine = {
         let directory = ProcessInfo.processInfo.environment["NAVAL_WAR_TEST_SAVE_DIR"].map { URL(fileURLWithPath: $0, isDirectory: true) }
         return OfflineEngine(saveDirectory: directory)
@@ -48,7 +49,10 @@ import AppKit
         if busy || view.isBotTurn { return "\(view.gameState.players.first { $0.id == view.gameState.currentPlayerId }?.name ?? "Opponent") is taking a turn…" }
         if let pending = view.gameState.pendingDestroyerAttack { return "Choose \(pending.shipsToSink) enemy ships for your Destroyer Squadron." }
         if showAirStrikes { return "Assign targets, then launch your air strikes." }
-        if selectedCard != nil { return "Choose a highlighted target or an action below." }
+        if selectedCard != nil {
+            if actions.contains(where: { $0.command.targetPlayerId != nil && $0.command.targetShipId == nil }) { return "Click the highlighted enemy fleet button or any afloat ship in that fleet." }
+            return "Choose a highlighted ship or an action below."
+        }
         if view.gameState.openingTurnPendingPlayerIds.contains(view.humanPlayerId) { return "Opening orders: resolve special cards, then end your turn." }
         if view.legalCommands.contains("resolve_destroyer_squadron_roll") || view.legalCommands.contains("discard_destroyer_squadron") { return "Your Destroyer Squadron is ready. Resolve it before drawing." }
         if view.legalCommands.contains("draw_card") { return "Draw a card or launch a carrier air strike." }
@@ -104,10 +108,26 @@ import AppKit
             saved = true; steps += 1
         }
     }
-    private func update(_ next: GameView) {
+    func update(_ next: GameView) {
         let previousCount = view?.gameState.events.count ?? 0
         let sameRound = view?.gameState.roundNumber == next.gameState.roundNumber
         let events = Array(next.gameState.events.dropFirst(sameRound ? previousCount : 0))
+        if sameRound, let previous = view?.gameState {
+            for player in next.gameState.players {
+                for ship in player.ships {
+                    guard let old = previous.players.first(where: { $0.id == player.id })?.ships.first(where: { $0.id == ship.id }), !old.sunk else { continue }
+                    if ship.sunk || ship.remaining < old.remaining {
+                        let attachment = ship.attachments.last(where: { item in !old.attachments.contains(where: { $0.card.id == item.card.id }) })?.card
+                        let effect = CombatEffect(sinking: ship.sunk, salvo: attachment)
+                        combatEffects[ship.id] = effect
+                        Task { [weak self] in
+                            try? await Task.sleep(nanoseconds: 1_800_000_000)
+                            if self?.combatEffects[ship.id]?.id == effect.id { self?.combatEffects[ship.id] = nil }
+                        }
+                    }
+                }
+            }
+        } else { combatEffects = [:] }
         view = next
         guard sound else { return }
         let mapping = ["card_drawn": "draw-card", "special_card_drawn": "draw-card", "salvo_hit": "Salvo-big", "ship_sunk": "shipsink", "smoke_deployed": "smoke", "ship_repaired": "repairCard", "round_completed": "WinnerSound", "carrier_roll": "AirStrike", "destroyer_squadron_roll": "Destroyers"]
@@ -142,13 +162,24 @@ import AppKit
             else if destroyerTargets.count < pending.shipsToSink { destroyerTargets.insert(ship.id) }
             return
         }
+        if !ship.sunk, let option = fleetAction(player) { perform(option); return }
         let options = actions.filter { $0.command.targetShipId == ship.id && ($0.command.targetPlayerId == nil || $0.command.targetPlayerId == player.id) }
         if options.count == 1 { perform(options[0]) } else { inspectedShip = ship }
     }
     func isTarget(_ ship: Ship, player: Player) -> Bool {
         guard canInteract else { return false }
         if let pending = view?.gameState.pendingDestroyerAttack { return player.id == pending.targetPlayerId && !ship.sunk }
+        if !ship.sunk && fleetAction(player) != nil { return true }
         return actions.contains { $0.command.targetShipId == ship.id && ($0.command.targetPlayerId == nil || $0.command.targetPlayerId == player.id) }
+    }
+    func fleetTargetLabel(_ player: Player) -> String {
+        if let card = view?.human.hand.first(where: { $0.id == selectedCard }) { return "Play \(card.title) on \(player.name)" }
+        return "Attack \(player.name)'s fleet"
+    }
+    func fleetAction(_ player: Player) -> ActionOption? {
+        guard canInteract else { return nil }
+        let matches = actions.filter { $0.command.targetPlayerId == player.id && $0.command.targetShipId == nil && $0.command.strikes == nil }
+        return matches.count == 1 ? matches[0] : nil
     }
     func returnToMenu() {
         guard !busy else { return }

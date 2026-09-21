@@ -19,9 +19,11 @@ struct ShipCard: Codable, Identifiable {
     let faction: String
 }
 struct Damage: Codable { let type: String; let hits: Int }
+struct FleetAttachment: Codable { let card: PlayCard; let source: Damage }
 struct Ship: Codable, Identifiable {
     let card: ShipCard
     let damage: [Damage]
+    let attachments: [FleetAttachment]
     let sunk: Bool
     var id: String { card.id }
     var remaining: Int { max(0, card.hitNumber - damage.reduce(0) { $0 + $1.hits }) }

@@ -6,8 +6,10 @@ import { macToolchainEnvironment } from './mac_toolchain.mjs';
 const toolchain = macToolchainEnvironment();
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const build = path.join(root, 'macos/build');
-const app = path.join(build, 'Naval War.app');
-const stage = path.join(build, 'Naval War.staging.app');
+const preview = process.argv.includes('--preview');
+const appName = preview ? 'Naval War Preview' : 'Naval War';
+const app = path.join(build, `${appName}.app`);
+const stage = path.join(build, `${appName}.staging.app`);
 // Preflight before changing the last successful application bundle.
 execFileSync('xcrun', ['swift', '--version'], { stdio: 'inherit', env: toolchain });
 execFileSync('node', ['scripts/bundle_mac_engine.mjs'], { cwd: root, stdio: 'inherit' });
@@ -57,7 +59,7 @@ await fs.writeFile(path.join(contents, 'Info.plist'), `<?xml version="1.0" encod
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
 <key>CFBundleExecutable</key><string>NavalWar</string>
-<key>CFBundleIdentifier</key><string>local.navalwar.mac</string>
+<key>CFBundleIdentifier</key><string>${preview ? "local.navalwar.preview" : "local.navalwar.mac"}</string>
 <key>CFBundleIconFile</key><string>NavalWar</string>
 <key>CFBundleName</key><string>Naval War</string>
 <key>CFBundleDisplayName</key><string>Naval War</string>
@@ -73,7 +75,7 @@ const arch = process.arch === 'arm64' ? 'arm64' : 'x86_64';
 execFileSync('xcrun', ['swiftc', '-swift-version', '5', '-parse-as-library', '-O', '-target', `${arch}-apple-macosx14.0`, ...sources, '-o', path.join(contents, 'MacOS/NavalWar'), '-framework', 'SwiftUI', '-framework', 'SpriteKit', '-framework', 'JavaScriptCore', '-framework', 'AppKit'], { cwd: root, stdio: 'inherit', env: toolchain });
 execFileSync('codesign', ['--force', '--deep', '--sign', '-', stage], { stdio: 'inherit' });
 execFileSync('codesign', ['--verify', '--deep', '--strict', stage], { stdio: 'inherit' });
-const previous = path.join(build, 'Naval War.previous.app');
+const previous = path.join(build, `${appName}.previous.app`);
 await fs.rm(previous, { recursive: true, force: true });
 try { await fs.rename(app, previous); } catch (error) { if (error.code !== 'ENOENT') throw error; }
 await fs.rename(stage, app);

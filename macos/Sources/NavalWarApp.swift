@@ -45,6 +45,13 @@ struct ContentView: View {
             VStack(spacing: 16) {
                 Text(ship.card.name).font(.title2.bold())
                 CardArt(key: ship.card.id, detailed: true).frame(width: 720, height: 480)
+                if !ship.attachments.isEmpty {
+                    ScrollView(.horizontal) {
+                        HStack { ForEach(ship.attachments, id: \.card.id) { attachment in
+                            VStack { CardArt(key: Artwork.shared.key(attachment.card)).frame(width: 150, height: 100); Text(attachment.card.title).font(.caption) }
+                        } }
+                    }.frame(width: 720, height: 130)
+                }
                 Text("\(ship.card.faction) · \(ship.sunk ? "Sunk" : "\(ship.remaining) of \(ship.card.hitNumber) hit points remaining")")
                 Button("Close") { game.inspectedShip = nil }.keyboardShortcut(.cancelAction)
             }.padding(24)
@@ -106,6 +113,7 @@ struct WelcomeView: View {
     }
 }
 struct WarTableView: View {
+    @AppStorage("cardWidth") private var cardWidth = 210.0
     @EnvironmentObject var game: GameModel
     var body: some View {
         VStack(spacing: 0) {
@@ -119,10 +127,10 @@ struct WarTableView: View {
                         ScrollView {
                             VStack(spacing: 12) {
                                 ForEach(view.gameState.players.filter { $0.id != view.humanPlayerId }) { player in FleetView(player: player) }
+                                battleZone(view)
+                                FleetView(player: view.human)
                             }.padding(16)
                         }
-                        battleZone(view).padding(.horizontal, 16)
-                        FleetView(player: view.human).padding(.horizontal, 16)
                         hand(view)
                     }
                 }
@@ -134,6 +142,10 @@ struct WarTableView: View {
             Text("NAVAL WAR").font(.system(size: 22, weight: .bold, design: .serif)).tracking(3).foregroundStyle(gold)
             Text(game.view?.gameState.options.matchMode.capitalized ?? "Skirmish").foregroundStyle(.secondary)
             Spacer()
+            HStack(spacing: 6) {
+                Image(systemName: "rectangle.expand.vertical")
+                Slider(value: $cardWidth, in: 180...260, step: 10).frame(width: 95).accessibilityLabel("Card size")
+            }.help("Adjust the size of all cards")
             if let state = game.view?.gameState { Text("ROUND \(state.roundNumber)  /  TURN \(state.turnNumber)").font(.caption.monospaced()).tracking(1) }
             Toggle(isOn: $game.sound) { Image(systemName: game.sound ? "speaker.wave.2" : "speaker.slash") }.toggleStyle(.button).help("Sound effects")
             Label(game.isOnline ? (game.onlineConnected ? "Online" : "Disconnected") : (game.saved ? "Saved" : "Saving…"), systemImage: game.isOnline ? "network" : "checkmark.circle").font(.caption).foregroundStyle(.secondary)
@@ -151,7 +163,7 @@ struct WarTableView: View {
             }
             if let discarded = view.gameState.discardPile.last {
                 Button { game.inspectedCard = discarded } label: {
-                    VStack(spacing: 2) { CardArt(key: Artwork.shared.key(discarded)).frame(width: 74, height: 49); Text("Discard").font(.system(size: 9)) }
+                    VStack(spacing: 2) { CardArt(key: Artwork.shared.key(discarded)).frame(width: cardWidth * 0.52, height: cardWidth * 0.52 / 1.5); Text("Discard").font(.caption) }
                 }.buttonStyle(.plain)
             }
         }.padding(12).frame(minHeight: 60).background(.black.opacity(0.18), in: RoundedRectangle(cornerRadius: 10))
@@ -164,7 +176,7 @@ struct WarTableView: View {
                     ForEach(view.human.hand) { card in
                         Button { game.choose(card) } label: {
                             VStack(spacing: 5) {
-                                CardArt(key: Artwork.shared.key(card)).frame(width: 150, height: 100)
+                                CardArt(key: Artwork.shared.key(card)).frame(width: cardWidth, height: cardWidth / 1.5)
                                     .overlay(RoundedRectangle(cornerRadius: 7).stroke(game.selectedCard == card.id ? gold : .clear, lineWidth: 3))
                                 Text(card.title).font(.caption).lineLimit(1)
                             }.padding(4).background(game.selectedCard == card.id ? gold.opacity(0.12) : .clear, in: RoundedRectangle(cornerRadius: 10))
@@ -173,11 +185,12 @@ struct WarTableView: View {
                         .contextMenu { Button("Inspect card") { game.inspectedCard = card } }
                     }
                 }.padding(.vertical, 4)
-            }.frame(height: 146)
+            }.frame(height: cardWidth / 1.5 + 46)
         }.padding(.horizontal, 18).padding(.top, 10).padding(.bottom, 12).background(navy.opacity(0.95))
     }
 }
 struct FleetView: View {
+    @AppStorage("cardWidth") private var cardWidth = 210.0
     @EnvironmentObject var game: GameModel
     let player: Player
     var body: some View {
@@ -191,19 +204,21 @@ struct FleetView: View {
                 if let score = game.view?.gameState.campaign?.totalScores[player.id] { Text("\(score) points").font(.caption).foregroundStyle(gold) }
                 ForEach(Array(player.fleetEffects.enumerated()), id: \.offset) { _, effect in Text(effect.kind.uppercased()).font(.system(size: 9, weight: .bold)).foregroundStyle(.orange) }
             }
+            if let option = game.fleetAction(player) {
+                Button { game.perform(option) } label: {
+                    Label(game.fleetTargetLabel(player), systemImage: "scope").font(.headline).frame(maxWidth: .infinity).padding(6)
+                }.buttonStyle(.borderedProminent).accessibilityLabel(game.fleetTargetLabel(player))
+            }
             ScrollView(.horizontal) {
                 HStack(spacing: 9) {
                     ForEach(player.ships.sorted { !$0.card.isCarrier && $1.card.isCarrier }) { ship in
                         Button { game.target(ship, player: player) } label: {
                             VStack(alignment: .leading, spacing: 4) {
-                                ZStack {
-                                    CardArt(key: ship.sunk ? "shipBack" : ship.card.id).frame(width: 146, height: 98).opacity(ship.sunk ? 0.38 : 1)
-                                    if ship.sunk { Text("SUNK").font(.headline).tracking(3).foregroundStyle(.white) }
-                                }
+                                CombatShipArt(ship: ship, effect: game.combatEffects[ship.id], width: cardWidth)
                                 .overlay(RoundedRectangle(cornerRadius: 7).stroke(game.destroyerTargets.contains(ship.id) ? Color.green : (game.isTarget(ship, player: player) ? gold : Color.white.opacity(0.1)), lineWidth: game.isTarget(ship, player: player) ? 3 : 1))
                                 HStack { Text(ship.card.name).font(.caption.weight(.semibold)).lineLimit(1); Spacer(); Text(ship.sunk ? "—" : "\(ship.remaining)/\(ship.card.hitNumber)").font(.caption.monospacedDigit()).foregroundStyle(ship.remaining < ship.card.hitNumber ? .orange : .secondary) }
                                 if ship.card.isCarrier { Text("CARRIER · REAR LINE").font(.system(size: 8)).tracking(1).foregroundStyle(gold) }
-                            }.frame(width: 146).padding(3)
+                            }.frame(width: cardWidth).padding(3)
                         }.buttonStyle(.plain)
                         .accessibilityLabel("\(player.name), \(ship.card.name), \(ship.sunk ? "sunk" : "\(ship.remaining) hit points")")
                         .contextMenu { Button("Inspect ship") { game.inspectedShip = ship } }
@@ -211,6 +226,7 @@ struct FleetView: View {
                 }.padding(4)
             }
         }.padding(12).background(navy.opacity(player.id == game.view?.humanPlayerId ? 0.8 : 0.5), in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(game.fleetAction(player) != nil ? gold : .clear, lineWidth: 3))
     }
 }
 struct CommandPanel: View {

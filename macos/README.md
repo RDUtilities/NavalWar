@@ -88,3 +88,11 @@ Card inspection uses bundled 1536×1024 artwork, separate from the 768×512 tabl
 Online verification includes a mixed Socket.IO/HTTP match using the browser client bundle, checking live broadcasts against native snapshots. Both offline and online views hide the card kind in opponents' ordinary draw logs. See `RELEASE_READINESS.md` for the remaining deployment gates.
 
 Destroyer Squadron attacks use the same automatic first-afloat victim order offline and online after you choose a target fleet. Older development saves that paused for manual victim selection remain loadable and retain their recorded selections. The native verification runner includes a prior-build golden-save compatibility check.
+
+### Native presentation preview
+
+`node scripts/build_mac_app.mjs --preview` builds `macos/build/Naval War Preview.app` with a separate bundle identity, leaving the regular app bundle intact. `node scripts/package_mac_app.mjs --preview` packages that preview separately. For testing, launch it with the isolated save and Keychain environment variables described above. For normal play, quit the regular game before opening the preview: without test variables both use the normal Naval War save location.
+
+The toolbar card-size slider adjusts hand, fleet, and discard art. Select a fleet-wide card such as Minefield, then click the labeled fleet button or any highlighted afloat ship. Salvos highlight individual legal ships. Attached damage cards appear on ships; right-click and inspect a ship to read its full attachment list. The hand stays visible while the table scrolls. Combat effects follow confirmed damage/sinking and honor the Mac Reduce Motion preference.
+
+`npm run test:mac-presentation` verifies native targeting and combat presentation against actual engine positions; it is also included in `test:mac-native`.

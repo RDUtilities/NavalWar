@@ -20,7 +20,8 @@
     "build:mac": "npm run check && node scripts/build_mac_app.mjs",
     "test:mac-online": "node scripts/test_online_transport.mjs",
     "test:browser-campaign": "node scripts/test_browser_campaign.mjs",
-    "package:mac": "npm run build:mac && node scripts/package_mac_app.mjs"
+    "package:mac": "npm run build:mac && node scripts/package_mac_app.mjs",
+    "test:mac-presentation": "npm run test:mac-engine && node scripts/test_mac_presentation.mjs"
   },
   "devDependencies": {
     "typescript": "^5.8.3"
