@@ -28,6 +28,7 @@ struct DiceFixture: Decodable { let kind: String; let roll: Int; let before: Gam
         await task.value
         precondition(game.view!.gameState.players[1].ships[0].sunk && !game.presentingDice)
         precondition(game.recentRolls.count == 1)
+        precondition(game.diceResult == nil && game.canInteract, "Completed roll left a blocking overlay")
         await game.present(fixture.after)
         precondition(game.recentRolls.count == 1, "Unchanged snapshots replayed dice")
         game.view = nil; game.recentRolls = []
@@ -42,6 +43,23 @@ struct DiceFixture: Decodable { let kind: String; let roll: Int; let before: Gam
         game.view = fixture.before; game.diceRollDelay = 1; game.diceResultDelay = 1
         await game.present(batch)
         precondition(game.recentRolls.compactMap(\.face) == [1,4])
+        // Every attack, including a bot submarine miss, must release the table.
+        game.diceRollDelay = 1; game.diceResultDelay = 1
+        for sample in fixtures {
+            game.view = sample.before
+            await game.present(sample.after)
+            precondition(game.diceResult == nil && !game.presentingDice && !game.diceRolling)
+            precondition(game.canInteract, "Completed attack left input blocked")
+            precondition(game.recentRolls.last?.face == sample.roll, "Dismissal lost the retained result")
+        }
+        // Cancellation during the result hold must clear the transient overlay too.
+        game.view = fixture.before; game.diceRollDelay = 1; game.diceResultDelay = 5_000_000_000
+        let canceled = Task { await game.present(fixture.after) }
+        try await Task.sleep(nanoseconds: 20_000_000)
+        precondition(game.presentingDice && game.diceResult != nil)
+        canceled.cancel(); await canceled.value
+        precondition(game.diceResult == nil && !game.presentingDice && game.canInteract)
+        print("PASS: all 24 attack results dismiss, Last Roll remains, canceled presentation releases input.")
         print("PASS: all 24 actual RNG faces/outcomes, capped Destroyer result, legacy fallback, roll/result before impact, batched rolls, and no polling/load replay.")
     }
 }

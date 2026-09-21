@@ -228,6 +228,12 @@ Include the user-visible result in the final response, not just the internal imp
 
 ## Changelog
 
+### 2026-09-21 — Clear completed dice overlay
+
+- Scope: native full-table overlay visibility, GameModel transient result cleanup, DiceTests.
+- Result: the completed roll no longer blocks the following turn. The modal is gated by active presentation and cleared on completion/cancellation; Last Roll retains history.
+- Verification: all 24 outcomes dismiss and restore interaction; cancellation during result hold clears the overlay; existing timing, batching and no-replay tests pass. Required syntax/type/build checks pass. User save untouched.
+
 ### 2026-09-21 — Native full-table layout
 
 - Scope: `FullTableView.swift`, `TableInteraction.swift`, `CommandPanel.swift`, GameModel and native presentation tests.

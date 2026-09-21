@@ -37,7 +37,7 @@ struct WarTableView: View {
                     .padding(12).background(.black.opacity(0.8), in: RoundedRectangle(cornerRadius: 10))
                     .position(game.tableDragPoint).allowsHitTesting(false)
             }
-            if let result = game.diceResult {
+            if game.presentingDice, let result = game.diceResult {
                 Color.black.opacity(0.5).ignoresSafeArea()
                 DiceRollPanel(result: result, rolling: game.diceRolling).padding(28)
                     .background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 20)).frame(maxWidth: 520)

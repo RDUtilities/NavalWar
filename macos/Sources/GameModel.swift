@@ -135,6 +135,13 @@ import AppKit
         let events = Array(next.gameState.events.dropFirst(sameRound ? oldCount : 0))
         let rolls = view == nil ? [] : events.compactMap(DiceResolution.init)
         let generation = sessionGeneration
+        defer {
+            if generation == sessionGeneration {
+                diceResult = nil
+                presentingDice = false
+                diceRolling = false
+            }
+        }
         presentingDice = !rolls.isEmpty
         for roll in rolls {
             guard !Task.isCancelled, generation == sessionGeneration else { presentingDice = false; return }

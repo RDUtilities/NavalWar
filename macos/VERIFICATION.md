@@ -131,3 +131,11 @@ The online transport and native online UI are implemented and checked locally. T
 - Native regressions cover legal fleet/ship/Destroyer distinctions, stale/foreign source rejection, ownership and busy-state gates. Waiting Destroyer targeting uses the engine's `targetDestroyerId`; ready activation uses `destroyerId` plus target fleet.
 - Hand and own fleet remain pinned. Oversized enemy fleets share vertical scrolling; oversized hands scroll horizontally. Orders & Log retains full commands, dice history and results.
 - These checks do not constitute a new hosted multiplayer playtest or public-release notarization.
+
+
+## Completed dice overlay regression — 2026-09-21
+
+- User screenshot showed a completed Submarine miss covering an already-ready human draw turn.
+- Confirmed the full-table view rendered whenever `diceResult` existed, while GameModel retained the completed value. The overlay now requires `presentingDice`, and transient state clears on completion/cancellation; history remains separate.
+- Native async tests verify dismissal and input release for all 24 type/face outcomes, including Submarine misses, plus cancellation during result hold. Existing reveal-before-impact, batching and no-replay tests pass.
+- Required browser syntax, TypeScript check/build pass. No engine rules or saved-game changes.
