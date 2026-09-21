@@ -4,3 +4,5 @@ node_modules/
 dist/
 tmp-crops/
 tmp-preview/
+macos/build/
+macos/Resources/naval-engine.js

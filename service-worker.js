@@ -1,4 +1,4 @@
-const CACHE_VERSION = "naval-war-assets-v10";
+const CACHE_VERSION = "naval-war-assets-v12";
 const SHELL_ASSETS = [
   "/",
   "/prototype/index.html",

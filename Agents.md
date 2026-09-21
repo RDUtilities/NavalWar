@@ -1,6 +1,6 @@
 # Naval War Game Agent Guide
 
-Last updated: 2026-05-13
+Last updated: 2026-09-21
 
 This file is the working handoff map for agents contributing to the Naval War Game project. Keep it practical: update it when scope changes, when a workstream moves from planned to active, or when a future agent needs a reliable place to resume.
 
@@ -61,6 +61,21 @@ Build an online-playable Naval War style card game with:
 - In Campaign, round score is hit points in each player's Victory Pile; first to target score wins.
 
 ## Workstreams
+
+### Standalone Mac App
+
+Status: milestones 1 and 2 implemented and verified; milestone 3 native online UI and local transport implemented; actual browser UI cross-play and hosted verification remain. Review branch: `codex/native-mac-game`.
+
+- Goal: preserve gameplay/rules, keep browser-compatible online PvP, add fully offline bots, and improve the Mac presentation.
+- Roadmap and architecture recommendation: `MAC_APP_PLAN.md`.
+- Recommended stack: SwiftUI + SpriteKit presentation; existing TypeScript rules bundled for JavaScriptCore offline; existing Render server authoritative online.
+- Implemented source: `src/bots.ts`, `src/offline-session.ts`, `src/mac-bridge.ts`; native build/check instructions: `macos/README.md`.
+- Native sources: `macos/Sources/`; build with `npm run build:mac`; full native checks: `npm run test:mac-native`; evidence: `macos/VERIFICATION.md`.
+- Native online transport: `macos/Sources/OnlineSession.swift`; local protocol/transport verification: `npm run test:mac-online`.
+- Native lobby controls and Keychain reconnect storage are implemented. Next slice: actual Mac/browser cross-play. Hosted server update is required for native protocol v1; nothing deployed.
+- Node checks: `npm run test:mac-engine` and `npm run test:shared-bots`.
+- Toolchain: Xcode license is pending, but the separately installed Command Line Tools successfully build and test the app. Build scripts select this alternative locally; no global developer-directory change is needed.
+- Current source has HTTP and Socket.IO multiplayer plus optimized/PWA assets; older introductory status bullets above are historical and must not be used to infer those features are absent.
 
 ### Engine Rules
 
@@ -220,6 +235,58 @@ Entry format:
 - Scope: files/components touched
 - Result: user-visible behavior change
 - Verification: commands run and result
+
+### 2026-09-21
+
+- `2026-09-21 America/Chicago` — Offline Destroyer gameplay parity and legacy saves
+- Scope: shared automatic Destroyer target helper, offline/server adapters, native parity tests, captured legacy fixture and package.
+- Result: New native offline Destroyer attacks now automatically select victims in the existing hosted fleet order. The user still selects the target fleet. Older saves with recorded manual victim choices replay unchanged, including a save paused before selection; the old native selection controls remain only for that compatibility path.
+- Verification: full native suite passed (12 matches, 24 rounds, 5,025 actions; 622 JavaScriptCore transcript requests; 20 rule cases; 14 restores; 170 images). Prior-build golden save views matched before/after manual selection and the following turn. Mixed socket/HTTP, native transport and failure-recovery tests passed. User has an active native game, so no UI actions/relaunch were performed. Source remains uncommitted; no deployment.
+
+- `2026-09-21 America/Chicago` — Socket identity remapping and private draw logs
+- Scope: `server.mjs`, shared visibility filter, native bundle, offline/server views, engine and mixed-transport tests.
+- Result: Browser sockets now resolve their current match player ID through the stable session token before lobby/game broadcasts, fixing missing live updates when a match changes seat IDs. Every authenticated socket receives its own filtered view. Opponents' ordinary draw logs no longer expose hidden card kinds; public special-card events remain visible.
+- Verification: mixed Socket.IO/HTTP match completed 133 commands with a bot, verifying both socket broadcasts, native snapshot agreement, host gates and hidden draws; native transport completed 142 actions/four reconnects; failure recovery and browser HTTP tests passed. Full native offline suite and refreshed development ZIP passed. Actual browser GUI cross-play awaits browser access; nothing deployed, changes uncommitted.
+
+- `2026-09-21 America/Chicago` — Retina inspection artwork and development package
+- Scope: native artwork loader/inspection, build asset bundling, native resource checks, package script and documentation.
+- Result: Card inspection uses bundled 1536×1024 artwork while the table retains lighter images. Added `npm run package:mac` to create an extracted-and-verified development ZIP. The current package is 49.6 MB for Apple Silicon, with a local signature; not notarized.
+- Verification: full native suite passed (5,066 actions, 628 JavaScriptCore transcript requests, 20 targeted rules, 14 save reloads and 170 artwork entries). Native card inspection visually checked under network denial. Extracted archive signature and executable hash matched. Hosted cross-play remains unfinished; changes uncommitted.
+
+- `2026-09-21 America/Chicago` — Online stale-response recovery guard
+- Scope: `macos/Sources/OnlineSession.swift`, native failure tests, controlled-response test proxy and online test runner.
+- Result: A refresh started before an online action can no longer clear the uncertain-action guard after that action loses its response. Reconnect must obtain a fresh snapshot before another action; cancelled requests are rejected as well.
+- Verification: Controlled local proxy accepted Ready on the real server, dropped its response, then released an older snapshot. Native transport rejected the stale snapshot and a premature Start, refreshed to the accepted Ready state, and started once. Request counters confirmed Ready=1 and Start=1. Integrated online tests and app build passed. Hosted health returned ok/multiplayer but no nativeProtocolVersion; no deployment.
+
+- `2026-09-21 America/Chicago` — Campaign browser continuation and visible home fleet
+- Scope: `prototype/app.js`, service-worker v12, `scripts/test_browser_campaign.mjs`, online test runner, native table layout and documentation.
+- Result: Browser hosts can request the next online Campaign round; guests wait for the host. Online transitions refresh from the server, block double clicks, and clear stale result banners. The native table keeps the local fleet and hand visible while opponent fleets scroll.
+- Verification: browser controller regression passed; native Campaign transport completed 142 actions with four reconnects; browser-compatible HTTP match completed 124 actions. Actual native guest joined a four-player Campaign, resumed after rebuild, sent End Turn, and matched the host protocol view at turn 7 with hidden hands. Native screenshot verifies the pinned home fleet. Actual browser UI attempt was blocked by browser-control timeouts; no hosted deployment. Changes remain uncommitted.
+
+- `2026-09-21 America/Chicago` — Native online screens and Campaign transport
+- Scope: native session model, lobby/setup/table UI, Keychain store, server next-round route, session round transition and online tests.
+- Result: Added host/join/ready/start, online action routing, polling, reconnect credentials and host-only Campaign progression. Offline saves stay separate. No hosted deployment.
+- Verification: app build passed; native Campaign round completed 153 human actions with four reconnects, host-only/early-round guards passed; browser-compatible HTTP match completed 203 commands. Actual native UI host/ready/start/attack and quit/reopen recovery passed on an isolated local server. Actual browser UI cross-play remains unverified. Changes are uncommitted.
+
+- `2026-09-21 12:17 CDT` — Native online transport and lobby privacy
+- Scope: `macos/Sources/OnlineSession.swift`, online transport tests, `src/session.ts`, `server.mjs`, browser host requests, service-worker v11, package metadata and documentation.
+- Result: Added native HTTP create/join/ready/start/state/command/reconnect transport with compatibility checks and no automatic mutation retries. Removed full match state and reconnect identifiers from public lobby responses, required tokens for views/commands, enforced host-only start/fill, and replaced session ID randomness with crypto UUIDs (Node 20+). Native online UI is not wired yet; no deployment.
+- Verification: local browser-protocol match completed 192 commands; native three-player match with a bot completed 150 human actions and four fresh-client reconnects; privacy/authentication checks passed; six-match shared-bot regression passed; TypeScript and JS syntax checks passed. Evidence: `macos/build/online-transport-verification.json`. Changes remain uncommitted.
+
+- `2026-09-21 12:10 CDT` — Native offline Mac milestones 1 and 2 verified
+- Scope: `macos/Sources/`, native build/test scripts, `src/action-options.ts`, shared engine and documentation.
+- Result: Built a native offline app with bundled cards/audio, human-versus-bot play, legal targeting, card inspection, Campaign support and atomic autosave/resume. Fixed direct-command Destroyer gate bypasses and aligned Skirmish deck-exhaustion scoring with accepted captured-ship/point rules. No hosted deployment changed.
+- Verification: 12 Node matches / 24 rounds / 5,066 actions; 628 JavaScriptCore transcript requests and 20 targeted rule cases; six local multiplayer-service matches; 86 artwork entries decoded; native packaged-resource tests completed four rounds and 14 exact save reloads with network denied. Actual native GUI Skirmish finished at turn 57 under network denial, with exact turn-12 quit/reopen recovery. App signature verified. Detailed evidence: `macos/VERIFICATION.md`. Uncommitted; online Mac adapter remains next.
+
+- `2026-09-21 11:46 CDT` — Shared offline engine and bot reuse
+- Scope: `src/bots.ts`, `src/session.ts`, `src/offline-session.ts`, `src/mac-bridge.ts`, `src/engine.ts`, Mac bundle/test scripts, `macos/Tests/EngineParity.swift`, project documentation and package scripts.
+- Result: Added a browser-independent local game bridge with bots, Campaign continuation and deterministic save/restore. Reused server bot policy. Fixed the existing smoke-blocked mandatory-card end-turn deadlock without permitting ordinary action skips. No playable native app exists yet.
+- Verification: Node/bundle parity across 12 matches / 24 rounds / 5,066 actions; local multiplayer-service bot regression across 6 matches / 296 human commands; build/type checks pass. Native JavaScriptCore execution remains blocked by Xcode license acceptance. Changes remain uncommitted; nothing deployed.
+
+- `2026-09-21 11:37 CDT` — Standalone Mac architecture and roadmap
+- Scope: `MAC_APP_PLAN.md`, `Agents.md`
+- Result: Established the Mac app goal and recommended a native SwiftUI/SpriteKit client with shared offline rules and existing hosted PvP. Defined implementation milestones and acceptance checks.
+- Verification: Inspected engine/session/server and asset layout; consulted official framework documentation. `node --check prototype/app.js` and `npm run check` passed. Hosted health request timed out. Documentation-only change; no native build or cross-play verification claimed. Xcode license acceptance is pending.
 
 ### 2026-05-14
 

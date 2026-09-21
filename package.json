@@ -5,6 +5,10 @@
   "type": "module",
   "description": "Authoritative rules engine scaffold for an online naval tactics card game inspired by Naval War.",
   "scripts": {
+    "build:mac-engine": "npm run check && node scripts/bundle_mac_engine.mjs",
+    "test:mac-engine": "npm run build && npm run build:mac-engine && node scripts/test_mac_engine.mjs",
+    "test:shared-bots": "npm run build && node scripts/test_shared_bots.mjs",
+    "test:mac-native": "node scripts/test_mac_native.mjs",
     "start": "node server.mjs",
     "serve:local": "node server.mjs",
     "build": "npm run build:pwa-assets && tsc -p tsconfig.json",
@@ -12,12 +16,19 @@
     "optimize:assets": "node scripts/optimize_card_assets.mjs && npm run build:pwa-assets",
     "check": "tsc -p tsconfig.json --noEmit",
     "simulate": "npm run build && node dist/simulation.js",
-    "simulate:quick": "npm run build && node dist/simulation.js --games=20 --players=4 --mode=skirmish --seed=20260508 --max-steps=5000"
+    "simulate:quick": "npm run build && node dist/simulation.js --games=20 --players=4 --mode=skirmish --seed=20260508 --max-steps=5000",
+    "build:mac": "npm run check && node scripts/build_mac_app.mjs",
+    "test:mac-online": "node scripts/test_online_transport.mjs",
+    "test:browser-campaign": "node scripts/test_browser_campaign.mjs",
+    "package:mac": "npm run build:mac && node scripts/package_mac_app.mjs"
   },
   "devDependencies": {
     "typescript": "^5.8.3"
   },
   "dependencies": {
     "socket.io": "^4.8.3"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

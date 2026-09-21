@@ -311,10 +311,10 @@ function maybeCompleteRound(state: GameState) {
         .map((player) => player.id);
       finalizeCampaignScores(state);
     } else {
-      const mostShipsAfloat = Math.max(...state.players.map((player) => livingShips(player).length));
-      state.winnerIds = state.players
-        .filter((player) => livingShips(player).length === mostShipsAfloat)
-        .map((player) => player.id);
+      const mostCapturedShips = Math.max(...state.players.map(player => player.victoryPile.length));
+      const leaders = state.players.filter(player => player.victoryPile.length === mostCapturedShips);
+      const mostCapturedPoints = Math.max(...leaders.map(scoreVictoryPile));
+      state.winnerIds = leaders.filter(player => scoreVictoryPile(player) === mostCapturedPoints).map(player => player.id);
       state.matchWinnerIds = [...state.winnerIds];
     }
   }
@@ -643,6 +643,9 @@ export function listLegalCommands(state: GameState, actorId: PlayerId): string[]
   if (state.currentPlayerId !== actorId || state.phase !== "normal") {
     return [];
   }
+  if (state.pendingDestroyerAttack?.ownerId === actorId) {
+    return ["select_destroyer_squadron_targets"];
+  }
 
   const legal: string[] = [];
   const openingTurnPending = isOpeningTurnForPlayer(state, actorId);
@@ -810,6 +813,14 @@ export function applyCommand(state: GameState, command: GameCommand, rng: Random
   const actor = getPlayer(next, command.actorId);
   const openingTurnPending = isOpeningTurnForPlayer(next, actor.id);
   const mandatorySpecialInHand = hasMandatorySpecialInHand(actor);
+
+  if (next.pendingDestroyerAttack?.ownerId === actor.id) {
+    assert(command.type === "select_destroyer_squadron_targets", "Select the pending Destroyer Squadron targets first.");
+  } else if (!openingTurnPending && !mandatorySpecialInHand && livingShips(actor).length > 0 &&
+    next.destroyerSquadrons.some(entry => entry.ownerId === actor.id && entry.deployedTurn < next.turnNumber)) {
+    assert(command.type === "resolve_destroyer_squadron_roll" || command.type === "discard_destroyer_squadron",
+      "Resolve the ready Destroyer Squadron before taking another action.");
+  }
 
   if (openingTurnPending && !mandatorySpecialInHand) {
     assert(command.type === "end_turn", `${actor.name} must end their opening turn after resolving special cards.`);
@@ -1304,17 +1315,17 @@ export function applyCommand(state: GameState, command: GameCommand, rng: Random
     }
 
     case "end_turn": {
+      const canEndTurnWithUnplayableMandatory =
+        hasMandatorySpecialInHand(actor) &&
+        !next.hasPerformedActionThisTurn &&
+        !hasPlayableMandatorySpecial(next, actor) &&
+        listLegalCommands(next, actor.id).includes("end_turn");
       if (isOpeningTurnForPlayer(next, actor.id)) {
         assert(!hasMandatorySpecialInHand(actor), `${actor.name} must resolve all opening special cards before ending their turn.`);
         completeOpeningTurnForPlayer(next, actor.id);
       } else if (!actor.eliminated) {
-        assert(next.hasPerformedActionThisTurn, `${actor.name} must take an action before ending their turn.`);
+        assert(next.hasPerformedActionThisTurn || canEndTurnWithUnplayableMandatory, `${actor.name} must take an action before ending their turn.`);
       }
-      const canEndTurnWithUnplayableMandatory =
-        hasMandatorySpecialInHand(actor) &&
-        next.hasDrawnThisTurn &&
-        !next.hasPerformedActionThisTurn &&
-        !hasPlayableMandatorySpecial(next, actor);
       assert(
         !next.hasDrawnThisTurn || next.hasPerformedActionThisTurn || canEndTurnWithUnplayableMandatory,
         `${actor.name} must take an action after drawing before ending their turn.`

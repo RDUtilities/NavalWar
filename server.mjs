@@ -124,10 +124,23 @@ function toInt(value, fallback) {
 }
 
 function sanitizeLobbyResponse(lobby) {
+  // Lobby metadata is public. Match state and reconnect credentials are not.
+  const { state, ...metadata } = lobby;
   return {
-    ...lobby,
-    players: (lobby.players || []).map(({ sessionToken, ...rest }) => ({ ...rest })),
+    ...metadata,
+    players: (lobby.players || []).map(({ sessionToken, clientId, ...rest }) => ({ ...rest })),
   };
+}
+
+function sessionTokenFrom(req, body = {}, searchParams = null) {
+  const authorization = String(req.headers.authorization || "");
+  return authorization.startsWith("Bearer ") ? authorization.slice(7).trim()
+    : String(body.sessionToken || searchParams?.get("sessionToken") || "");
+}
+
+function requireHost(lobbyId, token) {
+  const identity = multiplayerService.resumeSession(lobbyId, token);
+  if (!identity.isHost) throw new Error("Only the host may manage this lobby.");
 }
 
 function parseLobbyId(pathname) {
@@ -148,16 +161,21 @@ function toSocketLobbyView(lobby, viewerPlayerId = null) {
   };
 }
 
-function emitLobbyState(io, lobby, targetPlayerId = null) {
-  const sockets = [...socketSessionRef.entries()].filter(([, ref]) => ref.lobbyId === lobby.lobbyId);
-  const byPlayer = new Map();
-  for (const [socketId, ref] of sockets) {
-    if (!ref.playerId) continue;
-    if (!byPlayer.has(ref.playerId)) {
-      byPlayer.set(ref.playerId, socketId);
-    }
+function attachedLobbySockets(lobby) {
+  const attached = [];
+  for (const [socketId, ref] of socketSessionRef.entries()) {
+    if (ref.lobbyId !== lobby.lobbyId) continue;
+    // Seats receive engine player IDs when a match starts. Tokens remain stable.
+    const player = lobby.players.find(player => player.sessionToken === ref.sessionToken);
+    if (!player) continue;
+    ref.playerId = player.playerId;
+    attached.push({ socketId, playerId: player.playerId, sessionToken: player.sessionToken });
   }
-  for (const [playerId, socketId] of byPlayer.entries()) {
+  return attached;
+}
+
+function emitLobbyState(io, lobby, targetPlayerId = null) {
+  for (const { playerId, socketId } of attachedLobbySockets(lobby)) {
     if (targetPlayerId && targetPlayerId !== playerId) continue;
     io.to(socketId).emit("lobby:state", toSocketLobbyView(lobby, playerId));
   }
@@ -165,16 +183,7 @@ function emitLobbyState(io, lobby, targetPlayerId = null) {
 
 function emitMatchState(io, lobbyId) {
   const lobby = multiplayerService.getLobby(lobbyId);
-  const sockets = [...socketSessionRef.entries()].filter(([, ref]) => ref.lobbyId === lobbyId);
-  const byPlayer = new Map();
-  for (const [socketId, ref] of sockets) {
-    if (!ref.playerId || byPlayer.has(ref.playerId)) continue;
-    byPlayer.set(ref.playerId, socketId);
-  }
-
-  for (const [playerId, socketId] of byPlayer.entries()) {
-    const sessionToken = (lobby.players || []).find((player) => player.playerId === playerId)?.sessionToken || null;
-    if (!sessionToken) continue;
+  for (const { playerId, socketId, sessionToken } of attachedLobbySockets(lobby)) {
     const view = multiplayerService.getPlayerView(lobbyId, playerId, sessionToken);
     io.to(socketId).emit("match:state", {
       lobbyId,
@@ -192,7 +201,7 @@ async function handleApi(req, res, pathname, searchParams) {
   }
 
   if (req.method === "GET" && pathname === "/api/health") {
-    sendJson(res, 200, { ok: true, multiplayer: true });
+    sendJson(res, 200, { ok: true, multiplayer: true, nativeProtocolVersion: 1 });
     return;
   }
 
@@ -280,6 +289,7 @@ async function handleApi(req, res, pathname, searchParams) {
 
   if (req.method === "POST" && pathname === `/api/lobbies/${encodeURIComponent(lobbyId)}/fill-bots`) {
     const body = await parseJsonBody(req);
+    requireHost(lobbyId, sessionTokenFrom(req, body));
     const lobby = multiplayerService.fillOpenSeatsWithBots(
       lobbyId,
       String(body.botNamePrefix ?? "Bot Admiral")
@@ -302,6 +312,8 @@ async function handleApi(req, res, pathname, searchParams) {
   }
 
   if (req.method === "POST" && pathname === `/api/lobbies/${encodeURIComponent(lobbyId)}/start`) {
+    const body = await parseJsonBody(req);
+    requireHost(lobbyId, sessionTokenFrom(req, body));
     const lobby = multiplayerService.startMatch(lobbyId);
     emitLobbyState(io, lobby);
     io.to(lobbyId).emit("match:ready", {
@@ -309,6 +321,16 @@ async function handleApi(req, res, pathname, searchParams) {
       joinCode: lobby.joinCode,
       status: lobby.status
     });
+    emitMatchState(io, lobbyId);
+    sendJson(res, 200, sanitizeLobbyResponse(lobby));
+    return;
+  }
+
+  if (req.method === "POST" && pathname === `/api/lobbies/${encodeURIComponent(lobbyId)}/next-round`) {
+    const body = await parseJsonBody(req);
+    requireHost(lobbyId, sessionTokenFrom(req, body));
+    const lobby = multiplayerService.startNextRound(lobbyId);
+    emitLobbyState(io, lobby);
     emitMatchState(io, lobbyId);
     sendJson(res, 200, sanitizeLobbyResponse(lobby));
     return;
@@ -322,12 +344,35 @@ async function handleApi(req, res, pathname, searchParams) {
 
   if (req.method === "GET" && pathname === `/api/lobbies/${encodeURIComponent(lobbyId)}/view`) {
     const viewerPlayerId = searchParams.get("playerId");
-    const sessionToken = searchParams.get("sessionToken");
+    const sessionToken = sessionTokenFrom(req, {}, searchParams);
     if (!viewerPlayerId && !sessionToken) {
       sendJson(res, 400, { error: "Missing required query parameter: playerId or sessionToken" });
       return;
     }
     sendJson(res, 200, multiplayerService.getPlayerView(lobbyId, viewerPlayerId, sessionToken));
+    return;
+  }
+
+  if (req.method === "GET" && pathname === `/api/lobbies/${encodeURIComponent(lobbyId)}/native-view`) {
+    const token = sessionTokenFrom(req);
+    const playerView = multiplayerService.getPlayerView(lobbyId, null, token);
+    const state = playerView.gameState;
+    sendJson(res, 200, {
+      protocolVersion: 1,
+      viewerPlayerId: playerView.viewerPlayerId,
+      lobby: sanitizeLobbyResponse(multiplayerService.getLobby(lobbyId)),
+      view: state ? {
+        humanPlayerId: playerView.viewerPlayerId,
+        isBotTurn: false,
+        legalCommands: playerView.legalCommands,
+        actions: playerView.actions,
+        gameState: {
+          ...state,
+          discardPile: state.discardPileTopCard ? [state.discardPileTopCard] : [],
+          players: state.players.map(player => ({ ...player, hand: player.hand ?? [] }))
+        }
+      } : null
+    });
     return;
   }
 
@@ -337,7 +382,7 @@ async function handleApi(req, res, pathname, searchParams) {
       sendJson(res, 400, { error: "Command payload is missing required fields." });
       return;
     }
-    const lobby = multiplayerService.submitCommand(lobbyId, body, body.sessionToken ?? null);
+    const lobby = multiplayerService.submitCommand(lobbyId, body, sessionTokenFrom(req, body));
     emitLobbyState(io, lobby);
     emitMatchState(io, lobbyId);
     sendJson(res, 200, sanitizeLobbyResponse(lobby));
@@ -545,6 +590,7 @@ io.on("connection", (socket) => {
         ack({ ok: false, error: "Not attached to a lobby session." });
         return;
       }
+      requireHost(ref.lobbyId, ref.sessionToken);
       const lobby = multiplayerService.startMatch(ref.lobbyId);
       emitLobbyState(io, lobby);
       io.to(ref.lobbyId).emit("match:ready", {
