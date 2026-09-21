@@ -3,6 +3,7 @@ import { macToolchainEnvironment } from './mac_toolchain.mjs';
 const env = macToolchainEnvironment();
 function run(command,args) { execFileSync(command,args,{stdio:'inherit',env}); }
 run('npm',['run','test:mac-engine']);
+run('node',['scripts/test_solo_elimination.mjs']);
 run('node',['scripts/test_mac_legacy_save.mjs']);
 run('node',['scripts/test_mac_presentation.mjs']);
 run('node',['scripts/test_mac_dice.mjs']);

@@ -56,7 +56,7 @@ Build an online-playable Naval War style card game with:
 - Repair removes exactly one attached salvo from one damaged ship.
 - Destroyer Squadron sits in the battle zone with 4 hit points, can be attacked before activation, and scores no victory points if destroyed.
 - Salvos and Additional Damage attach to ships and move to the discard pile when the ship sinks or the damage is repaired.
-- The round ends when only one player has ships afloat or when the Play Deck runs out.
+- Multiplayer rounds end when only one player has ships afloat or when the Play Deck runs out. Offline solo rounds also end immediately when the human fleet is eliminated.
 - In Skirmish, if the Play Deck runs out, the winner is determined by ships in Victory Pile, then captured hit points.
 - In Campaign, round score is hit points in each player's Victory Pile; first to target score wins.
 
@@ -227,6 +227,13 @@ When an agent finishes a workstream slice, update this file if any of these chan
 Include the user-visible result in the final response, not just the internal implementation detail.
 
 ## Changelog
+
+### 2026-09-21 — End solo rounds when the human is eliminated
+
+- Scope: offline session policy, shared score-finalization helper, native loss message, regression scripts.
+- Result: offline solo rounds stop when the human fleet is eliminated. Multiplayer retains normal surviving-player/deck end conditions. In early solo endings, surviving bots are ranked by captured ships then HP (Skirmish), or captured HP (Campaign); Campaign scores all captures at the cutoff and offers the next round when applicable.
+- Saves: replay recorded commands first, then apply the solo end policy; finalize before recorded next-round entries. Existing saves remain supported without fabricating bot turns.
+- Verification: targeted 2/3/4-player tests, 12 matches / 34 rounds / 3966 actions, completed-round restore, 622-request JavaScriptCore parity, legacy save, six multiplayer-service matches and required syntax/type/build checks pass.
 
 ### 2026-09-21 — Clear completed dice overlay
 

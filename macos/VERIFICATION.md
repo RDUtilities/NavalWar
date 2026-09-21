@@ -139,3 +139,10 @@ The online transport and native online UI are implemented and checked locally. T
 - Confirmed the full-table view rendered whenever `diceResult` existed, while GameModel retained the completed value. The overlay now requires `presentingDice`, and transient state clears on completion/cancellation; history remains separate.
 - Native async tests verify dismissal and input release for all 24 type/face outcomes, including Submarine misses, plus cancellation during result hold. Existing reveal-before-impact, batching and no-replay tests pass.
 - Required browser syntax, TypeScript check/build pass. No engine rules or saved-game changes.
+
+
+## Solo elimination cutoff — 2026-09-21
+
+- Focused two-, three-, and four-player Skirmish/Campaign checks: human elimination stops solo bots; multiplayer continues while multiple players survive; eliminating a bot does not end a living human's solo round.
+- Campaign scores finalize once and carry into the next round. Full offline sweep completed 12 matches, 34 rounds and 3966 actions, with completed-round save restoration and Node/bundle parity.
+- Apple JavaScriptCore matched all 622 recorded requests; prior-build manual Destroyer save replay and six multiplayer-service matches passed. Native preview built separately from user saves.

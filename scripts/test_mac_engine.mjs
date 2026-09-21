@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import vm from "node:vm";
 import { OfflineSession, OfflineRandom } from "../dist/offline-session.js";
 import { automaticDestroyerSelection, chooseBotCommand } from "../dist/bots.js";
-import { applyCommand } from "../dist/engine.js";
+import { applyCommand, completeSoloRoundIfEliminated } from "../dist/engine.js";
 import { createInitialGameState, createNextRoundState } from "../dist/sample-data.js";
 
 const bundle = await fs.readFile(new URL("../macos/Resources/naval-engine.js", import.meta.url), "utf8");
@@ -47,6 +47,10 @@ for (let game = 0; game < 12; game++) {
   let finished = false;
   for (let i = 0; i < 6000; i++) {
     if (state.phase === "round_complete") {
+      const endedSave = session.save();
+      session = OfflineSession.restore(endedSave);
+      assert.deepEqual(session.state, state, "Completed-round restore changed scores or outcome");
+      check({ type: "restore", save: endedSave }, { ok: true, view: expectedView(session) });
       rounds++;
       if (setup.mode === "skirmish" || state.matchWinnerIds.length) { finished = true; break; }
       state = createNextRoundState(state, rng);
@@ -70,6 +74,7 @@ for (let game = 0; game < 12; game++) {
       state = applyCommand(state, automaticSelection, rng);
       covered.add(automaticSelection.type);
     }
+    state = completeSoloRoundIfEliminated(state, setup.humanPlayerId);
     const request = command.actorId === setup.humanPlayerId ? { type: "command", command } : { type: "bot_step" };
     if (request.type === "command") session.command(command); else session.botStep();
     check(request, { ok: true, view: expectedView(session) });

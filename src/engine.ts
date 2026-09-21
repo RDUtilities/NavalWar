@@ -320,6 +320,24 @@ function maybeCompleteRound(state: GameState) {
   }
 }
 
+/** Solo session policy only. Multiplayer continues until its normal end conditions. */
+export function completeSoloRoundIfEliminated(state: GameState, humanPlayerId: PlayerId): GameState {
+  if (state.phase === "round_complete" || !state.players.find(player => player.id === humanPlayerId)?.eliminated) return state;
+  const next = cloneState(state);
+  const survivors = next.players.filter(player => !player.eliminated);
+  const mostShips = Math.max(...survivors.map(player => player.victoryPile.length));
+  const leaders = next.options.matchMode === "campaign" ? survivors : survivors.filter(player => player.victoryPile.length === mostShips);
+  const mostPoints = Math.max(...leaders.map(scoreVictoryPile));
+  next.winnerIds = leaders.filter(player => scoreVictoryPile(player) === mostPoints).map(player => player.id);
+  next.phase = "round_complete";
+  next.roundEndReason = "solo_player_eliminated";
+  next.pendingDestroyerAttack = null;
+  if (next.options.matchMode === "skirmish") next.matchWinnerIds = [...next.winnerIds];
+  addEvent(next, humanPlayerId, "solo_round_ended", "Your fleet has been eliminated. The solo round is over.");
+  finalizeCampaignScores(next);
+  return next;
+}
+
 function nextPlayerId(state: GameState): PlayerId {
   const liveOrder = state.players.filter((player) => !player.eliminated).map((player) => player.id);
   const currentIndex = liveOrder.indexOf(state.currentPlayerId);

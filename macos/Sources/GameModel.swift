@@ -54,6 +54,7 @@ import AppKit
     var instruction: String {
         guard let view else { return "Welcome aboard, Admiral." }
         if view.gameState.phase == "round_complete" {
+            if !isOnline && view.human.eliminated { return "Your fleet has been eliminated. Round over." }
             let winners = view.gameState.players.filter { view.gameState.winnerIds.contains($0.id) }.map(\.name).joined(separator: " & ")
             return winners.isEmpty ? "Round complete" : "\(winners) wins the round"
         }

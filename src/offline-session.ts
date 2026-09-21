@@ -1,4 +1,4 @@
-import { applyCommand, listLegalCommands } from "./engine.js";
+import { applyCommand, listLegalCommands, completeSoloRoundIfEliminated } from "./engine.js";
 import { automaticDestroyerSelection, chooseBotCommand } from "./bots.js";
 import { actionOptions } from "./action-options.js";
 import { visibleEvents } from "./visibility.js";
@@ -160,6 +160,7 @@ export class OfflineSession {
       this.apply(command);
       const selection = automaticDestroyerSelection(this.state, command.actorId);
       if (selection) this.apply(selection);
+      this.state = completeSoloRoundIfEliminated(this.state, this.setup.humanPlayerId);
     } catch (error) {
       this.state = previousState;
       this.rng.state = previousRandom;
@@ -188,12 +189,16 @@ export class OfflineSession {
     const session = new OfflineSession(save.setup);
     for (const entry of save.history) {
       assert(entry && typeof entry === "object", "Invalid save entry.");
-      if (entry.type === "next_round") session.nextRound();
+      if (entry.type === "next_round") {
+        session.state = completeSoloRoundIfEliminated(session.state, session.setup.humanPlayerId);
+        session.nextRound();
+      }
       // Replay individual recorded commands, including older manual selections,
       // rather than generating automatic commands a second time.
       else if (entry.type === "command") session.apply(entry.command);
       else throw new Error("Unknown save entry.");
     }
+    session.state = completeSoloRoundIfEliminated(session.state, session.setup.humanPlayerId);
     return session;
   }
 }
