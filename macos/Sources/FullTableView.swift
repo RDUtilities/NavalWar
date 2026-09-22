@@ -5,6 +5,7 @@ private let tableGold = Color(red: 0.86, green: 0.70, blue: 0.40)
 struct WarTableView: View {
     @EnvironmentObject var game: GameModel
     @State private var orders = false
+    @State private var dismissedResultsRound: Int?
     @AppStorage("navalTableCardSize") private var cardSize = 220.0
     @State private var preview: ReadableCardPreview?
     @State private var previewTask: Task<Void, Never>?
@@ -22,6 +23,11 @@ struct WarTableView: View {
                 Image(systemName: "rectangle.on.rectangle.fill").font(.largeTitle).foregroundStyle(tableGold)
                     .padding(12).background(.black.opacity(0.8), in: RoundedRectangle(cornerRadius: 10))
                     .position(game.tableDragPoint).allowsHitTesting(false)
+            }
+            if let view = game.view, view.gameState.phase == "round_complete",
+               !game.presentingDice, game.combatEffects.isEmpty,
+               dismissedResultsRound != view.gameState.roundNumber {
+                RoundVictoryView(view: view) { dismissedResultsRound = view.gameState.roundNumber }
             }
             if game.presentingDice, let result = game.diceResult {
                 Color.black.opacity(0.5).ignoresSafeArea()
@@ -119,7 +125,7 @@ struct WarTableView: View {
                 if let pending = view.gameState.pendingDestroyerAttack, pending.ownerId == view.humanPlayerId {
                     Button("Confirm \(game.destroyerTargets.count) targets") { game.confirmDestroyer() }.disabled(!game.canInteract || game.destroyerTargets.count != pending.shipsToSink)
                 }
-                if view.gameState.phase == "round_complete" { Button("Battle results") { orders = true }.buttonStyle(.borderedProminent) }
+                if view.gameState.phase == "round_complete" { Button("Battle results") { dismissedResultsRound = nil }.buttonStyle(.borderedProminent) }
                 if game.isOnline && !game.onlineConnected { Button("Reconnect") { game.reconnectOnline() }.disabled(game.busy) }
                 Spacer()
                 if game.selectedCard != nil || game.selectedSquadron != nil || game.showAirStrikes { Button("Clear selection") { game.clearSelection() } }

@@ -111,3 +111,6 @@ Playable hand cards have a green outline during your turn, based on the engine's
 
 
 Readability: hand art adapts to the window and the saved **Card size** setting. **Balanced size** restores the default; choosing larger cards can introduce scrolling. Ship art scales with available column width, with larger native name/HP text. Pause over a card for a detailed preview, click a hand card's magnifier to open its full-size artwork, or right-click a ship to inspect attachments. Reading cards does not require a legal play action.
+
+
+Every completed round now opens a victory banner after dice and combat effects finish. The battle report uses authoritative winner IDs and ship records: captures, captured HP, losses and afloat ships. Campaign totals and campaign champions are displayed separately. **Review table** dismisses it; **Battle results** reopens it. **Next round** is available for unfinished Campaigns (online host only). The banner also appears when resuming a completed round and respects Reduce Motion.

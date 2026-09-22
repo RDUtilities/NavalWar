@@ -228,6 +228,12 @@ Include the user-visible result in the final response, not just the internal imp
 
 ## Changelog
 
+### 2026-09-21 — Victory banner and round battle report
+
+- Scope: `RoundVictoryView.swift` and full-table results lifecycle.
+- Result: automatic gold/navy victory screen after final dice/combat effects, naming authoritative round winners (including ties). Every commander gets captured ships, captured HP, ships lost and ships afloat; Campaign totals and match winners are separate. Review table, reopen Battle results, next round (host only online) and return-to-menu controls are available.
+- Verification: native preview build and dice regressions pass; four-player completed Campaign save displayed correct winner and exact engine stats. Review/reopen and next-round UI checked in an isolated app. Motion respects Reduce Motion. No gameplay/scoring changes.
+
 ### 2026-09-21 — Readable full-table cards
 
 - Scope: native full-table view only.
