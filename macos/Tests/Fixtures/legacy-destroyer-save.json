@@ -1,0 +1,1045 @@
+{
+  "provenance": "Disposable native GUI save from before automatic offline Destroyer selection. Expected views captured from the previous packaged engine.",
+  "save": {
+    "history": [
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "additional-ship-4",
+          "type": "play_additional_ship"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "submarine-1",
+          "targetPlayerId": "p1",
+          "targetShipId": "ship-bismarck",
+          "type": "play_submarine"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "additional-ship-7",
+          "type": "play_additional_ship"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "smoke-5",
+          "type": "play_smoke"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "salvo-14-1-1",
+          "type": "discard_play_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "salvo-12_6-2-3",
+          "targetPlayerId": "p1",
+          "targetShipId": "ship-bismarck",
+          "type": "play_salvo"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "salvo-12_6-2-5",
+          "type": "discard_play_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "salvo-14-2-2",
+          "targetPlayerId": "p1",
+          "targetShipId": "ship-bismarck",
+          "type": "play_salvo"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "salvo-14-2-1",
+          "type": "discard_play_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "salvo-14-2-4",
+          "targetPlayerId": "p1",
+          "targetShipId": "ship-bismarck",
+          "type": "play_salvo"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "salvo-14-2-5",
+          "type": "discard_play_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "salvo-14-1-6",
+          "targetPlayerId": "p1",
+          "targetShipId": "ship-bismarck",
+          "type": "play_salvo"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "salvo-12_6-2-1",
+          "type": "discard_play_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "torpedo-boat-1",
+          "targetPlayerId": "p1",
+          "targetShipId": "ship-bismarck",
+          "type": "play_torpedo_boat"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "additional-damage-1-1",
+          "type": "discard_play_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "salvo-11-1-6",
+          "targetPlayerId": "p1",
+          "targetShipId": "ship-bismarck",
+          "type": "play_salvo"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "smoke-2",
+          "type": "play_smoke"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "salvo-16-2-4",
+          "type": "discard_play_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "salvo-12_6-2-4",
+          "type": "discard_play_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "salvo-15-3-1",
+          "targetPlayerId": "p1",
+          "targetShipId": "ship-pennsylvania",
+          "type": "play_salvo"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "salvo-12_6-1-2",
+          "type": "discard_play_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "salvo-11-1-4",
+          "targetPlayerId": "p1",
+          "targetShipId": "ship-pennsylvania",
+          "type": "play_salvo"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "salvo-12_6-1-1",
+          "type": "discard_play_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "additional-damage-1-3",
+          "targetPlayerId": "p1",
+          "targetShipId": "ship-pennsylvania",
+          "type": "play_additional_damage"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "salvo-16-3-3",
+          "type": "discard_play_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "salvo-15-2-3",
+          "targetPlayerId": "p1",
+          "targetShipId": "ship-lutzow",
+          "type": "play_salvo"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "additional-damage-1-4",
+          "type": "discard_play_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "minefield-2-1",
+          "targetPlayerId": "p1",
+          "type": "play_minefield"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "additional-ship-6",
+          "type": "play_additional_ship"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "salvo-11-1-3",
+          "targetPlayerId": "p1",
+          "targetShipId": "ship-musashi",
+          "type": "play_salvo"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "salvo-16-1-3",
+          "type": "discard_play_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "salvo-18-3-1",
+          "type": "discard_play_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "salvo-15-3-4",
+          "targetPlayerId": "p2",
+          "targetShipId": "ship-vittorio-veneto",
+          "type": "play_salvo"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "repair-4",
+          "targetShipId": "ship-vittorio-veneto",
+          "type": "play_repair"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "salvo-16-3-4",
+          "type": "discard_play_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "additional-damage-2-1",
+          "targetPlayerId": "p1",
+          "targetShipId": "ship-musashi",
+          "type": "play_additional_damage"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "submarine-2",
+          "targetPlayerId": "p2",
+          "targetShipId": "ship-vittorio-veneto",
+          "type": "play_submarine"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "salvo-15-2-4",
+          "targetPlayerId": "p1",
+          "targetShipId": "ship-musashi",
+          "type": "play_salvo"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "salvo-18-2-3",
+          "targetPlayerId": "p2",
+          "targetShipId": "ship-vittorio-veneto",
+          "type": "play_salvo"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "repair-3",
+          "targetShipId": "ship-vittorio-veneto",
+          "type": "play_repair"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "salvo-15-2-5",
+          "targetPlayerId": "p2",
+          "targetShipId": "ship-vittorio-veneto",
+          "type": "play_salvo"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "salvo-11-1-8",
+          "targetPlayerId": "p1",
+          "targetShipId": "ship-musashi",
+          "type": "play_salvo"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "cardId": "destroyer-squadron-2",
+          "type": "play_destroyer_squadron"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "draw_card"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "cardId": "minefield-1-1",
+          "targetPlayerId": "p1",
+          "type": "play_minefield"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p2",
+          "type": "end_turn"
+        },
+        "type": "command"
+      },
+      {
+        "command": {
+          "actorId": "p1",
+          "destroyerId": "destroyer-squadron-2",
+          "targetPlayerId": "p2",
+          "type": "resolve_destroyer_squadron_roll"
+        },
+        "type": "command"
+      }
+    ],
+    "rulesVersion": "naval-war-2026-09-21",
+    "setup": {
+      "campaignTargetScore": 100,
+      "humanPlayerId": "p1",
+      "mode": "skirmish",
+      "playerNames": [
+        "Test Admiral",
+        "Admiral North"
+      ],
+      "seed": 3785020153
+    },
+    "version": 1
+  },
+  "selection": {
+    "actorId": "p1",
+    "destroyerId": "destroyer-squadron-2",
+    "targetShipIds": [
+      "ship-california",
+      "ship-vittorio-veneto"
+    ],
+    "type": "select_destroyer_squadron_targets"
+  },
+  "expected": {
+    "pending": "53a7bd7200c223f7080abbda210db99a95556bb2cd551d1ccc623a8993d96ece",
+    "selected": "c8a83e544e6578bacc349909921c44a9358e8a5fac3ed19df1e44650de4c9bf2",
+    "advanced": "5e39af0fa7f123ab0a8e0159248d5d2d5ac05f638b08868d6299345485e517ec"
+  }
+}

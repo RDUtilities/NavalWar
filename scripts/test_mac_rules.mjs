@@ -1,0 +1,81 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import vm from 'node:vm';
+import { applyCommand, listLegalCommands } from '../dist/engine.js';
+import { createInitialGameState } from '../dist/sample-data.js';
+import { fullPlayDeck, fullShipDeck } from '../dist/cards.js';
+import { OfflineRandom } from '../dist/offline-session.js';
+import { actionOptions } from '../dist/action-options.js';
+const fixtures = [];
+const card = kind => structuredClone(fullPlayDeck.find(c => c.kind === kind));
+const carrier = fullShipDeck.find(s => s.isCarrier);
+const gunship = fullShipDeck.find(s => !s.isCarrier && s.gunCaliber === '14"');
+const other = fullShipDeck.find(s => !s.isCarrier && s.id !== gunship.id);
+const ship = c => ({card:structuredClone(c),damage:[],attachments:[],sunk:false});
+function base() {
+    const s = createInitialGameState(['Human','Bot'],new OfflineRandom(91));
+    s.currentPlayerId='p1';s.openingTurnPendingPlayerIds=[];s.hasDrawnThisTurn=true;
+    s.players[0].ships=[ship(gunship)];s.players[1].ships=[ship(other),ship(carrier)];
+    s.players.forEach(p=>{p.hand=[];p.fleetEffects=[];});
+    return s;
+}
+function check(label,state,command,accept,verify=()=>{}) {
+    const request={state,command,seed:123}; let response;
+    const before=JSON.stringify(state);
+    try { const rng=new OfflineRandom(123); const next=applyCommand(state,command,rng);response={ok:true,state:next,randomState:rng.state}; }
+    catch(error) {response={ok:false,error:error.message};}
+    assert.equal(response.ok,accept,label);
+    if(accept) verify(response.state);
+    assert.equal(JSON.stringify(state),before,`Input mutation: ${label}`);
+    fixtures.push(structuredClone({label,request,response}));
+}
+const salvo=structuredClone(fullPlayDeck.find(c=>c.kind==='salvo'&&c.gunCaliber==='14"'));
+const fire=target=>({type:'play_salvo',actorId:'p1',cardId:salvo.id,targetPlayerId:'p2',targetShipId:target});
+let s=base();s.players[0].hand=[salvo];
+check('screened carrier rejects salvo',s,fire(carrier.id),false);
+check('screening ship accepts salvo',s,fire(other.id),true);
+s.players[1].fleetEffects=[{kind:'smoke',ownerId:'p2',card:card('smoke')}];
+check('smoke rejects salvo',s,fire(other.id),false);
+s.players[0].hand=[card('submarine')];
+check('submarine bypasses smoke',s,{type:'play_submarine',actorId:'p1',cardId:s.players[0].hand[0].id,targetPlayerId:'p2',targetShipId:other.id},true);
+s=base();s.hasDrawnThisTurn=false;
+check('air strike targets screened carrier',s={...s,players:[{...s.players[0],ships:[ship(carrier)]},s.players[1]]},{type:'use_carrier_strike',actorId:'p1',strikes:[{carrierShipId:carrier.id,targetPlayerId:'p2',targetShipId:carrier.id}]},true);
+s=base();s.players[0].hand=[card('additional_damage')];
+const damage={type:'salvo',ownerId:'p1',cardId:salvo.id,hits:salvo.hits};
+s.players[1].ships[0].damage=[damage];s.players[1].ships[0].attachments=[{card:salvo,source:damage}];
+s.players[1].fleetEffects=[{kind:'smoke',ownerId:'p2',card:card('smoke')}];
+check('additional damage bypasses smoke on damaged ship',s,{type:'play_additional_damage',actorId:'p1',cardId:s.players[0].hand[0].id,targetPlayerId:'p2',targetShipId:other.id},true);
+s=base();s.players[0].hand=[card('repair')];
+const damage2={...damage,cardId:'other-damage',hits:2};
+s.players[0].ships[0].damage=[damage,damage2];s.players[0].ships[0].attachments=[{card:salvo,source:damage},{card:{...salvo,id:'other-damage'},source:damage2}];
+check('repair removes exactly one damage source',s,{type:'play_repair',actorId:'p1',cardId:s.players[0].hand[0].id,targetShipId:gunship.id},true,next=>{assert.equal(next.players[0].ships[0].attachments.length,1);assert.equal(next.players[0].ships[0].damage.length,1);});
+s=base();s.hasDrawnThisTurn=false;s.turnNumber=5;s.players[0].hand=[card('smoke')];s.destroyerSquadrons=[{id:'ready',ownerId:'p1',card:card('destroyer_squadron'),deployedTurn:1,hitsTaken:0}];
+assert.ok(!listLegalCommands(s,'p1').includes('draw_card'));
+check('ready destroyer blocks draw',s,{type:'draw_card',actorId:'p1'},false);
+check('ready destroyer activation',s,{type:'resolve_destroyer_squadron_roll',actorId:'p1',destroyerId:'ready',targetPlayerId:'p2'},true,next=>assert.ok(next.pendingDestroyerAttack));
+const pending=applyCommand(s,{type:'resolve_destroyer_squadron_roll',actorId:'p1',destroyerId:'ready',targetPlayerId:'p2'},new OfflineRandom(123));
+check('pending destroyer selection blocks ending turn',pending,{type:'end_turn',actorId:'p1'},false);
+check('pending destroyer selection blocks drawing',pending,{type:'draw_card',actorId:'p1'},false);
+s.players[1].fleetEffects=[{kind:'smoke',ownerId:'p2',card:card('smoke')}];
+check('smoke blocks destroyer activation',s,{type:'resolve_destroyer_squadron_roll',actorId:'p1',destroyerId:'ready',targetPlayerId:'p2'},false);
+check('blocked destroyer discard',s,{type:'discard_destroyer_squadron',actorId:'p1',destroyerId:'ready'},true,next=>assert.equal(next.destroyerSquadrons.length,0));
+s=base();s.openingTurnPendingPlayerIds=['p1','p2'];s.hasDrawnThisTurn=false;s.players[0].hand=[card('additional_ship')];
+check('opening special blocks normal draw',s,{type:'draw_card',actorId:'p1'},false);
+check('opening additional ship resolves',s,{type:'play_additional_ship',actorId:'p1',cardId:s.players[0].hand[0].id},true,next=>assert.equal(next.players[0].ships.length,2));
+s=base();s.hasPerformedActionThisTurn=true;s.playDeck=[];s.players[0].victoryPile=[other];
+check('empty deck scores skirmish',s,{type:'end_turn',actorId:'p1'},true,next=>{assert.equal(next.phase,'round_complete');assert.deepEqual(next.winnerIds,['p1']);});
+const tie=structuredClone(s);tie.players[0].victoryPile=[{...other,hitNumber:9}];tie.players[1].victoryPile=[{...gunship,hitNumber:4}];
+check('equal captured ships break tie on captured points',tie,{type:'end_turn',actorId:'p1'},true,next=>assert.deepEqual(next.winnerIds,['p1']));
+tie.players[1].victoryPile[0].hitNumber=9;
+check('equal captured ships and points share victory',tie,{type:'end_turn',actorId:'p1'},true,next=>assert.deepEqual(next.winnerIds,['p1','p2']));
+s.options.matchMode='campaign';s.campaign={targetScore:25,totalScores:{p1:24,p2:0},scoreHistory:[],tieBreakerRound:false};
+check('campaign accumulates captured points and ends match',s,{type:'end_turn',actorId:'p1'},true,next=>{assert.deepEqual(next.matchWinnerIds,['p1']);assert.equal(next.campaign.totalScores.p1,24+other.hitNumber);});
+s.campaign.totalScores={p1:24,p2:24};s.players[1].victoryPile=[structuredClone(other)];
+check('campaign tied leaders require another round',s,{type:'end_turn',actorId:'p1'},true,next=>{assert.deepEqual(next.matchWinnerIds,[]);assert.equal(next.campaign.tieBreakerRound,true);});
+// Legal target generation must never consume the real state or random stream.
+s=base();s.players[0].hand=[salvo];const before=JSON.stringify(s);const options=actionOptions(s,'p1');
+assert.equal(JSON.stringify(s),before);assert.ok(options.some(o=>o.command.targetShipId===other.id));assert.ok(!options.some(o=>o.command.targetShipId===carrier.id));
+const context=vm.createContext({});vm.runInContext(await fs.readFile(new URL('../macos/build/naval-engine-tests.js',import.meta.url),'utf8'),context);
+for(const fixture of fixtures) assert.deepEqual(JSON.parse(context.NavalWarRules.dispatch(JSON.stringify(fixture.request))),fixture.response,fixture.label);
+await fs.writeFile(new URL('../macos/build/rules-fixture.json',import.meta.url),JSON.stringify(fixtures));
+console.log(`PASS: ${fixtures.length} targeted rules cases, including smoke, carrier screening, opening specials, repair, Destroyers and scoring.`);

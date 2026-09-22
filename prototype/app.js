@@ -1542,7 +1542,7 @@ async function startHostedMatchFromLobby() {
   const openSeats = Math.max(0, Number(lobbyInfo?.playerCount || 0) - Number((lobbyInfo?.players || []).length));
   if (openSeats > 0) {
     try {
-      await serverPost(`/api/lobbies/${lobbyId}/fill-bots`, {});
+      await serverPost(`/api/lobbies/${lobbyId}/fill-bots`, { sessionToken: appState.serverSession.sessionToken });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error || "");
       // If a parallel click/session already started the match, proceed to table instead of hard failing.
@@ -1559,7 +1559,7 @@ async function startHostedMatchFromLobby() {
     return true;
   }
 
-  const started = await serverPost(`/api/lobbies/${lobbyId}/start`, {});
+  const started = await serverPost(`/api/lobbies/${lobbyId}/start`, { sessionToken: appState.serverSession.sessionToken });
   appState.serverSession.status = started?.status ?? "in_progress";
   persistServerSessionSnapshot();
   return true;
@@ -1755,17 +1755,28 @@ function maybeRefreshServerTurnSummary(gameState, playersBySide) {
 
 function maybeShowServerWinnerBanner(gameState, playersBySide) {
   if (gameState.phase !== "round_complete") {
+    if (appState.serverSession.lastWinnerBannerKey) {
+      closeWinnerBanner();
+      appState.serverSession.lastWinnerBannerKey = null;
+    }
     return;
   }
-  const winnerId = gameState.winnerIds?.[0] || gameState.matchWinnerIds?.[0] || null;
-  const winner = Object.values(playersBySide).find((player) => player?.id === winnerId);
-  const winnerName = winner?.name || "Round winner";
+  const campaignOver = gameState.options?.matchMode === "campaign" && (gameState.matchWinnerIds || []).length > 0;
+  const winnerIds = campaignOver ? gameState.matchWinnerIds : gameState.winnerIds || [];
+  const winnerName = Object.values(playersBySide).filter((player) => winnerIds.includes(player?.id)).map((player) => player.name).join(" & ") || "Round winner";
   const roundKey = `${appState.serverSession?.lobbyId || "local"}:${gameState.roundNumber}:${(gameState.winnerIds || []).join(",")}:${gameState.roundEndReason || "round_complete"}`;
   if (appState.serverSession.lastWinnerBannerKey === roundKey) {
     return;
   }
   appState.serverSession.lastWinnerBannerKey = roundKey;
-  showWinnerBanner(`${winnerName} Wins`, gameState.roundEndReason === "play_deck_empty" ? "The play deck is empty. Winner determined by victory pile score." : "All opposing fleets have been eliminated.");
+  const continuingCampaign = gameState.options?.matchMode === "campaign" && !campaignOver;
+  const actions = continuingCampaign && appState.serverSession.isHost
+    ? [{ label: "Start Next Round", dataset: { nextCampaignRound: "true" } }] : [];
+  const detail = continuingCampaign
+    ? `Round scores are recorded. ${appState.serverSession.isHost ? "Start the next round when ready." : "Waiting for the host to start the next round."}`
+    : campaignOver ? "The campaign target has been reached."
+    : gameState.roundEndReason === "play_deck_empty" ? "The play deck is empty. Most captured ships wins, then captured hit points." : "All opposing fleets have been eliminated.";
+  showWinnerBanner(`${winnerName} Wins${campaignOver ? " Campaign" : continuingCampaign ? ` Round ${gameState.roundNumber}` : ""}`, detail, actions);
   playWinnerSound();
 }
 
@@ -1937,6 +1948,8 @@ function mapServerViewToLocalState(view) {
     appState.turnState.usedCarrierIndices = [];
   }
   appState.match.isRoundOver = gameState.phase === "round_complete";
+  appState.match.isCampaignOver = (gameState.matchWinnerIds || []).length > 0;
+  appState.match.pendingNextRound = appState.match.isRoundOver && gameState.options?.matchMode === "campaign" && !appState.match.isCampaignOver;
   appState.match.roundEndReason = gameState.roundEndReason || null;
   appState.match.winnerZone =
     Object.keys(playersBySide).find((side) => gameState.winnerIds?.includes(playersBySide[side]?.id)) || null;
@@ -4379,8 +4392,27 @@ function getCampaignLeader() {
     .sort((a, b) => b.total - a.total)[0];
 }
 
-function startNextCampaignRound() {
+let nextCampaignRoundInFlight = false;
+async function startNextCampaignRound() {
   if (!appState.match.pendingNextRound || appState.match.isCampaignOver) {
+    return;
+  }
+  if (appState.setupMode === "multiplayer") {
+    const session = appState.serverSession;
+    if (nextCampaignRoundInFlight || !session?.connected || !session.isHost || !session.lobbyId || !session.sessionToken) return;
+    nextCampaignRoundInFlight = true;
+    try {
+      await serverPost(`/api/lobbies/${encodeURIComponent(session.lobbyId)}/next-round`, { sessionToken: session.sessionToken });
+      await refreshServerViewAndRender();
+    } catch (error) {
+      session.lastError = error instanceof Error ? error.message : "Could not start the next round.";
+      appendLog(`Next round: ${session.lastError}`);
+      // Refresh before another explicit attempt: the request may have reached the server.
+      await refreshServerViewAndRender();
+      renderPrototype();
+    } finally {
+      nextCampaignRoundInFlight = false;
+    }
     return;
   }
   hasLaunchedMatch = true;
