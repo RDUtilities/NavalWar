@@ -5,32 +5,18 @@ private let tableGold = Color(red: 0.86, green: 0.70, blue: 0.40)
 struct WarTableView: View {
     @EnvironmentObject var game: GameModel
     @State private var orders = false
+    @AppStorage("navalTableCardSize") private var cardSize = 220.0
+    @State private var preview: ReadableCardPreview?
+    @State private var previewTask: Task<Void, Never>?
+    @State private var sizing = false
     var body: some View {
+        GeometryReader { geometry in
         ZStack {
             if let view = game.view {
-                VStack(spacing: 10) {
-                    HStack {
-                        Text("NAVAL WAR").font(.title2.bold()).foregroundStyle(tableGold)
-                        Text("Round \(view.gameState.roundNumber) · Turn \(view.gameState.turnNumber)").foregroundStyle(.secondary)
-                        Spacer()
-                        if game.isOnline { Text(game.onlineConnected ? "Online" : "Disconnected") }
-                        Toggle("Sound", isOn: $game.sound).toggleStyle(.switch).fixedSize()
-                        Button("Orders & Log") { orders.toggle() }.popover(isPresented: $orders) { CommandPanel().frame(width: 360, height: 600) }
-                        Button("Menu") { game.returnToMenu() }.disabled(game.busy)
-                    }
-                    ScrollView(.vertical) {
-                        HStack(alignment: .top, spacing: 10) {
-                            let enemies = view.gameState.players.filter { $0.id != view.humanPlayerId }
-                            ForEach(enemies) { player in
-                                TableFleet(player: player, columns: enemies.count == 1 ? 5 : enemies.count == 2 ? 3 : 2, own: false)
-                                    .frame(maxWidth: .infinity, alignment: .top)
-                            }
-                        }
-                    }.frame(maxHeight: .infinity)
-                    commandStrip(view)
-                    TableFleet(player: view.human, columns: max(5, min(7, view.human.afloat)), own: true)
-                    hand(view)
-                }.padding(14)
+                table(view, size: geometry.size)
+            }
+            if let preview, game.activeTableDrag == nil, !game.presentingDice {
+                enlargedPreview(preview, width: geometry.size.width)
             }
             if game.activeTableDrag != nil {
                 Image(systemName: "rectangle.on.rectangle.fill").font(.largeTitle).foregroundStyle(tableGold)
@@ -43,6 +29,68 @@ struct WarTableView: View {
                     .background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 20)).frame(maxWidth: 520)
             }
         }.coordinateSpace(name: "warTable").onPreferenceChange(TableZonePreference.self) { game.tableDropZones = $0 }
+        }.onChange(of: game.activeTableDrag) { _, _ in queuePreview(nil) }
+            .onChange(of: game.presentingDice) { _, _ in queuePreview(nil) }
+            .onDisappear { queuePreview(nil) }
+    }
+    private func handWidth(_ view: GameView, available: CGFloat) -> CGFloat {
+        let fitted = min(220, (available - 48) / CGFloat(max(1, min(6, view.human.hand.count))) - 20)
+        return max(180, min(280, fitted + cardSize - 220))
+    }
+    private func table(_ view: GameView, size: CGSize) -> some View {
+                VStack(spacing: 10) {
+                    HStack {
+                        Text("NAVAL WAR").font(.title2.bold()).foregroundStyle(tableGold)
+                        Text("Round \(view.gameState.roundNumber) · Turn \(view.gameState.turnNumber)").foregroundStyle(.secondary)
+                        Spacer()
+                        if game.isOnline { Text(game.onlineConnected ? "Online" : "Disconnected") }
+                        Toggle("Sound", isOn: $game.sound).toggleStyle(.switch).fixedSize()
+                        Button("Card size") { sizing.toggle() }.popover(isPresented: $sizing) {
+                            VStack(alignment: .leading, spacing: 12) {
+                                Text("Card readability").font(.headline)
+                                Slider(value: $cardSize, in: 180...280, step: 10).frame(width: 230)
+                                Text("Pause over any card for a large preview.").font(.callout)
+                                Button("Balanced size") { cardSize = 220 }
+                            }.padding(18)
+                        }
+                        Button("Orders & Log") { orders.toggle() }.popover(isPresented: $orders) { CommandPanel().frame(width: 360, height: 600) }
+                        Button("Menu") { game.returnToMenu() }.disabled(game.busy)
+                    }
+                    ScrollView(.vertical) {
+                        HStack(alignment: .top, spacing: 10) {
+                            let enemies = view.gameState.players.filter { $0.id != view.humanPlayerId }
+                            ForEach(enemies) { player in
+                                TableFleet(player: player, columns: enemies.count == 1 ? 5 : enemies.count == 2 ? 3 : 2, own: false, availableWidth: (size.width - 28 - CGFloat(max(0, enemies.count - 1)) * 10) / CGFloat(enemies.count), preview: queuePreview)
+                                    .frame(maxWidth: .infinity, alignment: .top)
+                            }
+                        }
+                    }.frame(maxHeight: .infinity)
+                    commandStrip(view)
+                    TableFleet(player: view.human, columns: max(5, min(7, view.human.afloat)), own: true, availableWidth: size.width - 28, preview: queuePreview)
+                    hand(view, width: handWidth(view, available: size.width))
+                }.padding(14)
+    }
+    private func enlargedPreview(_ preview: ReadableCardPreview, width: CGFloat) -> some View {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(preview.title).font(.title3.bold())
+                    CardArt(key: preview.key, detailed: true).aspectRatio(1.5, contentMode: .fit)
+                    if let detail = preview.detail { Text(detail).font(.body) }
+                    Text("Move away to close · Right-click to inspect").font(.caption).foregroundStyle(.secondary)
+                }.padding(14).frame(width: min(560, width * 0.48))
+                    .background(.ultraThickMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(tableGold.opacity(0.6)))
+                    .shadow(color: .black.opacity(0.6), radius: 20)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing).padding(24)
+                    .allowsHitTesting(false)
+    }
+    private func queuePreview(_ card: ReadableCardPreview?) {
+        previewTask?.cancel(); preview = nil
+        guard let card, game.activeTableDrag == nil, !game.presentingDice else { return }
+        previewTask = Task { @MainActor in
+            do { try await Task.sleep(nanoseconds: 450_000_000) } catch { return }
+            guard !Task.isCancelled else { return }
+            preview = card
+        }
     }
     private func commandStrip(_ view: GameView) -> some View {
         VStack(alignment: .leading, spacing: 7) {
@@ -83,29 +131,41 @@ struct WarTableView: View {
             }
         }.padding(12).background(.black.opacity(0.45), in: RoundedRectangle(cornerRadius: 12))
     }
-    private func hand(_ view: GameView) -> some View {
+    private func hand(_ view: GameView, width: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text("YOUR HAND · Green outline = playable · Drag or click a card, then its target · Right-click to inspect").font(.caption).foregroundStyle(.secondary)
+            Text("YOUR HAND · Green = playable · Pause over a card to read it · Drag or click to play").font(.caption).foregroundStyle(.secondary)
             ScrollView(.horizontal) {
                 HStack(spacing: 10) {
                     ForEach(view.human.hand) { card in
                         VStack(spacing: 3) {
-                                CardArt(key: Artwork.shared.key(card)).frame(width: 172, height: 115)
-                                Text(card.title).font(.caption.weight(.semibold)).lineLimit(1)
+                                CardArt(key: Artwork.shared.key(card)).frame(width: width, height: width / 1.5)
+                                HStack(spacing: 6) {
+                                    Text(card.title).font(.system(size: 14, weight: .semibold)).lineLimit(1)
+                                    Spacer(minLength: 0)
+                                    Button { queuePreview(nil); game.inspectedCard = card } label: {
+                                        Image(systemName: "magnifyingglass").font(.system(size: 14, weight: .semibold)).padding(3)
+                                    }.buttonStyle(.plain).help("Read \(card.title)").accessibilityLabel("Read \(card.title)")
+                                }.frame(width: width)
                             }.padding(5).background(game.selectedCard == card.id ? tableGold.opacity(0.28) : Color.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 9))
                                 .overlay(RoundedRectangle(cornerRadius: 9).stroke(game.isPlayable(card) ? Color.green : .clear, lineWidth: 3))
                                 .overlay(RoundedRectangle(cornerRadius: 7).inset(by: 4).stroke(game.selectedCard == card.id ? tableGold : .clear, lineWidth: 2))
+                            .onHover { over in queuePreview(over ? ReadableCardPreview(key: Artwork.shared.key(card), title: card.title) : nil) }
                             .accessibilityValue(game.isPlayable(card) ? "Playable now" : "Not playable now")
                             .onTapGesture { if game.canInteract && !view.isBotTurn { game.choose(card) } }
                             .accessibilityAddTraits(.isButton)
-                            .disabled(!game.canInteract || view.isBotTurn || !game.readySquadrons.isEmpty)
                             .modifier(TableDragSource { game.dragCard(card) })
                             .contextMenu { Button("Inspect \(card.title)") { game.inspectedCard = card } }
                     }
                 }
-            }.frame(height: 149)
+            }.frame(height: width / 1.5 + 42)
         }
     }
+}
+
+private struct ReadableCardPreview {
+    let key: String
+    let title: String
+    var detail: String? = nil
 }
 
 private struct TableFleet: View {
@@ -113,6 +173,9 @@ private struct TableFleet: View {
     let player: Player
     let columns: Int
     let own: Bool
+    let availableWidth: CGFloat
+    let preview: (ReadableCardPreview?) -> Void
+    private var artWidth: CGFloat { min(112, max(60, ((availableWidth - 20) / CGFloat(columns) - 12) * 0.40)) }
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
@@ -128,16 +191,18 @@ private struct TableFleet: View {
                 ForEach(player.ships.filter { !$0.sunk || game.combatEffects[$0.id] != nil }) { ship in
                     Button { game.target(ship, player: player) } label: {
                         HStack(spacing: 6) {
-                            CombatShipArt(ship: ship, effect: game.combatEffects[ship.id], width: 64).frame(width: 64, height: 63)
+                            CombatShipArt(ship: ship, effect: game.combatEffects[ship.id], width: artWidth).frame(width: artWidth, height: max(66, artWidth / 1.5))
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(ship.card.name).font(.system(size: 12, weight: .semibold)).lineLimit(2)
-                                Text("\(ship.remaining)/\(ship.card.hitNumber) HP").font(.system(size: 13, weight: .bold)).foregroundStyle(ship.remaining < ship.card.hitNumber ? .orange : .white)
-                                Text(ship.card.isCarrier ? "Carrier" : "Guns \(ship.card.gunCaliber ?? "—")").font(.caption2).foregroundStyle(.secondary)
+                                Text(ship.card.name).font(.system(size: 14, weight: .semibold)).lineLimit(2)
+                                Text("\(ship.remaining)/\(ship.card.hitNumber) HP").font(.system(size: 16, weight: .bold)).foregroundStyle(ship.remaining < ship.card.hitNumber ? .orange : .white)
+                                Text(ship.card.isCarrier ? "Carrier" : "Guns \(ship.card.gunCaliber ?? "—")").font(.system(size: 12)).foregroundStyle(.secondary)
                                 if !ship.attachments.isEmpty { Text("\(ship.attachments.count) attached").font(.caption2).foregroundStyle(.orange) }
                             }.frame(maxWidth: .infinity, alignment: .leading)
-                        }.padding(6).frame(height: 78).background(.black.opacity(0.35), in: RoundedRectangle(cornerRadius: 7))
+                        }.padding(7).frame(height: 94).background(.black.opacity(0.35), in: RoundedRectangle(cornerRadius: 7))
                             .overlay(RoundedRectangle(cornerRadius: 7).stroke(game.isTarget(ship, player: player) ? tableGold : .white.opacity(0.08), lineWidth: game.isTarget(ship, player: player) ? 2 : 1))
-                    }.buttonStyle(.plain).contextMenu { Button("Inspect \(ship.card.name)") { game.inspectedShip = ship } }
+                    }.buttonStyle(.plain)
+                        .onHover { over in preview(over ? ReadableCardPreview(key: ship.card.id, title: ship.card.name, detail: "\(ship.remaining)/\(ship.card.hitNumber) HP · \(ship.card.isCarrier ? "Carrier" : "Guns \(ship.card.gunCaliber ?? "—")") · \(ship.attachments.count) attached damage cards") : nil) }
+                        .contextMenu { Button("Inspect \(ship.card.name)") { game.inspectedShip = ship } }
                         .tableDropZone(.ship(player: player.id, ship: ship.id))
                 }
             }
@@ -172,7 +237,9 @@ private struct TableFleet: View {
                 Spacer(minLength: 0)
             }.padding(6).background(tableGold.opacity(0.1), in: RoundedRectangle(cornerRadius: 7))
                 .overlay(RoundedRectangle(cornerRadius: 7).stroke(game.squadronAction(squadron) != nil || game.selectedSquadron == squadron.id ? tableGold : .clear, lineWidth: 2))
-        }.buttonStyle(.plain).tableDropZone(.squadron(player: player.id, squadron: squadron.id))
+        }.buttonStyle(.plain)
+            .onHover { over in preview(over ? ReadableCardPreview(key: "play:destroyer_squadron", title: "Destroyer Squadron", detail: "\(max(0, 4 - squadron.hitsTaken))/4 HP · \(ready ? "Ready to strike" : "Waiting to strike; can be attacked")") : nil) }
+            .tableDropZone(.squadron(player: player.id, squadron: squadron.id))
     }
 }
 

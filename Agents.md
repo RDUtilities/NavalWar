@@ -228,6 +228,12 @@ Include the user-visible result in the final response, not just the internal imp
 
 ## Changelog
 
+### 2026-09-21 — Readable full-table cards
+
+- Scope: native full-table view only.
+- Result: larger responsive hand art, larger ship art and 14/16-point name/HP labels, persistent Card size control with Balanced reset, delayed high-resolution hover previews and visible hand magnifier buttons. All-opponent layout and green playable outlines remain.
+- Verification: native presentation regressions and syntax/type checks pass; isolated four-player layout, size slider/reset and Minefield magnifier visually checked. Larger settings intentionally allow scrolling; the default retains the full table at the checked window size.
+
 ### 2026-09-21 — Green playable hand outlines
 
 - Scope: native hand styling and current legal-action classification.

@@ -108,3 +108,6 @@ Solo rounds end when your last ship sinks, even when several bots remain. The re
 
 
 Playable hand cards have a green outline during your turn, based on the engine's current legal play options. Cards that can only be discarded do not receive a green outline. Selection keeps a separate gold inset and background. Outlines clear while bots/dice are resolving, after your action, or while a ready Destroyer must be resolved.
+
+
+Readability: hand art adapts to the window and the saved **Card size** setting. **Balanced size** restores the default; choosing larger cards can introduce scrolling. Ship art scales with available column width, with larger native name/HP text. Pause over a card for a detailed preview, click a hand card's magnifier to open its full-size artwork, or right-click a ship to inspect attachments. Reading cards does not require a legal play action.
